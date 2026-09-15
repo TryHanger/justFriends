@@ -6,6 +6,7 @@ from app.db.models import AnalysisRecord
 from app.db.session import get_db
 from app.schemas.analysis import AnalysisResponse, AnalyzeRequest, AnalysisResult
 from app.services.analyzer import (
+    AnalyzerInputInvalid,
     AnalyzerNotConfigured,
     AnalyzerOutputInvalid,
     analyze_text,
@@ -21,10 +22,12 @@ def _analyze_and_save(
 ) -> AnalysisResponse:
     try:
         result = analyze_text(text, language)
+    except AnalyzerInputInvalid as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except AnalyzerNotConfigured as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GPT analysis is not configured. Set OPENAI_API_KEY.",
+            detail="Analysis is not configured. Check NLP_BACKEND and its model/key settings.",
         ) from exc
     except AnalyzerOutputInvalid as exc:
         raise HTTPException(

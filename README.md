@@ -5,10 +5,11 @@ Python backend for the research project on automatic metaphor detection and cros
 ## What this starter provides
 
 - FastAPI service with health, text-analysis, and document-upload endpoints.
-- GPT-backed analysis with schema-validated JSON output.
+- Configurable NLP analysis: lexical baseline, OpenAI, Ollama, local XLM-R, or hybrid.
 - Text extraction from TXT, text-based PDF, and DOCX.
 - SQLAlchemy persistence for submitted analyses.
-- A documented integration boundary for Arslan's NLP/embedding models and Nikita's frontend.
+- Arslan's NLP module, corpus/annotation tools, model training, evaluation, and embedding comparison.
+- Versioned JSON examples and an integration contract for Nikita's frontend.
 
 Scanned-PDF OCR and DOC/ODT/RTF conversion are intentionally left as the next document-processing integration. Text-based PDF extraction is already supported.
 
@@ -19,7 +20,9 @@ Scanned-PDF OCR and DOC/ODT/RTF conversion are intentionally left as the next do
 3. Start the API: `uvicorn app.main:app --reload`.
 4. Open `/docs` for the interactive API reference.
 
-The service starts without an API key so health checks and documentation remain available. Analysis endpoints return HTTP 503 until `OPENAI_API_KEY` is configured.
+The service starts without an API key so health checks and documentation remain available.
+In the default OpenAI mode, analysis endpoints return HTTP 503 until `OPENAI_API_KEY` is
+configured. Set `NLP_BACKEND=baseline` for offline demonstration without a key.
 
 For a shared local environment, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, then run `docker compose up --build`.
 
@@ -34,7 +37,16 @@ The analysis response contains an `analysis_id`, detected language, model versio
 
 ## Module handoff
 
-- Arslan can implement the NLP detector and cross-language matcher behind `app/services/analyzer.py`; keep the `AnalysisResult` contract stable.
+Arslan's NLP implementation and Russian setup guide: [docs/NLP.md](docs/NLP.md).
+The versioned labels, domains, offset rules and integration examples are in
+[docs/NLP_CONTRACT.md](docs/NLP_CONTRACT.md) and `contracts/`.
+Run `python -m app.nlp demo` for an offline synthetic demonstration.
+Set `NLP_BACKEND=baseline` for the existing analysis API to work without an API key;
+other choices are `openai` (default), `ollama`, `xlmr`, and `hybrid`.
+Neural models require `pip install -e '.[nlp]'` and trained/downloaded weights.
+
+- Arslan maintains `app/nlp/`, taxonomy, annotation, model experiments, and the comparison module;
+  `app/services/analyzer.py` connects analysis to the existing backend.
 - Nikita can build the UI against the OpenAPI schema at `/openapi.json` and the endpoints above.
 - The API owner maintains document parsing, persistence, and integration tests.
 

@@ -8,4 +8,9 @@ __pycache__/
 *.db
 dist/
 build/
+models/
+runs/
+data/raw/
+data/processed/
+data/gold/
 
