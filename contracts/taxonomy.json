@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "labels": [
+    "metaphor",
+    "simile",
+    "personification",
+    "metonymy",
+    "idiom"
+  ],
+  "domains": [
+    "nature",
+    "water",
+    "fire",
+    "light",
+    "darkness",
+    "plant",
+    "animal",
+    "body",
+    "person",
+    "object",
+    "space",
+    "motion",
+    "journey",
+    "time",
+    "life",
+    "death",
+    "emotion",
+    "love",
+    "mind",
+    "society",
+    "spirituality",
+    "other",
+    "unknown"
+  ],
+  "bio_positive_labels": [
+    "metaphor",
+    "personification"
+  ],
+  "offset_unit": "unicode_codepoint",
+  "end_exclusive": true
+}

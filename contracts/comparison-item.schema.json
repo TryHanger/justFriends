@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "text": {
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
+    },
+    "language": {
+      "enum": [
+        "zh",
+        "kk"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "context": {
+      "default": "",
+      "title": "Context",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "text",
+    "language"
+  ],
+  "title": "ComparisonItem",
+  "type": "object"
+}

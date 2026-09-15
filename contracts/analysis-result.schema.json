@@ -1,0 +1,106 @@
+{
+  "$defs": {
+    "MetaphorSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "label": {
+          "enum": [
+            "metaphor",
+            "simile",
+            "personification",
+            "metonymy",
+            "idiom"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "source_domain": {
+          "title": "Source Domain",
+          "type": "string"
+        },
+        "target_domain": {
+          "title": "Target Domain",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "label",
+        "source_domain",
+        "target_domain",
+        "confidence",
+        "rationale"
+      ],
+      "title": "MetaphorSpan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "language": {
+      "enum": [
+        "zh",
+        "kk"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "model_version": {
+      "title": "Model Version",
+      "type": "string"
+    },
+    "metaphors": {
+      "items": {
+        "$ref": "#/$defs/MetaphorSpan"
+      },
+      "title": "Metaphors",
+      "type": "array"
+    },
+    "needs_review": {
+      "default": true,
+      "title": "Needs Review",
+      "type": "boolean"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "language",
+    "model_version",
+    "metaphors"
+  ],
+  "title": "AnalysisResult",
+  "type": "object"
+}

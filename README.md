@@ -38,7 +38,15 @@ Analysis requests return HTTP 202 and an `analysis_id`. The client polls the sup
 
 ## Module handoff
 
-- Arslan can implement the NLP detector and cross-language matcher behind `app/services/analyzer.py`; keep the `AnalysisResult` contract stable.
+Arslan's NLP module is implemented in `app/nlp/`. See [the NLP guide](docs/NLP.md)
+for setup, annotation, training, and evaluation, and [the NLP contract](docs/NLP_CONTRACT.md)
+for labels, domains, offsets, and examples matching the asynchronous API.
+Run `python -m app.nlp demo` for an offline synthetic demonstration.
+Set `NLP_BACKEND=baseline` to analyze without API keys; other modes are
+`openai` (default), `ollama`, `xlmr`, and `hybrid`. Neural models require `.[nlp]`.
+
+- Arslan maintains `app/nlp/`, taxonomy, annotation, model training, and semantic comparison;
+  `app/services/analyzer.py` connects the detector to the background analysis jobs.
 - Nikita can build the UI against the OpenAPI schema at `/openapi.json` and the endpoints above.
 - The API owner maintains document parsing, persistence, and integration tests.
 

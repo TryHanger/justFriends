@@ -1,0 +1,27 @@
+{
+  "analysis_id": 1,
+  "status": "completed",
+  "source_name": null,
+  "created_at": "2026-09-15T00:00:00+00:00",
+  "result": {
+    "language": "kk",
+    "model_version": "lexical-demo-v1",
+    "metaphors": [
+      {
+        "text": "Өмір өзені",
+        "start": 0,
+        "end": 10,
+        "label": "metaphor",
+        "source_domain": "water",
+        "target_domain": "life",
+        "confidence": 0.5,
+        "rationale": "Lexical candidate; context requires human verification."
+      }
+    ],
+    "needs_review": true,
+    "warnings": [
+      "Lexical baseline has limited coverage; confidence is not calibrated."
+    ]
+  },
+  "error": null
+}

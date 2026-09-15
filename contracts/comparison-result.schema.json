@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "ComparisonMatch": {
+      "properties": {
+        "query_id": {
+          "title": "Query Id",
+          "type": "string"
+        },
+        "candidate_id": {
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "similarity": {
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Similarity",
+          "type": "number"
+        },
+        "rank": {
+          "minimum": 1,
+          "title": "Rank",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "query_id",
+        "candidate_id",
+        "similarity",
+        "rank"
+      ],
+      "title": "ComparisonMatch",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "model_version": {
+      "title": "Model Version",
+      "type": "string"
+    },
+    "matches": {
+      "items": {
+        "$ref": "#/$defs/ComparisonMatch"
+      },
+      "title": "Matches",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "model_version",
+    "matches",
+    "warnings"
+  ],
+  "title": "ComparisonResult",
+  "type": "object"
+}

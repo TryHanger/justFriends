@@ -1,0 +1,139 @@
+{
+  "$defs": {
+    "ModelSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "label": {
+          "enum": [
+            "metaphor",
+            "simile",
+            "personification",
+            "metonymy",
+            "idiom"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "source_domain": {
+          "enum": [
+            "nature",
+            "water",
+            "fire",
+            "light",
+            "darkness",
+            "plant",
+            "animal",
+            "body",
+            "person",
+            "object",
+            "space",
+            "motion",
+            "journey",
+            "time",
+            "life",
+            "death",
+            "emotion",
+            "love",
+            "mind",
+            "society",
+            "spirituality",
+            "other",
+            "unknown"
+          ],
+          "title": "Source Domain",
+          "type": "string"
+        },
+        "target_domain": {
+          "enum": [
+            "nature",
+            "water",
+            "fire",
+            "light",
+            "darkness",
+            "plant",
+            "animal",
+            "body",
+            "person",
+            "object",
+            "space",
+            "motion",
+            "journey",
+            "time",
+            "life",
+            "death",
+            "emotion",
+            "love",
+            "mind",
+            "society",
+            "spirituality",
+            "other",
+            "unknown"
+          ],
+          "title": "Target Domain",
+          "type": "string"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "label",
+        "source_domain",
+        "target_domain",
+        "confidence",
+        "rationale"
+      ],
+      "title": "ModelSpan",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "language": {
+      "enum": [
+        "zh",
+        "kk"
+      ],
+      "title": "Language",
+      "type": "string"
+    },
+    "metaphors": {
+      "items": {
+        "$ref": "#/$defs/ModelSpan"
+      },
+      "title": "Metaphors",
+      "type": "array"
+    }
+  },
+  "required": [
+    "language",
+    "metaphors"
+  ],
+  "title": "ModelOutput",
+  "type": "object"
+}
