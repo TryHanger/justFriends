@@ -53,6 +53,45 @@ class AnalysisResponse(AnalysisResult):
     analysis_id: int
 
 
+class AnalysisJobResponse(BaseModel):
+    analysis_id: int
+    status: Literal["queued", "processing"]
+    status_url: str
+
+
+class AnalysisStatusResponse(BaseModel):
+    analysis_id: int
+    status: Literal["queued", "processing", "completed", "failed"]
+    source_name: str | None = None
+    created_at: str
+    result: AnalysisResult | None = None
+    error: str | None = None
+
+
+class AnalysisListResponse(BaseModel):
+    items: list[AnalysisStatusResponse]
+    limit: int
+    offset: int
+
+
+class CompareRequest(BaseModel):
+    analysis_ids: list[int] = Field(min_length=2, max_length=100)
+
+
+class ComparisonGroup(BaseModel):
+    analysis_count: int
+    metaphor_count: int
+    by_label: dict[str, int]
+    by_source_domain: dict[str, int]
+    by_target_domain: dict[str, int]
+
+
+class CompareResponse(BaseModel):
+    languages: dict[str, ComparisonGroup]
+    analysis_ids: list[int]
+    note: str
+
+
 class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     database: Literal["ok", "error"]
