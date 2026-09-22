@@ -80,7 +80,23 @@ Offsets use zero-based Python Unicode character indexes; `end` is exclusive. The
 }
 ```
 
-At least one completed Chinese (`zh`) and one completed Kazakh (`kk`) analysis are required. The response groups descriptive counts by language, label, source domain, and target domain. These counts do not claim one-to-one semantic equivalence; the embeddings module can later add semantic matches.
+At least one completed Chinese (`zh`) and one completed Kazakh (`kk`) analysis are required. The response groups descriptive counts by language, label, source domain, and target domain. These counts do not claim one-to-one semantic equivalence.
+
+## Semantic cross-language candidates
+
+`POST /compare/semantic?k=5` accepts the same `analysis_ids` request as `/compare`. It uses detected metaphor spans and up to 120 characters of surrounding source text, then ranks Chinese→Kazakh and Kazakh→Chinese candidates with the configured multilingual-e5 model. `k` ranges from 1 to 20.
+
+```json
+{
+  "model_version": "intfloat/multilingual-e5-base",
+  "matches": [
+    {"query_id": "42:0", "candidate_id": "43:1", "similarity": 0.81, "rank": 1}
+  ],
+  "warnings": ["Similarity ranks semantic candidates; it does not prove a shared metaphor or cultural equivalence."]
+}
+```
+
+IDs identify `analysis_id:metaphor_index`. The encoder loads lazily on the first semantic request and requires the `nlp` optional dependencies plus access to the configured model or a local model path. Initialization failures return `503`. Similarity is a research candidate score, not proof of cultural equivalence; pairs need human review.
 
 ## Export results
 
@@ -100,6 +116,15 @@ Both return a downloadable file and require a completed analysis.
 | 413 | Upload exceeds configured limit | Ask user for a smaller file |
 | 415 | Unsupported file extension | Show supported formats |
 | 422 | Invalid request or no extractable text | Show validation details |
+| 503 | Semantic encoder is unavailable or failed | Show that semantic comparison is temporarily unavailable |
 | 200 with `status: degraded` | Database health check failed | Show temporary service issue |
 
 GPT failures, including missing API configuration, are stored as job state `failed`; the API keeps details generic so it does not expose keys or provider internals.
+# Library API
+
+The library stores uploaded books as reusable corpus items and links each item to a whole-document analysis.
+
+- `GET /api/v1/library/books` — list books with status and analysis result.
+- `POST /api/v1/library/books` — multipart upload (`file`, optional `title`, `author`, `source_url`, and `language`); creates an analysis job and returns its `analysis_id`.
+
+Supported file formats are TXT, text-based PDF, and DOCX. Scanned PDFs still require OCR and are rejected with a clear message.

@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.analysis import AnalysisResult, MetaphorSpan
 from app.schemas.taxonomy import DOMAINS, Domain
@@ -15,6 +15,13 @@ class NLPInputError(ValueError):
 class ModelSpan(MetaphorSpan):
     source_domain: Domain
     target_domain: Domain
+    rationale: str = Field(
+        min_length=1,
+        description=(
+            "Write the explanation exclusively in Russian using Cyrillic. Never use Chinese, "
+            "Kazakh, or English here; leave the quoted source expression unchanged."
+        ),
+    )
 
 
 class ModelOutput(BaseModel):

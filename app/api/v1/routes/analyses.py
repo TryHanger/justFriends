@@ -1,6 +1,8 @@
 import csv
 import json
+import logging
 from collections import Counter, defaultdict
+from functools import lru_cache
 from io import StringIO
 from typing import Literal
 
@@ -12,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.models import AnalysisRecord
 from app.db.session import get_db
+from app.nlp.comparison import CrossLanguageMatcher
 from app.schemas.analysis import (
     AnalysisJobResponse,
     AnalysisListResponse,
@@ -21,11 +24,19 @@ from app.schemas.analysis import (
     CompareResponse,
     ComparisonGroup,
 )
+from app.schemas.comparison import ComparisonItem, ComparisonMatch, ComparisonResult
 from app.services.analysis_jobs import create_analysis_job, process_analysis, read_result
 from app.services.document_loader import extract_text
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def get_semantic_matcher() -> CrossLanguageMatcher:
+    """Load the multilingual encoder only when semantic comparison is requested."""
+    return CrossLanguageMatcher(get_settings().embedding_model)
 
 
 def _csv_safe(value: object) -> str | object:
@@ -234,4 +245,81 @@ def compare_analyses(
         languages=output,
         analysis_ids=unique_ids,
         note="Counts are descriptive and depend on the selected analyses; semantic cross-language matching is a separate NLP integration.",
+    )
+
+
+@router.post("/compare/semantic", response_model=ComparisonResult)
+def compare_semantically(
+    request: CompareRequest,
+    k: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db),
+) -> ComparisonResult:
+    """Rank cross-language metaphor candidates from the selected completed analyses."""
+    unique_ids = list(dict.fromkeys(request.analysis_ids))
+    records = list(
+        db.scalars(select(AnalysisRecord).where(AnalysisRecord.id.in_(unique_ids))).all()
+    )
+    by_id = {record.id: record for record in records}
+    missing_ids = [analysis_id for analysis_id in unique_ids if analysis_id not in by_id]
+    if missing_ids:
+        raise HTTPException(status_code=404, detail={"missing_analysis_ids": missing_ids})
+
+    pending_ids = [
+        record.id for record in records if record.status != "completed" or record.result is None
+    ]
+    if pending_ids:
+        raise HTTPException(
+            status_code=409,
+            detail={"message": "All analyses must be completed", "pending_analysis_ids": pending_ids},
+        )
+
+    grouped: dict[str, list[ComparisonItem]] = {"zh": [], "kk": []}
+    for record in records:
+        result = read_result(record)
+        if result is None:
+            continue
+        language = result.language
+        for index, span in enumerate(result.metaphors):
+            context_start = max(0, span.start - 120)
+            context_end = min(len(record.source_text), span.end + 120)
+            grouped[language].append(
+                ComparisonItem(
+                    id=f"{record.id}:{index}",
+                    text=span.text,
+                    language=language,
+                    context=record.source_text[context_start:context_end],
+                )
+            )
+
+    if not grouped["zh"] or not grouped["kk"]:
+        return ComparisonResult(
+            model_version=get_settings().embedding_model,
+            matches=[],
+            warnings=[
+                "Select completed analyses that contain at least one metaphor in each language."
+            ],
+        )
+
+    try:
+        matcher = get_semantic_matcher()
+    except Exception as exc:
+        logger.exception("Could not initialize semantic comparison model")
+        raise HTTPException(
+            status_code=503,
+            detail="Semantic comparison model is unavailable; install NLP dependencies and check model access.",
+        ) from exc
+
+    try:
+        zh_to_kk = matcher.compare(grouped["zh"], grouped["kk"], k=k)
+        kk_to_zh = matcher.compare(grouped["kk"], grouped["zh"], k=k)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Semantic comparison failed")
+        raise HTTPException(status_code=503, detail="Semantic comparison failed.") from exc
+
+    return ComparisonResult(
+        model_version=zh_to_kk.model_version,
+        matches=zh_to_kk.matches + kk_to_zh.matches,
+        warnings=list(dict.fromkeys(zh_to_kk.warnings + kk_to_zh.warnings)),
     )

@@ -8,6 +8,7 @@ import pytest
 from app.nlp.contracts import output_schema, validate_result
 from app.nlp.corpus import Poem
 from app.schemas.analysis import AnalysisJobResponse, AnalysisStatusResponse
+from app.schemas.comparison import ComparisonMatch, ComparisonResult
 
 
 def test_generated_contracts_and_examples():
@@ -37,6 +38,7 @@ def test_api_persist_retrieve_and_errors(monkeypatch):
     from sqlalchemy.pool import StaticPool
     from app.core.config import get_settings
     from app.services.analyzer import get_pipeline
+    from app.api.v1.routes import analyses as analysis_routes
     from app.api.v1.routes.analyses import router
     from app.db.base import Base
     from app.db.session import get_db
@@ -81,6 +83,42 @@ def test_api_persist_retrieve_and_errors(monkeypatch):
             uploaded_result = client.get(uploaded.json()["status_url"]).json()
             assert uploaded_result["status"] == "completed", uploaded_result
             assert uploaded_result["result"]["metaphors"] == data["metaphors"]
+            history = client.get("/api/v1/analyses").json()
+            assert isinstance(history["items"], list) and history["limit"] == 20
+
+            zh_job = client.post(
+                "/api/v1/analyze", json={"text": "心海泛起波浪。", "language": "zh"}
+            ).json()
+            zh_done = client.get(zh_job["status_url"]).json()
+            assert zh_done["status"] == "completed", zh_done
+
+            class FakeMatcher:
+                def compare(self, queries, candidates, k):
+                    assert k == 2
+                    assert queries and candidates
+                    assert queries[0].language != candidates[0].language
+                    return ComparisonResult(
+                        model_version="fake-e5",
+                        matches=[
+                            ComparisonMatch(
+                                query_id=queries[0].id,
+                                candidate_id=candidates[0].id,
+                                similarity=0.81,
+                                rank=1,
+                            )
+                        ],
+                        warnings=["Similarity is not cultural equivalence."],
+                    )
+
+            monkeypatch.setattr(analysis_routes, "get_semantic_matcher", lambda: FakeMatcher())
+            semantic = client.post(
+                "/api/v1/compare/semantic?k=2",
+                json={"analysis_ids": [job["analysis_id"], zh_job["analysis_id"]]},
+            )
+            assert semantic.status_code == 200, semantic.text
+            assert semantic.json()["model_version"] == "fake-e5"
+            assert len(semantic.json()["matches"]) == 2  # zh→kk and kk→zh
+
             assert client.post("/api/v1/analyze", json={"text": "   "}).status_code == 422
             assert (
                 client.post("/api/v1/analyze", json={"text": "x", "language": "en"}).status_code

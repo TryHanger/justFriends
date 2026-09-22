@@ -6,7 +6,7 @@ import pytest
 
 from app.nlp.comparison import CrossLanguageMatcher
 from app.nlp.hybrid import HybridDetector
-from app.nlp.llm import OpenAIDetector, OllamaDetector
+from app.nlp.llm import OpenAIDetector, OllamaDetector, parse_output
 from app.nlp.xlmr import align_labels, decode_bio, token_windows
 from app.schemas.analysis import AnalysisResult
 from app.schemas.comparison import ComparisonItem
@@ -56,9 +56,17 @@ def test_hybrid_disagreement_does_not_become_confident_gold():
 
 def test_openai_adapter_uses_schema_and_rejects_incomplete():
     captured = {}
+    calls = 0
 
     def create(**kwargs):
+        nonlocal calls
+        calls += 1
         captured.update(kwargs)
+        if calls == 2:
+            return SimpleNamespace(
+                status="completed",
+                output_text=json.dumps({"translations": ["Образ моря передаёт внутреннее переживание лирического героя."]}),
+            )
         return SimpleNamespace(
             status="completed",
             output_text=json.dumps({"language": "zh", "metaphors": [span().model_dump()]}),
@@ -68,10 +76,23 @@ def test_openai_adapter_uses_schema_and_rejects_incomplete():
     result = OpenAIDetector("test", "test", client).analyze("心海", "zh")
     assert result.model_version == "openai:test"
     assert captured["text"]["format"]["strict"] is True
+    assert "in Russian" in captured["instructions"]
+    assert "exclusively in Russian" in captured["text"]["format"]["schema"]["$defs"]["ModelSpan"]["properties"]["rationale"]["description"]
     assert json.loads(captured["input"])["poem"] == "心海"
+    assert result.metaphors[0].rationale.startswith("Образ моря")
     client.responses.create = lambda **_: SimpleNamespace(status="incomplete")
     with pytest.raises(ValueError):
         OpenAIDetector("test", "test", client).analyze("心海", "zh")
+
+
+def test_parse_output_repairs_wrong_offsets_only_for_unique_exact_span():
+    raw = json.dumps({"language": "zh", "metaphors": [span().model_dump()]})
+    result = parse_output(raw, "前心海", "zh", "test")
+    assert [(item.text, item.start, item.end) for item in result.metaphors] == [("心海", 1, 3)]
+
+    ambiguous = parse_output(raw, "心海和心海", "zh", "test")
+    assert ambiguous.metaphors == []
+    assert "omitted" in ambiguous.warnings[-1]
 
 
 def test_ollama_http_adapter(monkeypatch):

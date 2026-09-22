@@ -94,6 +94,8 @@
           "type": "number"
         },
         "rationale": {
+          "description": "Write the explanation exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; leave the quoted source expression unchanged.",
+          "minLength": 1,
           "title": "Rationale",
           "type": "string"
         }

@@ -32,6 +32,7 @@ For a shared local environment, copy `.env.example` to `.env`, set `OPENAI_API_K
 - `GET /api/v1/analyses/{analysis_id}` — poll status and retrieve a finished result.
 - `GET /api/v1/analyses` — list recent analyses.
 - `POST /api/v1/compare` — compare descriptive counts for Chinese and Kazakh analyses.
+- `POST /api/v1/compare/semantic?k=5` — rank metaphor candidates in both language directions with multilingual-e5.
 - `GET /api/v1/analyses/{analysis_id}/export?format=json|csv` — download one finished result.
 
 Analysis requests return HTTP 202 and an `analysis_id`. The client polls the supplied status URL; the completed result contains detected language, model version, and metaphor spans with character offsets, labels, source/target domains, confidence, and a short rationale. See [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) for examples.

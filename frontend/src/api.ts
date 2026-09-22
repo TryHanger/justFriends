@@ -32,6 +32,52 @@ export interface AnalysisResponse {
   error: string | null;
 }
 
+export interface AnalysisListResponse {
+  items: AnalysisResponse[];
+  limit: number;
+  offset: number;
+}
+
+export interface ComparisonGroup {
+  analysis_count: number;
+  metaphor_count: number;
+  by_label: Record<string, number>;
+  by_source_domain: Record<string, number>;
+  by_target_domain: Record<string, number>;
+}
+
+export interface AggregateCompareResponse {
+  languages: Record<string, ComparisonGroup>;
+  analysis_ids: number[];
+  note: string;
+}
+
+export interface SemanticMatch {
+  query_id: string;
+  candidate_id: string;
+  similarity: number;
+  rank: number;
+}
+
+export interface SemanticCompareResponse {
+  model_version: string;
+  matches: SemanticMatch[];
+  warnings: string[];
+}
+
+export interface LibraryBook {
+  id: number;
+  title: string;
+  author: string | null;
+  language: string;
+  source_name: string;
+  source_url: string | null;
+  analysis_id: number;
+  status: string;
+  created_at: string;
+  result: AnalysisResult | null;
+}
+
 export interface SubmitResponse {
   analysis_id: number;
   status: string;
@@ -57,12 +103,35 @@ export const getAnalysis = async (id: number) => {
 };
 
 export const listAnalyses = async (limit = 20, offset = 0) => {
-  const res = await api.get<AnalysisResponse[]>(`/analyses`, { params: { limit, offset } });
+  const res = await api.get<AnalysisListResponse>(`/analyses`, { params: { limit, offset } });
   return res.data;
 };
 
 export const compareAnalyses = async (analysisIds: number[]) => {
-  const res = await api.post('/compare', { analysis_ids: analysisIds });
+  const res = await api.post<AggregateCompareResponse>('/compare', { analysis_ids: analysisIds });
+  return res.data;
+};
+
+export const compareSemanticAnalyses = async (analysisIds: number[], k = 5) => {
+  const res = await api.post<SemanticCompareResponse>(`/compare/semantic?k=${k}`, {
+    analysis_ids: analysisIds,
+  });
+  return res.data;
+};
+
+export const listLibraryBooks = async () => {
+  const res = await api.get<{ items: LibraryBook[]; total: number }>('/library/books');
+  return res.data;
+};
+
+export const uploadLibraryBook = async (file: File, language = 'auto', title = '', author = '', sourceUrl = '') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('language', language);
+  if (title) formData.append('title', title);
+  if (author) formData.append('author', author);
+  if (sourceUrl) formData.append('source_url', sourceUrl);
+  const res = await api.post<SubmitResponse>('/library/books', formData);
   return res.data;
 };
 
