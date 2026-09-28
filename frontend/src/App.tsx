@@ -3,6 +3,7 @@ import { FileText, List, BarChart2, BookOpen } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import AnalysisDetail from './pages/AnalysisDetail';
 import Compare from './pages/Compare';
+import Standards from './pages/Standards';
 import Library from './pages/Library';
 import { LanguageProvider, tr, useLanguage } from './i18n';
 
@@ -34,6 +35,10 @@ function AppContent() {
                 <BookOpen className="w-4 h-4" />
                 {tr('Library', language)}
               </Link>
+              <Link to="/standards" className="text-gray-600 hover:text-indigo-600 flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                {tr('Standards', language)}
+              </Link>
               <button type="button" onClick={() => setLanguage(language === 'ru' ? 'en' : 'ru')} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50" aria-label="Переключить язык интерфейса">
                 {language === 'ru' ? 'RU' : 'EN'}
               </button>
@@ -46,6 +51,7 @@ function AppContent() {
             <Route path="/analyses/:id" element={<AnalysisDetail />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/library" element={<Library />} />
+            <Route path="/standards" element={<Standards />} />
           </Routes>
         </main>
       </div>

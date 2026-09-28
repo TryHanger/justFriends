@@ -138,3 +138,55 @@ export const uploadLibraryBook = async (file: File, language = 'auto', title = '
 export const getExportUrl = (id: number, format: 'json' | 'csv') => {
   return `${API_BASE}/analyses/${id}/export?format=${format}`;
 };
+
+export interface StandardInfo {
+  designation: string;
+  organization: string;
+  title: string;
+  domain: string;
+  purpose: string;
+  example_use: string;
+}
+
+export interface LifecycleProcess {
+  name: string;
+  status: string;
+  responsible: string;
+  dependencies: string[];
+}
+
+export interface LifecycleState {
+  processes: LifecycleProcess[];
+  readiness: string;
+  issues: string[];
+}
+
+export interface QualityMetric {
+  characteristic: string;
+  score: number;
+  passed: boolean;
+  details: string;
+}
+
+export interface QualityReport {
+  metrics: QualityMetric[];
+  overall_status: string;
+  total_tests: number;
+  passed_tests: number;
+}
+
+export const getStandardsReference = async () => {
+  const res = await api.get<StandardInfo[]>('/standards/reference');
+  return res.data;
+};
+
+export const getLifecycleState = async () => {
+  const res = await api.get<LifecycleState>('/standards/lifecycle');
+  return res.data;
+};
+
+export const runQualityChecks = async () => {
+  const res = await api.post<QualityReport>('/standards/quality/run');
+  return res.data;
+};
+
