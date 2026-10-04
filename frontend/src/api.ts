@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '') || 'http://localhost:8000/api/v1');
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -21,6 +21,8 @@ export interface AnalysisResult {
   language: string;
   model_version: string;
   metaphors: Metaphor[];
+  needs_review?: boolean;
+  warnings?: string[];
 }
 
 export interface AnalysisResponse {
@@ -153,12 +155,15 @@ export interface LifecycleProcess {
   status: string;
   responsible: string;
   dependencies: string[];
+  evidence?: string[];
+  details?: string;
 }
 
 export interface LifecycleState {
   processes: LifecycleProcess[];
   readiness: string;
   issues: string[];
+  last_checked_at?: string | null;
 }
 
 export interface QualityMetric {

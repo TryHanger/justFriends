@@ -1,8 +1,8 @@
-import subprocess
-import time
-import json
 from fastapi import APIRouter
-from app.schemas.standards import StandardInfo, LifecycleState, LifecycleProcess, QualityReport, QualityMetric
+
+from app.schemas.standards import LifecycleState, QualityReport, StandardInfo
+from app.services.project_evidence import build_lifecycle_state
+from app.services.quality_checks import run_quality_checks
 
 router = APIRouter()
 
@@ -89,97 +89,12 @@ STANDARDS_DB = [
     )
 ]
 
-LIFECYCLE_DB = LifecycleState(
-    processes=[
-        LifecycleProcess(name="Requirements Analysis", status="completed", responsible="System Analyst", dependencies=[]),
-        LifecycleProcess(name="Architectural Design", status="completed", responsible="Architect", dependencies=["Requirements Analysis"]),
-        LifecycleProcess(name="Software Implementation", status="completed", responsible="Developer", dependencies=["Architectural Design"]),
-        LifecycleProcess(name="Software Integration", status="completed", responsible="Developer", dependencies=["Software Implementation"]),
-        LifecycleProcess(name="Software Testing", status="in_progress", responsible="QA Engineer", dependencies=["Software Integration"]),
-        LifecycleProcess(name="System Validation", status="pending", responsible="QA Manager", dependencies=["Software Testing"]),
-        LifecycleProcess(name="Software Operation", status="pending", responsible="DevOps", dependencies=["System Validation"])
-    ],
-    readiness="Conditionally Ready",
-    issues=["Testing phase is not fully completed.", "Performance under high load requires validation."]
-)
-
 @router.get("/reference", response_model=list[StandardInfo])
 def get_standards_reference():
     return STANDARDS_DB
 
 @router.get("/lifecycle", response_model=LifecycleState)
 def get_lifecycle_state():
-    return LIFECYCLE_DB
+    return build_lifecycle_state()
 
-@router.post("/quality/run", response_model=QualityReport)
-def run_quality_checks():
-    # Run pytest programmatically and capture output
-    start_time = time.time()
-    try:
-        # Assuming pytest is installed and tests are in the 'tests' directory
-        result = subprocess.run(
-            ["pytest", "tests/", "--tb=short", "-q"],
-            capture_output=True,
-            text=True
-        )
-        test_output = result.stdout
-        exit_code = result.returncode
-    except Exception as e:
-        test_output = str(e)
-        exit_code = -1
-
-    duration = time.time() - start_time
-
-    # Parse pytest output roughly to get passed/failed
-    # A simple heuristic: if exit_code == 0, all passed. If >0, some failed.
-    # In a real scenario we'd use pytest-json-report, but for this task we can mock the parsing.
-    # Let's count tests by lines like '..F..' or using the final summary line
-    
-    passed_tests = 0
-    total_tests = 0
-    if "passed" in test_output or "failed" in test_output:
-        import re
-        passed_match = re.search(r'(\d+) passed', test_output)
-        failed_match = re.search(r'(\d+) failed', test_output)
-        passed_tests = int(passed_match.group(1)) if passed_match else 0
-        failed_tests = int(failed_match.group(1)) if failed_match else 0
-        total_tests = passed_tests + failed_tests
-    else:
-        # Fallback if parsing fails but command succeeded
-        if exit_code == 0:
-            passed_tests = 10
-            total_tests = 10
-        else:
-            total_tests = 10
-            passed_tests = 5
-
-    functional_suitability = QualityMetric(
-        characteristic="Functional Suitability",
-        score=(passed_tests / total_tests * 100) if total_tests > 0 else 0.0,
-        passed=exit_code == 0,
-        details=f"{passed_tests}/{total_tests} tests passed."
-    )
-
-    performance_efficiency = QualityMetric(
-        characteristic="Performance Efficiency",
-        score=max(0, 100 - (duration * 10)), # arbitrary score calculation
-        passed=duration < 5.0,
-        details=f"Test suite execution time: {duration:.2f} seconds."
-    )
-    
-    reliability = QualityMetric(
-        characteristic="Reliability",
-        score=100.0 if exit_code == 0 else 50.0,
-        passed=exit_code == 0,
-        details="No critical crashes detected during test run." if exit_code == 0 else "Test suite encountered failures."
-    )
-
-    metrics = [functional_suitability, performance_efficiency, reliability]
-    all_passed = all(m.passed for m in metrics)
-
-    return QualityReport(
-        metrics=metrics,
-        overall_status="PASS" if all_passed else "FAIL",
-        total_tests=total_tests,
-        passed_tests=passed_tests
-    )
+router.add_api_route("/quality/run", run_quality_checks, methods=["POST"], response_model=QualityReport)

@@ -5,7 +5,8 @@ import AnalysisDetail from './pages/AnalysisDetail';
 import Compare from './pages/Compare';
 import Standards from './pages/Standards';
 import Library from './pages/Library';
-import { LanguageProvider, tr, useLanguage } from './i18n';
+import { tr, useLanguage } from './i18n';
+import { LanguageProvider } from './LanguageProvider';
 
 function App() {
   return <LanguageProvider><AppContent /></LanguageProvider>;

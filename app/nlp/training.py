@@ -43,8 +43,11 @@ def train_xlmr(
     import torch
     import transformers
     from torch.utils.data import DataLoader
-    from transformers import AutoModelForTokenClassification, AutoTokenizer
-    from transformers import DataCollatorForTokenClassification
+    from transformers import (
+        AutoModelForTokenClassification,
+        AutoTokenizer,
+        DataCollatorForTokenClassification,
+    )
 
     random.seed(seed)
     torch.manual_seed(seed)

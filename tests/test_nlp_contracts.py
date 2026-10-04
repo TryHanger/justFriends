@@ -3,10 +3,10 @@ import json
 import pytest
 
 from app.nlp.annotation import export_tasks, import_tasks, python_offset
+from app.nlp.baseline import LexicalDetector
 from app.nlp.contracts import ModelSpan, resolve_language, validate_result
 from app.nlp.corpus import Poem, assert_disjoint, clean_corpus, require_gold, split_corpus
 from app.nlp.evaluation import annotation_agreement, evaluate, recall_at_k
-from app.nlp.baseline import LexicalDetector
 from app.nlp.llm import parse_output
 from app.schemas.analysis import AnalysisResult
 

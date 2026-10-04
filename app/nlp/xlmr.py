@@ -89,7 +89,7 @@ def decode_bio(text, offsets, tags, confidences):
                     )
                 )
 
-    for (start, end), tag, confidence in zip(offsets, tags, confidences):
+    for (start, end), tag, confidence in zip(offsets, tags, confidences, strict=False):
         if tag not in BIO_LABELS:
             raise ValueError(f"Unexpected BIO label {tag}")
         if start == end:

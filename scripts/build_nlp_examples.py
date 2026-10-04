@@ -3,8 +3,8 @@
 from pathlib import Path
 
 from app.nlp.baseline import LexicalDetector
-from app.nlp.corpus import Poem, save_json, write_corpus
 from app.nlp.contracts import ModelSpan
+from app.nlp.corpus import Poem, save_json, write_corpus
 
 ROOT = Path(__file__).resolve().parents[1]
 

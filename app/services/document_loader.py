@@ -2,10 +2,34 @@ from io import BytesIO
 from pathlib import Path
 
 from docx import Document
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 from fastapi import HTTPException, UploadFile, status
 from pypdf import PdfReader
 
+from app.core.limits import MAX_ANALYSIS_CHARS
+
 SUPPORTED_SUFFIXES = {".txt", ".pdf", ".docx"}
+
+
+def _table_text(table: Table):
+    seen_cells: set[object] = set()
+    for row in table.rows:
+        for cell in row.cells:
+            cell_xml = cell._tc
+            if cell_xml in seen_cells:
+                continue
+            seen_cells.add(cell_xml)
+            yield from _docx_blocks(cell)
+
+
+def _docx_blocks(container, *, keep_empty_paragraphs: bool = False):
+    for block in container.iter_inner_content():
+        if isinstance(block, Paragraph):
+            if block.text or keep_empty_paragraphs:
+                yield block.text
+        elif isinstance(block, Table):
+            yield from _table_text(block)
 
 
 async def extract_text(upload: UploadFile, max_upload_mb: int) -> tuple[str, str]:
@@ -36,7 +60,7 @@ async def extract_text(upload: UploadFile, max_upload_mb: int) -> tuple[str, str
                 )
         else:
             document = Document(BytesIO(content))
-            text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+            text = "\n".join(_docx_blocks(document, keep_empty_paragraphs=True))
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=422, detail="TXT must use UTF-8 encoding") from exc
     except HTTPException:
@@ -47,5 +71,10 @@ async def extract_text(upload: UploadFile, max_upload_mb: int) -> tuple[str, str
     text = text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="No text found in document")
+    if len(text) > MAX_ANALYSIS_CHARS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Extracted text exceeds {MAX_ANALYSIS_CHARS} characters",
+        )
     return text, filename
 

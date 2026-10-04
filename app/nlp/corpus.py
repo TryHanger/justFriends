@@ -137,7 +137,7 @@ def split_corpus(records: list[Poem], seed: int = 42) -> dict[str, list[Poem]]:
     partitions = (keys[n_test + n_val :], keys[n_test : n_test + n_val], keys[:n_test])
     result = {
         name: [r for key in keys_ for r in groups[key]]
-        for name, keys_ in zip(("train", "validation", "test"), partitions)
+        for name, keys_ in zip(("train", "validation", "test"), partitions, strict=False)
     }
     assert_disjoint(*result.values())
     return result

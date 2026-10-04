@@ -6,7 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /service
 COPY pyproject.toml README.md ./
 COPY app ./app
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir '.[quality]'
+
+COPY tests ./tests
+COPY contracts ./contracts
+COPY data/examples ./data/examples
+COPY docs ./docs
+COPY ARCHITECTURE.md ./ARCHITECTURE.md
+COPY .github ./.github
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

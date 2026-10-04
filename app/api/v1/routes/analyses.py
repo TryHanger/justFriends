@@ -6,7 +6,16 @@ from functools import lru_cache
 from io import StringIO
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -18,13 +27,13 @@ from app.nlp.comparison import CrossLanguageMatcher
 from app.schemas.analysis import (
     AnalysisJobResponse,
     AnalysisListResponse,
-    AnalyzeRequest,
     AnalysisStatusResponse,
+    AnalyzeRequest,
     CompareRequest,
     CompareResponse,
     ComparisonGroup,
 )
-from app.schemas.comparison import ComparisonItem, ComparisonMatch, ComparisonResult
+from app.schemas.comparison import ComparisonItem, ComparisonResult
 from app.services.analysis_jobs import create_analysis_job, process_analysis, read_result
 from app.services.document_loader import extract_text
 

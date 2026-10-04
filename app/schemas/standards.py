@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+
 
 class StandardInfo(BaseModel):
     designation: str
@@ -13,12 +13,15 @@ class LifecycleProcess(BaseModel):
     name: str
     status: str
     responsible: str
-    dependencies: List[str]
+    dependencies: list[str]
+    evidence: list[str] = Field(default_factory=list)
+    details: str = ""
 
 class LifecycleState(BaseModel):
-    processes: List[LifecycleProcess]
+    processes: list[LifecycleProcess]
     readiness: str
-    issues: List[str]
+    issues: list[str]
+    last_checked_at: str | None = None
 
 class QualityMetric(BaseModel):
     characteristic: str
@@ -27,7 +30,7 @@ class QualityMetric(BaseModel):
     details: str
 
 class QualityReport(BaseModel):
-    metrics: List[QualityMetric]
+    metrics: list[QualityMetric]
     overall_status: str
     total_tests: int
     passed_tests: int

@@ -2,13 +2,14 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.core.limits import MAX_ANALYSIS_CHARS
 from app.schemas.taxonomy import MetaphorLabel
 
 Language = Literal["auto", "zh", "kk"]
 
 
 class AnalyzeRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=100_000)
+    text: str = Field(min_length=1, max_length=MAX_ANALYSIS_CHARS)
     language: Language = "auto"
 
     @field_validator("text")

@@ -1,7 +1,7 @@
 """Character TF-IDF baselines for figure type and semantic domains."""
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 from app.nlp.corpus import manifest, require_gold, save_json
 from app.schemas.analysis import AnalysisResult
@@ -34,7 +34,7 @@ def train_attributes(records, output_dir, allow_synthetic=False):
     models = {}
     for field in FIELDS:
         labels = [getattr(s, field) for _, s in pairs]
-        usable = [(x, y) for x, y in zip(texts, labels) if y != "unknown"]
+        usable = [(x, y) for x, y in zip(texts, labels, strict=False) if y != "unknown"]
         if len({y for _, y in usable}) < 2:
             raise ValueError(f"Need at least two known classes for {field}")
         model = make_pipeline(

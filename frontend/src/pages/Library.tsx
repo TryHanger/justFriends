@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Loader2, Upload } from 'lucide-react';
 import { listLibraryBooks, uploadLibraryBook } from '../api';
+import { getApiErrorMessage } from '../apiErrors';
 import type { LibraryBook } from '../api';
 import { tr, useLanguage } from '../i18n';
 
@@ -19,10 +20,17 @@ export default function Library() {
 
   const refresh = async () => {
     try { setBooks((await listLibraryBooks()).items); }
-    catch { setError(tr('Could not load the library.', language)); }
+    catch { setError('Could not load the library.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    let active = true;
+    void listLibraryBooks()
+      .then(data => { if (active) setBooks(data.items); })
+      .catch(() => { if (active) setError('Could not load the library.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -33,8 +41,8 @@ export default function Library() {
       setFile(null); setTitle(''); setAuthor('');
       if (inputRef.current) inputRef.current.value = '';
       await refresh();
-    } catch (err: any) {
-      setError(err.response?.data?.detail || tr('Could not upload the book.', language));
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, tr('Could not upload the book.', language)));
     } finally { setUploading(false); }
   };
 
@@ -44,7 +52,7 @@ export default function Library() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <form onSubmit={submit} className="bg-white rounded-lg border border-gray-200 p-5 space-y-3 h-fit">
         <h2 className="font-semibold text-gray-900">{tr('Add a book', language)}</h2>
-        {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded bg-red-50 p-2 text-sm text-red-700">{tr(error, language)}</p>}
         <input ref={inputRef} type="file" accept=".txt,.pdf,.docx" onChange={e => setFile(e.target.files?.[0] ?? null)} className="block w-full text-sm" />
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder={tr('Title (optional)', language)} className="w-full rounded border p-2 text-sm" />
         <input value={author} onChange={e => setAuthor(e.target.value)} placeholder={tr('Author (optional)', language)} className="w-full rounded border p-2 text-sm" />

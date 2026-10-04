@@ -1,7 +1,7 @@
 """Label Studio import/export. Predictions are never promoted to human gold."""
 
-from app.nlp.corpus import Poem
 from app.nlp.contracts import ModelSpan
+from app.nlp.corpus import Poem
 
 
 def export_tasks(records: list[Poem]) -> list[dict]:
