@@ -1,12 +1,20 @@
 services:
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
   api:
     build: .
-    ports:
-      - "8000:8000"
     environment:
+      ENVIRONMENT: local
       DATABASE_URL: postgresql+psycopg://metaphor:metaphor@db:5432/metaphors
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-terra}
+      NLP_BACKEND: ${NLP_BACKEND:-baseline}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
     depends_on:
       db:
@@ -19,8 +27,6 @@ services:
       POSTGRES_DB: metaphors
       POSTGRES_USER: metaphor
       POSTGRES_PASSWORD: metaphor
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

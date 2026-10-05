@@ -3,7 +3,6 @@ from pathlib import Path
 
 from docx import Document
 from fastapi import HTTPException, UploadFile, status
-from pypdf import PdfReader
 
 SUPPORTED_SUFFIXES = {".txt", ".pdf", ".docx"}
 
@@ -27,6 +26,12 @@ async def extract_text(upload: UploadFile, max_upload_mb: int) -> tuple[str, str
         if suffix == ".txt":
             text = content.decode("utf-8-sig")
         elif suffix == ".pdf":
+            try:
+                from pypdf import PdfReader
+            except ImportError as exc:
+                raise HTTPException(
+                    status_code=503, detail="PDF support is unavailable: install project dependencies"
+                ) from exc
             reader = PdfReader(BytesIO(content))
             text = "\n".join(page.extract_text() or "" for page in reader.pages)
             if not text.strip():

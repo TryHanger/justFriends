@@ -26,6 +26,17 @@ For a shared local environment, copy `.env.example` to `.env`, set `OPENAI_API_K
 
 ## API contract
 
+The `/standards` UI now shows a sourced teaching catalog, artifact-based life-cycle
+map, and a reproducible JUnit test report. See [the standards review](docs/STANDARDS_REVIEW.md)
+for the scope, verification steps, and remaining gaps. The test-run endpoint is
+available only in local mode. Compose publishes only the site on the host loopback address;
+Nginx proxies API requests inside the Docker network.
+
+To open the site locally, run `docker compose up --build -d` and visit
+`http://localhost:8080/standards`. The default NLP backend in Compose is the
+offline baseline, so example analyses work without an API key. Set
+`NLP_BACKEND=openai` and `OPENAI_API_KEY` to use the configured model.
+
 - `GET /api/v1/health` — service and database status.
 - `POST /api/v1/analyze` — submit text and receive a job ID.
 - `POST /api/v1/analyze/file` — upload `.txt`, text PDF, or `.docx` and receive a job ID.

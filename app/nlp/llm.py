@@ -105,7 +105,7 @@ class OpenAIDetector:
             translation = self.client.responses.create(
                 model=self.model,
                 instructions=(
-                    "Translate each metaphor rationale into clear, concise Russian. "
+                    "Translate each metaphor rationale in Russian, using clear, concise language. "
                     "Return Russian Cyrillic only. Preserve meaning and do not add claims. "
                     "Return exactly one translated string per input item, in the same order."
                 ),

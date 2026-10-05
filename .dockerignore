@@ -1,9 +1,11 @@
 .git
 .venv
-__pycache__
-.pytest_cache
-.ruff_cache
-.env
-*.sqlite3
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/dist
+frontend/.tsbuildinfo
+*.docx
+docs_out.txt
 *.db
-
+.env

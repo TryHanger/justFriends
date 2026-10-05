@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -146,33 +146,52 @@ export interface StandardInfo {
   domain: string;
   purpose: string;
   example_use: string;
+  source_url: string;
+  project_evidence: string[];
 }
 
 export interface LifecycleProcess {
+  id: string;
   name: string;
-  status: string;
+  status: 'evidenced' | 'partial' | 'missing';
   responsible: string;
+  inputs: string[];
+  outputs: string[];
   dependencies: string[];
+  evidence: string[];
+  gaps: string[];
 }
 
 export interface LifecycleState {
   processes: LifecycleProcess[];
-  readiness: string;
+  readiness: 'not_ready' | 'conditional' | 'ready';
   issues: string[];
 }
 
 export interface QualityMetric {
   characteristic: string;
-  score: number;
-  passed: boolean;
-  details: string;
+  criterion: string;
+  method: string;
+  status: 'passed' | 'failed' | 'not_evaluated';
+  observed: string;
+}
+
+export interface QualityCase {
+  name: string;
+  status: 'passed' | 'failed' | 'error' | 'skipped';
+  message: string;
 }
 
 export interface QualityReport {
   metrics: QualityMetric[];
-  overall_status: string;
+  overall_status: 'PASS' | 'FAIL' | 'INCOMPLETE';
   total_tests: number;
   passed_tests: number;
+  failed_tests: number;
+  skipped_tests: number;
+  duration_seconds: number;
+  cases: QualityCase[];
+  limitations: string[];
 }
 
 export const getStandardsReference = async () => {

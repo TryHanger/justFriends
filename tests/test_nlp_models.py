@@ -56,12 +56,15 @@ def test_hybrid_disagreement_does_not_become_confident_gold():
 
 def test_openai_adapter_uses_schema_and_rejects_incomplete():
     captured = {}
+    initial_call = {}
     calls = 0
 
     def create(**kwargs):
         nonlocal calls
         calls += 1
         captured.update(kwargs)
+        if calls == 1:
+            initial_call.update(kwargs)
         if calls == 2:
             return SimpleNamespace(
                 status="completed",
@@ -77,8 +80,8 @@ def test_openai_adapter_uses_schema_and_rejects_incomplete():
     assert result.model_version == "openai:test"
     assert captured["text"]["format"]["strict"] is True
     assert "in Russian" in captured["instructions"]
-    assert "exclusively in Russian" in captured["text"]["format"]["schema"]["$defs"]["ModelSpan"]["properties"]["rationale"]["description"]
-    assert json.loads(captured["input"])["poem"] == "心海"
+    assert "exclusively in Russian" in initial_call["text"]["format"]["schema"]["$defs"]["ModelSpan"]["properties"]["rationale"]["description"]
+    assert json.loads(initial_call["input"])["poem"] == "心海"
     assert result.metaphors[0].rationale.startswith("Образ моря")
     client.responses.create = lambda **_: SimpleNamespace(status="incomplete")
     with pytest.raises(ValueError):
@@ -90,7 +93,8 @@ def test_parse_output_repairs_wrong_offsets_only_for_unique_exact_span():
     result = parse_output(raw, "前心海", "zh", "test")
     assert [(item.text, item.start, item.end) for item in result.metaphors] == [("心海", 1, 3)]
 
-    ambiguous = parse_output(raw, "心海和心海", "zh", "test")
+    wrong_offset = json.dumps({"language": "zh", "metaphors": [span().model_copy(update={"start": 1, "end": 3}).model_dump()]})
+    ambiguous = parse_output(wrong_offset, "心海和心海", "zh", "test")
     assert ambiguous.metaphors == []
     assert "omitted" in ambiguous.warnings[-1]
 
