@@ -36,13 +36,14 @@ def test_api_persist_retrieve_and_errors(monkeypatch):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.pool import StaticPool
-    from app.core.config import get_settings
-    from app.services.analyzer import get_pipeline
+
     from app.api.v1.routes import analyses as analysis_routes
     from app.api.v1.routes.analyses import router
+    from app.core.config import get_settings
     from app.db.base import Base
     from app.db.session import get_db
     from app.services import analysis_jobs
+    from app.services.analyzer import get_pipeline
 
     monkeypatch.setenv("NLP_BACKEND", "baseline")
     get_settings.cache_clear()

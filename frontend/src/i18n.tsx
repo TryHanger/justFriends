@@ -1,24 +1,6 @@
-import { createContext, useContext, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-
-type Language = 'ru' | 'en';
-const LanguageContext = createContext<{ language: Language; setLanguage: (value: Language) => void }>({
-  language: 'ru', setLanguage: () => undefined,
-});
-
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() =>
-    localStorage.getItem('metaphor-ui-language') === 'en' ? 'en' : 'ru'
-  );
-  const value = useMemo(() => ({
-    language,
-    setLanguage: (next: Language) => {
-      localStorage.setItem('metaphor-ui-language', next);
-      setLanguage(next);
-    },
-  }), [language]);
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
-}
+import { useContext } from 'react';
+import { LanguageContext } from './LanguageContext';
+import type { Language } from './LanguageContext';
 
 export function useLanguage() { return useContext(LanguageContext); }
 
@@ -35,7 +17,7 @@ const ru: Record<string, string> = {
   'Chinese (zh)': 'Китайский (zh)', 'Kazakh (kk)': 'Казахский (kk)', 'Poem Text': 'Текст стихотворения',
   'Paste poem text here...': 'Вставьте текст стихотворения…', OR: 'ИЛИ', 'Upload Document': 'Загрузить документ',
   Remove: 'Удалить', Analyze: 'Анализировать', 'Recent Analyses': 'Последние анализы',
-  'Could not load analysis history. Check that the backend is running at http://localhost:8000.': 'Не удалось загрузить историю. Проверьте, запущен ли сервер: http://localhost:8000.',
+  'Could not load analysis history. Check that the backend is available.': 'Не удалось загрузить историю. Проверьте доступность сервера.',
   'Please provide text or select a file.': 'Введите текст или выберите файл.', 'Failed to submit analysis.': 'Не удалось отправить текст на анализ.',
   'Text input': 'Ввод текста', 'No analyses yet. Submit your first poem!': 'Пока нет анализов. Отправьте первое стихотворение!',
   ID: 'ID', Source: 'Источник', Status: 'Статус', Date: 'Дата',
@@ -65,6 +47,7 @@ const ru: Record<string, string> = {
   'Text Input': 'Ввод текста', 'Analysis in progress...': 'Анализ выполняется…',
   "This may take a few moments. We'll automatically refresh.": 'Это может занять некоторое время. Страница обновляется автоматически.',
   'Analysis Failed': 'Ошибка анализа', 'An unknown error occurred during analysis.': 'Во время анализа произошла неизвестная ошибка.',
+  'Analysis warnings': 'Предупреждения анализа', 'This analysis needs manual review.': 'Требуется ручная проверка анализа.',
   'Found Metaphors': 'Найденные метафоры', 'No metaphors detected in this document.': 'В документе метафоры не обнаружены.',
 };
 

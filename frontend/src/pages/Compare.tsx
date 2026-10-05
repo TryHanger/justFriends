@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { listAnalyses, compareAnalyses, compareSemanticAnalyses } from '../api';
+import { getApiErrorMessage } from '../apiErrors';
 import type { AnalysisResponse, AggregateCompareResponse, SemanticCompareResponse } from '../api';
 import { BarChart2, Loader2, AlertCircle } from 'lucide-react';
 import { tr, useLanguage } from '../i18n';
@@ -17,20 +18,18 @@ export default function Compare() {
   const [matchFilter, setMatchFilter] = useState<'all' | 'high'>('all');
 
   useEffect(() => {
-    fetchAnalyses();
+    let active = true;
+    void listAnalyses(50, 0)
+      .then(data => {
+        if (active) setAnalyses(data.items.filter(a => a.status === 'completed' && a.result));
+      })
+      .catch(err => {
+        console.error(err);
+        if (active) setError('Could not load analysis history. Check that the backend is available.');
+      })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
-
-  const fetchAnalyses = async () => {
-    try {
-      const data = await listAnalyses(50, 0); // fetch more for comparison
-      setAnalyses(data.items.filter(a => a.status === 'completed' && a.result));
-    } catch (err) {
-      console.error(err);
-      setError(tr('Could not load analysis history. Check that the backend is running at http://localhost:8000.', language));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleSelect = (id: number) => {
     setSelectedIds(prev =>
@@ -54,9 +53,9 @@ export default function Compare() {
     try {
       const res = await compareAnalyses(selectedIds);
       setCompareResult(res);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.response?.data?.detail || tr('Failed to compare.', language));
+      setError(getApiErrorMessage(err, tr('Failed to compare.', language)));
       setComparing(false);
       return;
     }
@@ -112,7 +111,7 @@ export default function Compare() {
       {error && (
         <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
-          {typeof error === 'string' ? error : JSON.stringify(error)}
+          {tr(error, language)}
         </div>
       )}
 

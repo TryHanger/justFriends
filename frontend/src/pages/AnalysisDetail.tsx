@@ -59,6 +59,8 @@ export default function AnalysisDetail() {
   const isComplete = analysis.status === 'completed';
   const isFailed = analysis.status === 'failed';
   const metaphors = analysis.result?.metaphors || [];
+  const needsReview = analysis.result?.needs_review === true;
+  const warnings = analysis.result?.warnings ?? [];
 
   return (
     <div className="space-y-6">
@@ -122,6 +124,17 @@ export default function AnalysisDetail() {
 
       {isComplete && (
         <div className="space-y-4">
+          {(needsReview || warnings.length > 0) && (
+            <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+              <h2 className="font-semibold">{tr('Analysis warnings', language)}</h2>
+              {needsReview && <p className="mt-1">{tr('This analysis needs manual review.', language)}</p>}
+              {warnings.length > 0 && (
+                <ul className="mt-2 list-disc pl-5">
+                  {warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-gray-900">{tr('Found Metaphors', language)} ({metaphors.length})</h2>
             <div className="flex gap-2">

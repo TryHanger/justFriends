@@ -2,6 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+
 class StandardInfo(BaseModel):
     designation: str
     organization: str
@@ -27,6 +28,7 @@ class LifecycleState(BaseModel):
     processes: list[LifecycleProcess]
     readiness: Literal["not_ready", "conditional", "ready"]
     issues: list[str]
+    last_checked_at: str | None = None
 
 
 class QualityCase(BaseModel):

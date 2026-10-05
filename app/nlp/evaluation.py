@@ -40,16 +40,16 @@ def evaluate(gold: list[Poem], predictions: dict[str, AnalysisResult]) -> dict:
             predicted = predictions[record.id].metaphors
             for name, typed in (("metaphor_detection", False), ("typed_figures", True)):
 
-                def keys(spans):
+                def keys(spans, typed):
                     return {
                         (s.start, s.end, s.label) if typed else (s.start, s.end)
                         for s in spans
                         if typed or s.label in METAPHOR_LABELS
                     }
 
-                expected, actual = keys(record.spans), keys(predicted)
+                expected, actual = keys(record.spans, typed), keys(predicted, typed)
                 delta = (len(expected & actual), len(actual - expected), len(expected - actual))
-                counts[name] = [a + b for a, b in zip(counts[name], delta)]
+                counts[name] = [a + b for a, b in zip(counts[name], delta, strict=False)]
             by_bounds = {(s.start, s.end): s for s in predicted}
             for target in record.spans:
                 match = by_bounds.get((target.start, target.end))

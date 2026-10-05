@@ -6,7 +6,7 @@ import pytest
 
 from app.nlp.comparison import CrossLanguageMatcher
 from app.nlp.hybrid import HybridDetector
-from app.nlp.llm import OpenAIDetector, OllamaDetector, parse_output
+from app.nlp.llm import OllamaDetector, OpenAIDetector, parse_output
 from app.nlp.xlmr import align_labels, decode_bio, token_windows
 from app.schemas.analysis import AnalysisResult
 from app.schemas.comparison import ComparisonItem
@@ -55,20 +55,16 @@ def test_hybrid_disagreement_does_not_become_confident_gold():
 
 
 def test_openai_adapter_uses_schema_and_rejects_incomplete():
-    captured = {}
-    initial_call = {}
-    calls = 0
+    captured = []
 
     def create(**kwargs):
-        nonlocal calls
-        calls += 1
-        captured.update(kwargs)
-        if calls == 1:
-            initial_call.update(kwargs)
-        if calls == 2:
+        captured.append(kwargs)
+        if len(captured) == 2:
             return SimpleNamespace(
                 status="completed",
-                output_text=json.dumps({"translations": ["Образ моря передаёт внутреннее переживание лирического героя."]}),
+                output_text=json.dumps(
+                    {"translations": ["Образ моря передаёт внутреннее переживание лирического героя."]}
+                ),
             )
         return SimpleNamespace(
             status="completed",
@@ -78,10 +74,19 @@ def test_openai_adapter_uses_schema_and_rejects_incomplete():
     client = SimpleNamespace(responses=SimpleNamespace(create=create))
     result = OpenAIDetector("test", "test", client).analyze("心海", "zh")
     assert result.model_version == "openai:test"
-    assert captured["text"]["format"]["strict"] is True
-    assert "in Russian" in captured["instructions"]
-    assert "exclusively in Russian" in initial_call["text"]["format"]["schema"]["$defs"]["ModelSpan"]["properties"]["rationale"]["description"]
-    assert json.loads(initial_call["input"])["poem"] == "心海"
+    assert len(captured) == 2
+    analysis_request, translation_request = captured
+    assert analysis_request["text"]["format"]["strict"] is True
+    assert "in Russian" in analysis_request["instructions"]
+    analysis_schema = analysis_request["text"]["format"]["schema"]
+    rationale_schema = analysis_schema["$defs"]["ModelSpan"]["properties"]["rationale"]
+    assert "exclusively in Russian" in rationale_schema["description"]
+    assert json.loads(analysis_request["input"]) == {"requested_language": "zh", "poem": "心海"}
+    assert translation_request["text"]["format"]["strict"] is True
+    assert translation_request["text"]["format"]["schema"]["required"] == ["translations"]
+    assert json.loads(translation_request["input"]) == {
+        "items": [{"expression": "心海", "rationale": "test"}]
+    }
     assert result.metaphors[0].rationale.startswith("Образ моря")
     client.responses.create = lambda **_: SimpleNamespace(status="incomplete")
     with pytest.raises(ValueError):
@@ -93,14 +98,24 @@ def test_parse_output_repairs_wrong_offsets_only_for_unique_exact_span():
     result = parse_output(raw, "前心海", "zh", "test")
     assert [(item.text, item.start, item.end) for item in result.metaphors] == [("心海", 1, 3)]
 
-    wrong_offset = json.dumps({"language": "zh", "metaphors": [span().model_copy(update={"start": 1, "end": 3}).model_dump()]})
-    ambiguous = parse_output(wrong_offset, "心海和心海", "zh", "test")
+    ambiguous = parse_output(raw, "前心海和心海", "zh", "test")
     assert ambiguous.metaphors == []
     assert "omitted" in ambiguous.warnings[-1]
 
 
+@pytest.mark.parametrize(("start", "end"), [(0, 2), (3, 5)])
+def test_parse_output_preserves_valid_offsets_for_repeated_exact_span(start, end):
+    raw = json.dumps({"language": "zh", "metaphors": [span(start=start).model_dump()]})
+    result = parse_output(raw, "心海和心海", "zh", "test")
+    assert [(item.text, item.start, item.end) for item in result.metaphors] == [
+        ("心海", start, end)
+    ]
+    assert not any("omitted" in warning for warning in result.warnings)
+
+
 def test_ollama_http_adapter(monkeypatch):
     import io
+
     import app.nlp.llm as module
 
     captured = {}
@@ -176,6 +191,7 @@ def test_real_tiny_xlmr_train_save_load_infer(tmp_path):
     transformers = pytest.importorskip("transformers")
     pytest.importorskip("torch")
     from tokenizers import Tokenizer, models, pre_tokenizers
+
     from app.nlp.corpus import write_corpus
     from app.nlp.training import train_xlmr
     from app.nlp.xlmr import XLMRDetector
@@ -228,7 +244,8 @@ def test_real_tiny_xlmr_train_save_load_infer(tmp_path):
     assert (output / "experiment.json").exists()
 
     # Exercise the real sentence-transformers wrapper on the same tiny local backbone.
-    from sentence_transformers import SentenceTransformer, models as st_models
+    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import models as st_models
 
     transformer = st_models.Transformer(str(output), max_seq_length=16)
     encoder = SentenceTransformer(modules=[transformer, st_models.Pooling(16)], device="cpu")

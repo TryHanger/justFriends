@@ -2,6 +2,8 @@
 .venv
 **/__pycache__
 **/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
 **/node_modules
 **/dist
 frontend/.tsbuildinfo
@@ -9,3 +11,11 @@ frontend/.tsbuildinfo
 docs_out.txt
 *.db
 .env
+*.log
+reports
+coverage
+models
+runs
+data/raw
+data/processed
+data/gold

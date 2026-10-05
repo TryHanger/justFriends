@@ -149,7 +149,7 @@ class OpenAIDetector:
                 update={
                     "metaphors": [
                         item.model_copy(update={"rationale": rationale})
-                        for item, rationale in zip(result.metaphors, translations)
+                        for item, rationale in zip(result.metaphors, translations, strict=False)
                     ]
                 }
             )

@@ -46,12 +46,22 @@ PROCESS_DEFS = [
 
 
 def lifecycle_state(root: Path = ROOT) -> LifecycleState:
+    from app.services.quality import quality_snapshot
+
+    run_status, checked_at, run_error = quality_snapshot()
     processes = []
     outputs_by_id = {definition[0]: definition[5] for definition in PROCESS_DEFS}
     for ident, name, owner, deps, artifacts, outputs, fixed_gaps in PROCESS_DEFS:
         existing = [path for path in artifacts if (root / path).is_file()]
         missing = [f"Отсутствует {path}" for path in artifacts if path not in existing]
         gaps = missing + fixed_gaps
+        if ident == "verification":
+            if run_status in {None, "running"}:
+                gaps = missing + ["Автоматические тесты ещё не завершены"]
+            elif run_status != "PASS":
+                gaps = missing + [f"Последняя проверка: {run_status}. {run_error or ''}".strip()]
+            else:
+                gaps = missing
         status = "missing" if not existing else "partial" if gaps else "evidenced"
         processes.append(LifecycleProcess(
             id=ident, name=name, responsible=owner,
@@ -67,7 +77,8 @@ def lifecycle_state(root: Path = ROOT) -> LifecycleState:
         readiness = "conditional"
     else:
         readiness = "ready"
-    return LifecycleState(processes=processes, readiness=readiness, issues=issues)
+    return LifecycleState(processes=processes, readiness=readiness, issues=issues,
+                          last_checked_at=checked_at)
 
 
 def search_standards(query: str, domain: str | None = None) -> list[StandardInfo]:

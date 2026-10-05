@@ -1,5 +1,6 @@
 """Public NLP entry point independent of HTTP, files, and the database."""
 
+from app.core.limits import MAX_ANALYSIS_CHARS
 from app.nlp.contracts import NLPInputError, validate_result
 
 
@@ -8,7 +9,7 @@ class MetaphorPipeline:
         self.detector, self.classifier = detector, classifier
 
     def analyze(self, text: str, language: str = "auto"):
-        if not text.strip() or len(text) > 100000:
+        if not text.strip() or len(text) > MAX_ANALYSIS_CHARS:
             raise NLPInputError("Text must contain 1..100000 characters and not be whitespace only")
         result = self.detector.analyze(text, language)
         if self.classifier:

@@ -1,5 +1,6 @@
 """Behavioral checks for the standards dashboard, not copies of its implementation."""
 
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.v1.routes import standards as routes
-from app.services.quality import run_quality_suite
+from app.services.quality import quality_snapshot, run_quality_suite
 from app.services.standards import STANDARDS, lifecycle_state, search_standards
 
 
@@ -56,6 +57,8 @@ def test_lifecycle_tracks_real_artifacts_and_gaps(tmp_path):
 
 
 def test_quality_runner_counts_junit_cases_without_guesses(monkeypatch, tmp_path):
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_example.py").write_text("def test_example(): pass")
     def fake_run(command, **kwargs):
         path = Path(next(arg.split("=", 1)[1] for arg in command if arg.startswith("--junitxml=")))
         path.write_text('''<testsuite><testcase classname="api" name="ok"/>
@@ -72,13 +75,41 @@ def test_quality_runner_counts_junit_cases_without_guesses(monkeypatch, tmp_path
     assert next(m for m in report.metrics if m.characteristic == "Security").status == "not_evaluated"
 
 
-def test_quality_runner_reports_missing_junit_as_incomplete(monkeypatch, tmp_path):
+def test_quality_runner_rejects_missing_junit(monkeypatch, tmp_path):
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_example.py").write_text("def test_example(): pass")
     monkeypatch.setattr("app.services.quality.subprocess.run", lambda *a, **k: SimpleNamespace(
-        returncode=2, stdout="collection failed", stderr=""))
-    report = run_quality_suite(tmp_path)
-    assert report.overall_status == "INCOMPLETE"
-    assert report.total_tests == 0
-    assert "collection failed" in report.limitations[-1]
+        returncode=0, stdout=b"", stderr=b""))
+    with pytest.raises(Exception) as exc:
+        run_quality_suite(tmp_path)
+    assert getattr(exc.value, "status_code", None) == 503
+    assert quality_snapshot()[0] == "unavailable"
+
+
+def test_quality_runner_times_out_without_disclosing_paths(monkeypatch, tmp_path):
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_example.py").write_text("def test_example(): pass")
+
+    def timeout(command, **kwargs):
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr("app.services.quality.subprocess.run", timeout)
+    with pytest.raises(Exception) as exc:
+        run_quality_suite(tmp_path)
+    assert getattr(exc.value, "status_code", None) == 504
+    assert "test_example.py" not in str(exc.value)
+
+
+def test_quality_runner_rejects_concurrent_run():
+    from app.services import quality
+
+    assert quality._run_lock.acquire(blocking=False)
+    try:
+        with pytest.raises(Exception) as exc:
+            run_quality_suite()
+        assert getattr(exc.value, "status_code", None) == 409
+    finally:
+        quality._run_lock.release()
 
 
 def test_quality_endpoint_is_disabled_outside_local(monkeypatch):

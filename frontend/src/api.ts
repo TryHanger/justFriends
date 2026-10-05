@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? '/api/v1';
+const API_BASE = ((import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_BASE ?? '').trim() || '/api/v1').replace(/\/+$/, '');
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -21,6 +21,8 @@ export interface AnalysisResult {
   language: string;
   model_version: string;
   metaphors: Metaphor[];
+  needs_review?: boolean;
+  warnings?: string[];
 }
 
 export interface AnalysisResponse {
@@ -160,12 +162,14 @@ export interface LifecycleProcess {
   dependencies: string[];
   evidence: string[];
   gaps: string[];
+  details?: string;
 }
 
 export interface LifecycleState {
   processes: LifecycleProcess[];
   readiness: 'not_ready' | 'conditional' | 'ready';
   issues: string[];
+  last_checked_at?: string | null;
 }
 
 export interface QualityMetric {

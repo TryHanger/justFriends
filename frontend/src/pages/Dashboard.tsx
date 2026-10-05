@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, FileText, Plus, Loader2 } from 'lucide-react';
 import { listAnalyses, submitText, submitFile } from '../api';
+import { getApiErrorMessage } from '../apiErrors';
 import type { AnalysisResponse } from '../api';
 import { tr, useLanguage } from '../i18n';
 
@@ -10,7 +11,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
   const [loadingList, setLoadingList] = useState(true);
-  const [listError, setListError] = useState('');
+  const [listError, setListError] = useState(false);
   
   const [text, setText] = useState('');
   const [analysisLanguage, setAnalysisLanguage] = useState('auto');
@@ -20,21 +21,16 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchAnalyses();
+    let active = true;
+    void listAnalyses()
+      .then(data => { if (active) setAnalyses(data.items); })
+      .catch(err => {
+        console.error(err);
+        if (active) setListError(true);
+      })
+      .finally(() => { if (active) setLoadingList(false); });
+    return () => { active = false; };
   }, []);
-
-  const fetchAnalyses = async () => {
-    try {
-      setLoadingList(true);
-      const data = await listAnalyses();
-      setAnalyses(data.items);
-    } catch (err) {
-      console.error(err);
-      setListError(tr('Could not load analysis history. Check that the backend is running at http://localhost:8000.', uiLanguage));
-    } finally {
-      setLoadingList(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,9 +48,9 @@ export default function Dashboard() {
         res = await submitText(text, analysisLanguage);
       }
       navigate(`/analyses/${res.analysis_id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.response?.data?.detail || tr('Failed to submit analysis.', uiLanguage));
+      setError(getApiErrorMessage(err, tr('Failed to submit analysis.', uiLanguage)));
       setSubmitting(false);
     }
   };
@@ -152,7 +148,7 @@ export default function Dashboard() {
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
             </div>
           ) : listError ? (
-            <div className="text-center text-red-700 p-8 bg-red-50 rounded-lg">{listError}</div>
+            <div className="text-center text-red-700 p-8 bg-red-50 rounded-lg">{tr('Could not load analysis history. Check that the backend is available.', uiLanguage)}</div>
           ) : analyses.length === 0 ? (
             <div className="text-center text-gray-500 p-8 border-2 border-dashed border-gray-200 rounded-lg">
               {tr('No analyses yet. Submit your first poem!', uiLanguage)}

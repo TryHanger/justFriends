@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getLifecycleState, getStandardsReference, runQualityChecks } from '../api';
 import type { LifecycleState, QualityReport, StandardInfo } from '../api';
+import { getApiErrorMessage } from '../apiErrors';
 
 type Tab = 'catalog' | 'lifecycle' | 'quality';
 const badge = (tone: 'good' | 'warn' | 'bad' | 'neutral') => ({
@@ -18,13 +19,16 @@ export default function Standards() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
+  const requestVersion = useRef(0);
 
-  useEffect(() => {
+  const loadData = useCallback(() => {
+    const version = ++requestVersion.current;
     Promise.all([getStandardsReference(), getLifecycleState()])
-      .then(([reference, state]) => { setStandards(reference); setLifecycle(state); })
-      .catch(() => setError('Не удалось получить данные проекта. Проверьте запуск API.'))
-      .finally(() => setLoading(false));
+      .then(([reference, state]) => { if (version === requestVersion.current) { setStandards(reference); setLifecycle(state); } })
+      .catch(e => { if (version === requestVersion.current) setError(getApiErrorMessage(e, 'Не удалось получить данные проекта. Проверьте запуск API.')); })
+      .finally(() => { if (version === requestVersion.current) setLoading(false); });
   }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const domains = useMemo(() => [...new Set(standards.map(s => s.domain))].sort(), [standards]);
   const visible = useMemo(() => standards.filter(s => {
@@ -40,10 +44,13 @@ export default function Standards() {
   }, {})).sort((a, b) => b[1] - a[1]), [standards]);
 
   async function runChecks() {
-    setRunning(true); setError('');
+    setRunning(true); setError(''); setQuality(null);
     try { setQuality(await runQualityChecks()); }
-    catch { setError('Проверка недоступна. Запуск тестов разрешён только в локальном режиме API.'); }
-    finally { setRunning(false); }
+    catch (e) { setError(getApiErrorMessage(e, 'Проверка недоступна.')); }
+    finally {
+      setRunning(false);
+      try { setLifecycle(await getLifecycleState()); } catch { /* The quality result remains visible. */ }
+    }
   }
 
   const tabLabels: Record<Tab, string> = { catalog: 'Каталог', lifecycle: 'Жизненный цикл', quality: 'Качество и тесты' };
@@ -59,7 +66,7 @@ export default function Standards() {
       </div>
     </section>
 
-    {error && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</div>}
+    {error && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error} <button onClick={() => { setLoading(true); setError(''); loadData(); }} className="ml-2 font-semibold underline">Повторить загрузку</button></div>}
     <div role="tablist" aria-label="Разделы стандартов" className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
       {(Object.keys(tabLabels) as Tab[]).map(key => <button key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}`}>{tabLabels[key]}</button>)}
     </div>
@@ -90,7 +97,7 @@ export default function Standards() {
     </div>}
 
     {!loading && tab === 'lifecycle' && lifecycle && <div className="space-y-5">
-      <div className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-bold">Готовность: {lifecycle.readiness === 'ready' ? 'готово' : lifecycle.readiness === 'conditional' ? 'условно' : 'не готово'}</h2><p className="mt-1 text-sm text-slate-600">Решение основано на наличии артефактов и обязательной пользовательской валидации. Оно не подтверждает эксплуатационную готовность без испытаний.</p></div>
+      <div className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-bold">Готовность: {lifecycle.readiness === 'ready' ? 'готово' : lifecycle.readiness === 'conditional' ? 'условно' : 'не готово'}</h2><p className="mt-1 text-sm text-slate-600">Решение основано на наличии артефактов и обязательной пользовательской валидации. Оно не подтверждает эксплуатационную готовность без испытаний.</p>{lifecycle.last_checked_at && <p className="mt-2 text-xs text-slate-500">Последняя проверка: {new Date(lifecycle.last_checked_at).toLocaleString('ru-RU')}</p>}</div>
       <div className="grid gap-4 md:grid-cols-2">{lifecycle.processes.map(p => <article key={p.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex justify-between gap-2"><h3 className="font-bold">{p.name}</h3><span className={`h-fit rounded-full px-2 py-1 text-xs font-semibold ${badge(p.status === 'evidenced' ? 'good' : p.status === 'partial' ? 'warn' : 'bad')}`}>{p.status === 'evidenced' ? 'есть свидетельства' : p.status === 'partial' ? 'частично' : 'нет свидетельств'}</span></div>
         <p className="mt-1 text-xs text-slate-500">Ответственный: {p.responsible} · Зависит от: {p.dependencies.length ? p.dependencies.join(', ') : 'начала проекта'}</p>

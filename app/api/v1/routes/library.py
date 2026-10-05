@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -49,6 +49,8 @@ async def upload_book(
     source_url: str | None = Form(None),
     db: Session = Depends(get_db),
 ) -> AnalysisJobResponse:
+    if language not in {"auto", "zh", "kk"}:
+        raise HTTPException(status_code=422, detail="language must be auto, zh, or kk")
     text, filename = await extract_text(file, settings.max_upload_mb)
     record = create_analysis_job(db, text, language, filename)
     book = BookRecord(

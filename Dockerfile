@@ -8,9 +8,11 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 COPY tests ./tests
 COPY contracts ./contracts
+COPY data/examples ./data/examples
 COPY docs ./docs
 COPY frontend/src ./frontend/src
 COPY ARCHITECTURE.md Dockerfile docker-compose.yml ./
+COPY .github ./.github
 RUN pip install --no-cache-dir '.[dev]'
 
 EXPOSE 8000
