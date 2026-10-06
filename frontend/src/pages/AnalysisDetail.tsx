@@ -61,6 +61,18 @@ export default function AnalysisDetail() {
   const metaphors = analysis.result?.metaphors || [];
   const needsReview = analysis.result?.needs_review === true;
   const warnings = analysis.result?.warnings ?? [];
+  const candidates = analysis.result?.candidates || [];
+  const method = analysis.result?.method || {};
+  const sentimentStyle: Record<string, string> = {
+    positive: 'bg-green-50 text-green-700 ring-green-600/20',
+    neutral: 'bg-gray-50 text-gray-600 ring-gray-500/20',
+    negative: 'bg-red-50 text-red-700 ring-red-600/20',
+  };
+  const usageStyle: Record<string, string> = {
+    metaphorical: 'bg-indigo-50 text-indigo-700 ring-indigo-700/20',
+    literal: 'bg-gray-50 text-gray-600 ring-gray-500/20',
+    unclassified: 'bg-yellow-50 text-yellow-800 ring-yellow-600/20',
+  };
 
   return (
     <div className="space-y-6">
@@ -99,6 +111,16 @@ export default function AnalysisDetail() {
                 <dt className="text-sm font-medium text-gray-500">{tr('Model Version', language)}</dt>
                 <dd className="mt-1 text-sm text-gray-900">{analysis.result.model_version}</dd>
               </div>
+              {typeof method.strategy === 'string' && (
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">{tr('Method', language)}</dt>
+                  <dd className="mt-1 text-sm text-gray-900 font-mono">
+                    {method.strategy as string}
+                    {method.sampling_applied === true && ` · T=${method.temperature}, top-p=${method.top_p}`}
+                    {method.sampling_applied === false && ` · ${tr('provider default decoding', language)}`}
+                  </dd>
+                </div>
+              )}
             </>
           )}
         </dl>
@@ -150,6 +172,13 @@ export default function AnalysisDetail() {
               >
                 <Download className="w-4 h-4" /> CSV
               </a>
+              <a
+                href={getExportUrl(analysis.analysis_id, 'tz')}
+                title={tr('Fields of the technical specification', language)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" /> {tr('TZ format', language)}
+              </a>
             </div>
           </div>
           
@@ -164,9 +193,28 @@ export default function AnalysisDetail() {
                     {tr('Conf:', language)} {(m.confidence * 100).toFixed(0)}%
                   </span>
                 </div>
-                <blockquote className="text-lg font-serif mb-4 border-l-4 border-indigo-200 pl-3 py-1 text-gray-800 bg-gray-50">
+                <blockquote className="text-lg font-serif mb-2 border-l-4 border-indigo-200 pl-3 py-1 text-gray-800 bg-gray-50">
                   "{m.text}"
                 </blockquote>
+                {m.context_sentence && m.context_sentence !== m.text && (
+                  <p className="text-xs text-gray-500 mb-3">{tr('Context:', language)} {m.context_sentence}</p>
+                )}
+                {(m.entity || m.semantic_label || m.sentiment) && (
+                  <div className="flex flex-wrap items-center gap-2 text-sm mb-3">
+                    {m.entity && (
+                      <span className="font-medium text-gray-900">
+                        {m.entity}
+                        {m.entity_type && <span className="text-gray-500 font-normal"> · {tr(m.entity_type, language)}</span>}
+                      </span>
+                    )}
+                    {m.semantic_label && <span className="text-gray-700">→ «{m.semantic_label}»</span>}
+                    {m.sentiment && (
+                      <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${sentimentStyle[m.sentiment]}`}>
+                        {tr(m.sentiment, language)}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm mb-3">
                   <div>
                     <span className="text-gray-500">{tr('Source:', language)}</span> <span className="font-medium text-gray-900">{tr(m.source_domain, language)}</span>
@@ -186,6 +234,46 @@ export default function AnalysisDetail() {
               </div>
             )}
           </div>
+
+          {candidates.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-1">
+                {tr('Entity candidates', language)} ({candidates.length})
+              </h3>
+              <p className="text-sm text-gray-500 mb-4">
+                {tr('Found by the soft lexicon and the model; each is judged literal or metaphorical in context.', language)}
+              </p>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <th className="py-2 pr-4 font-medium">{tr('Entity', language)}</th>
+                      <th className="py-2 pr-4 font-medium">{tr('Type', language)}</th>
+                      <th className="py-2 pr-4 font-medium">{tr('Usage', language)}</th>
+                      <th className="py-2 pr-4 font-medium">{tr('Conventional reading / reasoning', language)}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candidates.map((c) => {
+                      const usage = c.usage_type ?? 'unclassified';
+                      return (
+                        <tr key={`${c.start}-${c.end}`} className="border-b border-gray-100 align-top">
+                          <td className="py-2 pr-4 font-medium text-gray-900">{c.text}</td>
+                          <td className="py-2 pr-4 text-gray-600">{tr(c.entity_type, language)}</td>
+                          <td className="py-2 pr-4">
+                            <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${usageStyle[usage]}`}>
+                              {tr(usage, language)}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-4 text-gray-600">{c.reasoning || c.lexicon_meaning || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

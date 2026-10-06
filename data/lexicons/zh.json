@@ -1,0 +1,555 @@
+{
+  "version": "0.1",
+  "language": "zh",
+  "status": "seed: стартовый словарь, требует проверки филологами; значения — традиционные символические прочтения, а не решение о метафоричности",
+  "matching": "zh: подстрока, длиннейшее совпадение; kk: словоформа, начинающаяся с основы (от 4 букв, с чередованием к/г, қ/ғ, п/б) или из списка forms",
+  "entries": [
+    {
+      "term": "兰",
+      "entity_type": "plant",
+      "meanings": [
+        "благородный муж",
+        "добродетель"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant",
+      "variants": [
+        "蘭",
+        "兰草",
+        "蘭草"
+      ]
+    },
+    {
+      "term": "蕙",
+      "entity_type": "plant",
+      "meanings": [
+        "добродетель",
+        "благоухание души"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "芷",
+      "entity_type": "plant",
+      "meanings": [
+        "чистота помыслов"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "江离",
+      "entity_type": "plant",
+      "meanings": [
+        "добродетель"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant",
+      "variants": [
+        "江離"
+      ]
+    },
+    {
+      "term": "薜荔",
+      "entity_type": "plant",
+      "meanings": [
+        "добродетель"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "椒",
+      "entity_type": "plant",
+      "meanings": [
+        "благоухание",
+        "достоинство"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "萧艾",
+      "entity_type": "plant",
+      "meanings": [
+        "недостойные люди"
+      ],
+      "sentiment": "negative",
+      "source_domain": "plant",
+      "variants": [
+        "蕭艾"
+      ]
+    },
+    {
+      "term": "菊",
+      "entity_type": "plant",
+      "meanings": [
+        "отшельничество",
+        "стойкость"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "梅",
+      "entity_type": "plant",
+      "meanings": [
+        "стойкость",
+        "чистота"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "竹",
+      "entity_type": "plant",
+      "meanings": [
+        "прямота",
+        "стойкость"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "松",
+      "entity_type": "plant",
+      "meanings": [
+        "стойкость",
+        "долголетие"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "柳",
+      "entity_type": "plant",
+      "meanings": [
+        "разлука",
+        "прощание"
+      ],
+      "sentiment": "negative",
+      "source_domain": "plant"
+    },
+    {
+      "term": "莲",
+      "entity_type": "plant",
+      "meanings": [
+        "чистота среди скверны"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant",
+      "variants": [
+        "蓮",
+        "荷"
+      ]
+    },
+    {
+      "term": "桃花",
+      "entity_type": "plant",
+      "meanings": [
+        "красота",
+        "весна"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "落花",
+      "entity_type": "plant",
+      "meanings": [
+        "увядание",
+        "утрата"
+      ],
+      "sentiment": "negative",
+      "source_domain": "plant"
+    },
+    {
+      "term": "浮萍",
+      "entity_type": "plant",
+      "meanings": [
+        "скитания"
+      ],
+      "sentiment": "negative",
+      "source_domain": "plant"
+    },
+    {
+      "term": "飞蓬",
+      "entity_type": "plant",
+      "meanings": [
+        "скиталец"
+      ],
+      "sentiment": "negative",
+      "source_domain": "plant",
+      "variants": [
+        "飛蓬"
+      ]
+    },
+    {
+      "term": "桂",
+      "entity_type": "plant",
+      "meanings": [
+        "благородство"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "狐",
+      "entity_type": "animal",
+      "meanings": [
+        "хитрость",
+        "коварство"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal"
+    },
+    {
+      "term": "鹤",
+      "entity_type": "animal",
+      "meanings": [
+        "долголетие",
+        "отшельник"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal",
+      "variants": [
+        "鶴"
+      ]
+    },
+    {
+      "term": "雁",
+      "entity_type": "animal",
+      "meanings": [
+        "весть",
+        "тоска по дому"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal",
+      "variants": [
+        "鸿雁",
+        "鴻雁"
+      ]
+    },
+    {
+      "term": "鸳鸯",
+      "entity_type": "animal",
+      "meanings": [
+        "супружеская любовь"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal",
+      "variants": [
+        "鴛鴦"
+      ]
+    },
+    {
+      "term": "杜鹃",
+      "entity_type": "animal",
+      "meanings": [
+        "скорбь",
+        "тоска по родине"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal",
+      "variants": [
+        "杜鵑",
+        "子规",
+        "子規"
+      ]
+    },
+    {
+      "term": "猿",
+      "entity_type": "animal",
+      "meanings": [
+        "печаль"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal",
+      "variants": [
+        "猨"
+      ]
+    },
+    {
+      "term": "凤",
+      "entity_type": "animal",
+      "meanings": [
+        "благородный муж",
+        "мудрец"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal",
+      "variants": [
+        "鳳",
+        "凤凰",
+        "鳳凰"
+      ]
+    },
+    {
+      "term": "龙",
+      "entity_type": "animal",
+      "meanings": [
+        "государь",
+        "сила"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal",
+      "variants": [
+        "龍"
+      ]
+    },
+    {
+      "term": "鸷鸟",
+      "entity_type": "animal",
+      "meanings": [
+        "несгибаемость"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal",
+      "variants": [
+        "鷙鳥"
+      ]
+    },
+    {
+      "term": "鸩",
+      "entity_type": "animal",
+      "meanings": [
+        "клеветник"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal",
+      "variants": [
+        "鴆"
+      ]
+    },
+    {
+      "term": "马",
+      "entity_type": "animal",
+      "meanings": [
+        "талант",
+        "странствие"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "animal",
+      "variants": [
+        "馬"
+      ]
+    },
+    {
+      "term": "蝉",
+      "entity_type": "animal",
+      "meanings": [
+        "чистота",
+        "бренность"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "animal",
+      "variants": [
+        "蟬"
+      ]
+    },
+    {
+      "term": "乌鸦",
+      "entity_type": "animal",
+      "meanings": [
+        "дурное предзнаменование",
+        "запустение"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal",
+      "variants": [
+        "烏鴉"
+      ]
+    },
+    {
+      "term": "明月",
+      "entity_type": "celestial",
+      "meanings": [
+        "тоска по дому",
+        "разлука"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "light"
+    },
+    {
+      "term": "月",
+      "entity_type": "celestial",
+      "meanings": [
+        "тоска по дому",
+        "разлука"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "light"
+    },
+    {
+      "term": "夕阳",
+      "entity_type": "celestial",
+      "meanings": [
+        "старость",
+        "закат жизни"
+      ],
+      "sentiment": "negative",
+      "source_domain": "light",
+      "variants": [
+        "夕陽",
+        "斜阳",
+        "斜陽"
+      ]
+    },
+    {
+      "term": "浮云",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "скитания",
+        "препятствие"
+      ],
+      "sentiment": "negative",
+      "source_domain": "nature",
+      "variants": [
+        "浮雲"
+      ]
+    },
+    {
+      "term": "云",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "скитания"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "nature",
+      "variants": [
+        "雲"
+      ]
+    },
+    {
+      "term": "风",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "перемены",
+        "влияние"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "nature",
+      "variants": [
+        "風"
+      ]
+    },
+    {
+      "term": "雨",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "печаль"
+      ],
+      "sentiment": "negative",
+      "source_domain": "water"
+    },
+    {
+      "term": "雪",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "чистота"
+      ],
+      "sentiment": "positive",
+      "source_domain": "nature"
+    },
+    {
+      "term": "霜",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "старость",
+        "седина"
+      ],
+      "sentiment": "negative",
+      "source_domain": "nature"
+    },
+    {
+      "term": "露",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "бренность"
+      ],
+      "sentiment": "negative",
+      "source_domain": "water"
+    },
+    {
+      "term": "流水",
+      "entity_type": "landscape",
+      "meanings": [
+        "течение времени"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "water"
+    },
+    {
+      "term": "江",
+      "entity_type": "landscape",
+      "meanings": [
+        "время",
+        "печаль"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "water"
+    },
+    {
+      "term": "山",
+      "entity_type": "landscape",
+      "meanings": [
+        "незыблемость"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "space"
+    },
+    {
+      "term": "春",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "молодость",
+        "надежда"
+      ],
+      "sentiment": "positive",
+      "source_domain": "time"
+    },
+    {
+      "term": "秋",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "печаль",
+        "увядание"
+      ],
+      "sentiment": "negative",
+      "source_domain": "time"
+    },
+    {
+      "term": "心",
+      "entity_type": "abstract",
+      "meanings": [
+        "душа",
+        "чувства"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "body"
+    },
+    {
+      "term": "愁",
+      "entity_type": "abstract",
+      "meanings": [
+        "тоска"
+      ],
+      "sentiment": "negative",
+      "source_domain": "emotion"
+    },
+    {
+      "term": "梦",
+      "entity_type": "abstract",
+      "meanings": [
+        "иллюзия",
+        "мечта"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "mind",
+      "variants": [
+        "夢"
+      ]
+    }
+  ]
+}

@@ -36,6 +36,7 @@ from app.schemas.analysis import (
 from app.schemas.comparison import ComparisonItem, ComparisonResult
 from app.services.analysis_jobs import create_analysis_job, process_analysis, read_result
 from app.services.document_loader import extract_text
+from app.services.export import TZ_COLUMNS, tz_rows
 
 router = APIRouter()
 settings = get_settings()
@@ -141,7 +142,7 @@ def list_analyses(
 @router.get("/analyses/{analysis_id}/export")
 def export_analysis(
     analysis_id: int,
-    format: Literal["json", "csv"] = "json",
+    format: Literal["json", "csv", "tz"] = "json",
     db: Session = Depends(get_db),
 ) -> Response:
     record = db.get(AnalysisRecord, analysis_id)
@@ -168,28 +169,34 @@ def export_analysis(
             headers={"Content-Disposition": f'attachment; filename="analysis-{record.id}.json"'},
         )
 
+    rows = tz_rows(result, record.source_text)
+    if format == "tz":
+        content = json.dumps(
+            {"analysis_id": record.id, "language": result.language, "items": rows},
+            ensure_ascii=False,
+            indent=2,
+        )
+        return Response(
+            content=content,
+            media_type="application/json; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="analysis-{record.id}-tz.json"'
+            },
+        )
+
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(
-        [
-            "analysis_id", "language", "text", "start", "end", "label",
-            "source_domain", "target_domain", "confidence", "rationale",
-        ]
-    )
-    for span in result.metaphors:
+    writer.writerow(["analysis_id", "language", *TZ_COLUMNS, "start", "end", "confidence"])
+    for row in rows:
         values = [
             record.id,
             result.language,
-            span.text,
-            span.start,
-            span.end,
-            span.label,
-            span.source_domain,
-            span.target_domain,
-            span.confidence,
-            span.rationale,
+            *(row[column] for column in TZ_COLUMNS),
+            row["start"],
+            row["end"],
+            row["confidence"],
         ]
-        writer.writerow([_csv_safe(value) for value in values])
+        writer.writerow([_csv_safe("" if value is None else value) for value in values])
     return Response(
         content="\ufeff" + buffer.getvalue(),
         media_type="text/csv; charset=utf-8",
@@ -233,6 +240,11 @@ def compare_analyses(
         labels: Counter[str] = Counter()
         source_domains: Counter[str] = Counter()
         target_domains: Counter[str] = Counter()
+        sentiments: Counter[str] = Counter()
+        entity_types: Counter[str] = Counter()
+        pairs: Counter[str] = Counter()
+        semantic: Counter[str] = Counter()
+        usage: Counter[str] = Counter()
         metaphor_count = 0
         for record in language_records:
             result = read_result(record)
@@ -242,12 +254,26 @@ def compare_analyses(
             labels.update(span.label for span in result.metaphors)
             source_domains.update(span.source_domain for span in result.metaphors)
             target_domains.update(span.target_domain for span in result.metaphors)
+            sentiments.update(span.sentiment for span in result.metaphors if span.sentiment)
+            entity_types.update(span.entity_type for span in result.metaphors if span.entity_type)
+            pairs.update(f"{s.source_domain}→{s.target_domain}" for s in result.metaphors)
+            semantic.update(
+                f"{s.entity or s.text}: {s.semantic_label}"
+                for s in result.metaphors
+                if s.semantic_label
+            )
+            usage.update(c.usage_type or "unclassified" for c in result.candidates)
         output[language] = ComparisonGroup(
             analysis_count=len(language_records),
             metaphor_count=metaphor_count,
             by_label=dict(labels),
             by_source_domain=dict(source_domains),
             by_target_domain=dict(target_domains),
+            by_sentiment=dict(sentiments),
+            by_entity_type=dict(entity_types),
+            by_domain_pair=dict(pairs.most_common(30)),
+            top_semantic_labels=dict(semantic.most_common(30)),
+            candidate_usage=dict(usage),
         )
 
     return CompareResponse(

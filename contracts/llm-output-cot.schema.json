@@ -1,0 +1,230 @@
+{
+  "$defs": {
+    "LLMLiteral": {
+      "additionalProperties": false,
+      "description": "A candidate entity that the model judged to be used literally.",
+      "properties": {
+        "text": {
+          "description": "Exact substring of the poem",
+          "type": "string"
+        },
+        "start": {
+          "description": "Zero-based Unicode code point offset",
+          "type": "integer"
+        },
+        "end": {
+          "description": "Exclusive end offset",
+          "type": "integer"
+        },
+        "entity_type": {
+          "enum": [
+            "plant",
+            "animal",
+            "natural_phenomenon",
+            "landscape",
+            "celestial",
+            "body",
+            "person",
+            "artifact",
+            "abstract",
+            "other"
+          ],
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "entity_type",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "LLMMetaphorCoT": {
+      "additionalProperties": false,
+      "description": "Chain-of-Thought variant: MIP/MIPVU steps are generated before the decision fields.",
+      "properties": {
+        "text": {
+          "description": "Exact substring of the poem",
+          "type": "string"
+        },
+        "start": {
+          "description": "Zero-based Unicode code point offset",
+          "type": "integer"
+        },
+        "end": {
+          "description": "Exclusive end offset",
+          "type": "integer"
+        },
+        "basic_meaning": {
+          "description": "MIP step 2: concrete basic meaning. Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        },
+        "contextual_meaning": {
+          "description": "MIP step 1: meaning in this context. Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        },
+        "contrast": {
+          "description": "MIP step 3: does the contextual meaning contrast with the basic one and is it understood by comparison with it? Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        },
+        "entity": {
+          "description": "Key image word inside text, e.g. 兰 or бөрі",
+          "type": "string"
+        },
+        "entity_type": {
+          "enum": [
+            "plant",
+            "animal",
+            "natural_phenomenon",
+            "landscape",
+            "celestial",
+            "body",
+            "person",
+            "artifact",
+            "abstract",
+            "other"
+          ],
+          "type": "string"
+        },
+        "label": {
+          "enum": [
+            "metaphor",
+            "simile",
+            "personification",
+            "metonymy",
+            "idiom"
+          ],
+          "type": "string"
+        },
+        "source_domain": {
+          "enum": [
+            "nature",
+            "water",
+            "fire",
+            "light",
+            "darkness",
+            "plant",
+            "animal",
+            "body",
+            "person",
+            "object",
+            "space",
+            "motion",
+            "journey",
+            "time",
+            "life",
+            "death",
+            "emotion",
+            "love",
+            "mind",
+            "society",
+            "spirituality",
+            "other",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "target_domain": {
+          "enum": [
+            "nature",
+            "water",
+            "fire",
+            "light",
+            "darkness",
+            "plant",
+            "animal",
+            "body",
+            "person",
+            "object",
+            "space",
+            "motion",
+            "journey",
+            "time",
+            "life",
+            "death",
+            "emotion",
+            "love",
+            "mind",
+            "society",
+            "spirituality",
+            "other",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        "semantic_label": {
+          "description": "Short meaning of the image in context. Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        },
+        "sentiment": {
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ],
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Self-estimate 0..1, not a calibrated probability",
+          "type": "number"
+        },
+        "rationale": {
+          "description": "Evidence-based reasoning. Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "basic_meaning",
+        "contextual_meaning",
+        "contrast",
+        "entity",
+        "entity_type",
+        "label",
+        "source_domain",
+        "target_domain",
+        "semantic_label",
+        "sentiment",
+        "confidence",
+        "rationale"
+      ],
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "language": {
+      "enum": [
+        "zh",
+        "kk"
+      ],
+      "type": "string"
+    },
+    "metaphors": {
+      "items": {
+        "$ref": "#/$defs/LLMMetaphorCoT"
+      },
+      "type": "array"
+    },
+    "literal_candidates": {
+      "items": {
+        "$ref": "#/$defs/LLMLiteral"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "language",
+    "metaphors",
+    "literal_candidates"
+  ],
+  "type": "object"
+}

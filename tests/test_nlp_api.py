@@ -13,9 +13,13 @@ from app.schemas.comparison import ComparisonMatch, ComparisonResult
 
 def test_generated_contracts_and_examples():
     root = Path(__file__).resolve().parents[1]
-    assert json.loads((root / "contracts/llm-output.schema.json").read_text()) == output_schema()
     assert (
-        json.loads((root / "contracts/corpus.schema.json").read_text()) == Poem.model_json_schema()
+        json.loads((root / "contracts/llm-output.schema.json").read_text(encoding="utf-8"))
+        == output_schema()
+    )
+    assert (
+        json.loads((root / "contracts/corpus.schema.json").read_text(encoding="utf-8"))
+        == Poem.model_json_schema()
     )
     for language in ("zh", "kk"):
         path = root / "contracts/examples" / f"analyze-{language}"

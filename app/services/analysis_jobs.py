@@ -1,9 +1,14 @@
+import logging
+import re
+
 from sqlalchemy.orm import Session
 
 from app.db.models import AnalysisRecord
 from app.db.session import SessionLocal
 from app.schemas.analysis import AnalysisResult
 from app.services.analyzer import analyze_text
+
+logger = logging.getLogger(__name__)
 
 
 def process_analysis(analysis_id: int) -> None:
@@ -26,9 +31,14 @@ def process_analysis(analysis_id: int) -> None:
             record.result = result.model_dump(mode="json")
             record.status = "completed"
             record.error_message = None
-        except Exception:
+        except Exception as exc:
+            logger.exception("Analysis %s failed", analysis_id)
+            reason = re.sub(r"sk-[A-Za-z0-9_\-]+", "sk-***", str(exc))[:300]
             record.status = "failed"
-            record.error_message = "Analysis failed. Check API configuration and try again."
+            record.error_message = (
+                f"Analysis failed ({type(exc).__name__}: {reason}). "
+                "Check API configuration and try again."
+            )
         db.commit()
     finally:
         db.close()

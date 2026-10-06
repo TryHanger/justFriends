@@ -1,0 +1,333 @@
+<title>Сверка с ТЗ: метафоры zh/kk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,650&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; summary strip → findings → requirement ledger grouped by ТЗ section → priority lanes. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6876;
+  --line: #d9e0e6;
+  --accent: #1f5f8b;          /* steppe-sky blue */
+  --accent-soft: #e3eef6;
+  --done: #2e7d4f;   --done-bg: #e2f2e8;
+  --part: #9a6a00;   --part-bg: #fbf0d6;
+  --miss: #b23a3a;   --miss-bg: #f8e3e1;
+  --code-bg: #eef2f5;
+  --f-display: "Literata", Georgia, "Times New Roman", serif;
+  --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171d; --surface: #182029; --ink: #e4eaf0; --muted: #98a6b4; --line: #2a3541;
+  --accent: #7cb7e0; --accent-soft: #1c2f3e;
+  --done: #6fcf97; --done-bg: #183427; --part: #e8b84a; --part-bg: #3a2f14; --miss: #f08a84; --miss-bg: #3d1f1f;
+  --code-bg: #212b36; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #182029; --ink: #e4eaf0; --muted: #98a6b4; --line: #2a3541;
+  --accent: #7cb7e0; --accent-soft: #1c2f3e;
+  --done: #6fcf97; --done-bg: #183427; --part: #e8b84a; --part-bg: #3a2f14; --miss: #f08a84; --miss-bg: #3d1f1f;
+  --code-bg: #212b36; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; font-weight: 650; }
+h1 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); line-height: 1.15; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+.eyebrow { font: 500 .74rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 68ch; }
+code { font: .82em var(--f-mono); background: var(--code-bg); padding: .08em .35em; border-radius: 4px; word-break: break-word; }
+header { display: grid; gap: 12px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: .85rem; }
+
+/* summary */
+.summary { display: grid; gap: 14px; }
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.count { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; }
+.count b { font: 650 1.9rem/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.count span { color: var(--muted); font-size: .85rem; }
+.count.done b { color: var(--done); } .count.part b { color: var(--part); } .count.miss b { color: var(--miss); }
+.bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--line); }
+.bar i { display: block; height: 100%; }
+.bar .done { background: var(--done); } .bar .part { background: var(--part); } .bar .miss { background: var(--miss); }
+.bar-note { color: var(--muted); font-size: .82rem; }
+
+/* findings */
+.findings { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.finding { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.finding p { color: var(--muted); font-size: .93rem; }
+
+/* filter */
+.ledger-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { font: 500 .82rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 99px; padding: 6px 12px; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filters button:focus-visible, .lane:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ledger */
+.group { display: grid; gap: 8px; }
+.group > h3 { display: flex; gap: 10px; align-items: baseline; padding-top: 6px; }
+.group > h3 small { font: 500 .75rem var(--f-mono); color: var(--muted); }
+.table { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(0,1.05fr) 108px minmax(0,1.5fr) minmax(0,1.5fr); gap: 14px; padding: 13px 16px; border-top: 1px solid var(--line); align-items: start; }
+.row:first-child { border-top: 0; }
+.row.th { background: var(--accent-soft); font: 500 .72rem var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-block: 9px; }
+.req b { font-weight: 600; display: block; }
+.req span { color: var(--muted); font-size: .82rem; }
+.cell { font-size: .9rem; min-width: 0; }
+.cell .lbl { display: none; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 .74rem var(--f-body); padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.done { color: var(--done); background: var(--done-bg); }
+.chip.part { color: var(--part); background: var(--part-bg); }
+.chip.miss { color: var(--miss); background: var(--miss-bg); }
+.empty { color: var(--muted); font-size: .9rem; padding: 14px 16px; }
+
+/* lanes */
+.lanes { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.lane { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.lane header { gap: 4px; }
+.lane .tag { font: 600 .72rem var(--f-mono); color: var(--accent); }
+.lane ol { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: .9rem; }
+.lane li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.two { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.plain { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; }
+.plain ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: .92rem; }
+footer { color: var(--muted); font-size: .82rem; }
+
+@media (max-width: 900px) {
+  .lanes { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 720px) {
+  .findings, .two, .lanes { grid-template-columns: 1fr; }
+  .counts { gap: 8px; }
+  .count { padding: 10px 12px; }
+  .count b { font-size: 1.5rem; }
+  .row.th { display: none; }
+  .row { grid-template-columns: 1fr; gap: 8px; }
+  .cell .lbl { display: block; font: 500 .7rem var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+}
+@media (prefers-reduced-motion: no-preference) { .filters button { transition: background .15s, color .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">justFriends · сверка репозитория с ТЗ · после доработки</span>
+    <h1>Метафоры в китайской и казахской поэзии: что готово по ТЗ</h1>
+    <p class="lede">Каждый пункт ТЗ сверен с кодом после доработки и слияния с <code>origin/main</code>. Код и инструменты под ТЗ готовы почти полностью. Главное, чего не хватает, — данных: корпусов, Golden Test Set и реальных прогонов моделей.</p>
+    <div class="meta"><span>Обновлено 6 октября 2026</span><span>База <code>d353ce6</code> + незакоммиченная доработка</span><span>Python: 67 тестов пройдено</span><span>Frontend: 32 теста, сборка OK</span></div>
+  </header>
+
+  <section class="summary" aria-labelledby="sum-h">
+    <h2 id="sum-h">Итог по пунктам ТЗ</h2>
+    <div class="counts" id="counts"></div>
+    <div class="bar" id="bar" role="img"></div>
+    <p class="bar-note">«Сделано» — реализовано в коде, покрыто тестами и запускается. «Частично» — инструмент готов, но результат зависит от данных или прогонов, которых ещё нет. «Нет» — требует работы людей: сбора текстов, разметки, публикаций.</p>
+  </section>
+
+  <section aria-labelledby="find-h" style="display:grid;gap:14px">
+    <h2 id="find-h">Главное</h2>
+    <div class="findings">
+      <div class="finding"><h3>Конвейер A–E соответствует ТЗ</h3><p>Словари-ограничения (модуль B), решение literal/metaphorical по MIP с CoT (модуль C), семантические метки, тональность и домены (модуль D). Вывод содержит все поля ТЗ: Entity, Type, Context_Sentence, Usage_Type, Source/Target_Domain, Semantic_Label, Evidence_Reasoning. Экспорт: <code>?format=tz</code>.</p></div>
+      <div class="finding"><h3>Методы сравнения готовы</h3><p>Стратегии zero-shot, few-shot, CoT, RAG и lexicon в любых комбинациях. Провайдеры: OpenAI, Claude, Ollama (Qwen-2.5, LLaMA-3.1) и локальный Transformers с LoRA-адаптером. Декодирование T = 0.2, top-p = 0.95; если провайдер его отвергает, это фиксируется в результате.</p></div>
+      <div class="finding"><h3>Инструменты под H1–H3 и метрики п. 6</h3><p>IFT-датасет и LoRA-дообучение (H1), фертильность токенизаторов и казахский BPE на 50K (H2), послойный пробинг с MDL (H3). Метрики: F1 по сущностям, бинарной классификации и этикетированию, Fleiss' κ, бутстрэп по произведениям, раннер экспериментов с флагами целей ТЗ.</p></div>
+      <div class="finding"><h3>Блокер — данные</h3><p>Нет собранных корпусов («Чу Цы», эпос, жырау) и нет Golden Test Set на 300–500 фрагментов от 3 экспертов. Поэтому ни одна цель F1 и ни одна гипотеза ещё не проверены. Словари-ограничения пока стартовые (~50 записей на язык) и требуют проверки филологами.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="led-h" style="display:grid;gap:16px">
+    <div class="ledger-head">
+      <h2 id="led-h">Пункты ТЗ и состояние</h2>
+      <div class="filters" role="group" aria-label="Фильтр по статусу">
+        <button type="button" id="f-all" data-f="all" aria-pressed="true">Все</button>
+        <button type="button" id="f-done" data-f="done" aria-pressed="false">Сделано</button>
+        <button type="button" id="f-part" data-f="part" aria-pressed="false">Частично</button>
+        <button type="button" id="f-miss" data-f="miss" aria-pressed="false">Нет</button>
+      </div>
+    </div>
+    <div id="ledger" style="display:grid;gap:22px"></div>
+  </section>
+
+  <section aria-labelledby="road-h" style="display:grid;gap:14px">
+    <h2 id="road-h">Что осталось, по приоритету</h2>
+    <p class="lede">Почти всё оставшееся — работа с данными и людьми. Команды для каждого шага описаны в <code>docs/NLP.md</code>, раздел «Эксперименты по ТЗ».</p>
+    <div class="lanes">
+      <div class="lane"><header><span class="tag">P0 · данные</span><h3>Корпуса</h3></header><ol>
+        <li>Импортировать «Чу Цы» и танскую поэзию: <code>import-chinese-poetry</code>.</li>
+        <li>Собрать казахские тексты (эпос, жырау, Абай, современные поэты) и импортировать: <code>import-texts</code>.</li>
+        <li>Проверить лицензии и выставить <code>license_verified</code>.</li>
+        <li>Очистить корпус: <code>clean --verse-lines</code>.</li>
+      </ol></div>
+      <div class="lane"><header><span class="tag">P0 · люди</span><h3>Golden Set</h3></header><ol>
+        <li>Пилот разметки по инструкции v2.0, затем уточнить её.</li>
+        <li>300–500 фрагментов, 3 эксперта, слепой первый этап.</li>
+        <li>Согласие: <code>agreement a b c</code>, цель κ ≥ 0.75.</li>
+        <li>Филологам расширить словари и базу RAG комментариями Ван И и Чжу Си со ссылками на издание.</li>
+      </ol></div>
+      <div class="lane"><header><span class="tag">P1 · этап 2</span><h3>Пилотные прогоны</h3></header><ol>
+        <li>Заполнить <code>experiments/pilot.example.json</code> доступными моделями.</li>
+        <li><code>experiment</code> на test: baseline, zero-shot … полный RAG.</li>
+        <li>Найти идентификатор SozKZ на Hugging Face.</li>
+        <li>Разобрать ошибки по <code>failures.json</code> и матрицам ошибок.</li>
+      </ol></div>
+      <div class="lane"><header><span class="tag">P2 · этапы 3–4</span><h3>Гипотезы и публикация</h3></header><ol>
+        <li><code>build-ift</code> + <code>finetune</code> на GPU → H1.</li>
+        <li><code>fertility</code>, <code>train-tokenizer</code> → H2.</li>
+        <li><code>probe</code> на нескольких моделях и seed → H3.</li>
+        <li>Межкультурный отчёт, публикация датасета и весов, статьи.</li>
+      </ol></div>
+    </div>
+  </section>
+
+  <section class="two" aria-label="Дополнительно">
+    <div class="plain"><h3>Что изменено в этой доработке</h3><ul>
+      <li>Таксономия 2.0: типы сущностей, literal/metaphorical, тональность. Старые результаты читаются.</li>
+      <li>Новые модули <code>app/nlp</code>: lexicon, prompts, rag, claude, hf_local, ift, finetune, tokenization, probing, preprocess, importers, experiment.</li>
+      <li>Label Studio v2.0: регионы сущностей, тональность, семантическая метка, подсказки словаря на втором этапе.</li>
+      <li>UI: сущности, тональность, контекст, метод анализа, экспорт в формате ТЗ, новые разрезы на странице сравнения.</li>
+      <li>Документация: <code>RESEARCH.md</code> переписан под H1–H3 и цели п. 6; обновлены <code>NLP.md</code>, контракт и инструкция разметки.</li>
+    </ul></div>
+    <div class="plain"><h3>Что стоит знать</h3><ul>
+      <li>Современные Claude и reasoning-модели OpenAI не принимают temperature/top-p. Адаптер повторяет запрос без них и помечает это в <code>method.sampling_applied</code>.</li>
+      <li>Цитата Ван И в базе RAG и символические прочтения в словарях — стартовые. Их нужно сверить с изданиями до публикации.</li>
+      <li>Метрики сущностей считаются только на записях gold, где размечены <code>candidates</code>.</li>
+      <li>XLM-R оставлен опорной моделью для сравнения, это не замена LLM.</li>
+      <li>Изменения не закоммичены; копия до слияния сохранена в <code>git stash</code>.</li>
+    </ul></div>
+  </section>
+
+  <footer>Источник требований: tz_llm_metaphors_poetry.docx. Статусы отражают код и тесты репозитория; качество моделей на реальной поэзии пока не измерялось.</footer>
+</div>
+
+<script>
+const S = { done: "Сделано", part: "Частично", miss: "Нет" };
+const DATA = [
+  { g: "Задачи проекта", ref: "п. 2.2", items: [
+    ["2.2.1 Корпуса", "Китай: «Чу Цы», классика, современность. Казахстан: эпос, жырау, лирика.", "part",
+     "Импорт chinese-poetry (включая 楚辞) и папок с CSV-метаданными, схема корпуса, очистка, дедупликация, разделение по произведениям.",
+     "Собрать и сбалансировать реальные тексты, проверить лицензии."],
+    ["2.2.2 Методы LLM", "Zero/few-shot, CoT, RAG, fine-tuning Qwen-2.5, LLaMA-3.1, SozKZ.", "done",
+     "Стратегии в <code>prompts.py</code>, RAG в <code>rag.py</code>, LoRA в <code>finetune.py</code>, адаптеры OpenAI, Claude, Ollama и HF.",
+     "Провести прогоны на Golden Set."],
+    ["2.2.3 Токенизация для казахского", "BPE на 50K, снижение фрагментации агглютинативных слов.", "done",
+     "<code>train-tokenizer</code> (BPE, 50K, NFC), <code>fertility</code> — сравнение токенизаторов.",
+     "Замерить на собранном казахском корпусе."],
+    ["2.2.4 Картирование и тональность", "Source → Target, сентимент.", "done",
+     "Домены, тональность, семантические метки; <code>/compare</code> строит пары «источник → мишень», тональность и метки.",
+     "Интерпретировать на реальных данных."],
+    ["2.2.5 Human-in-the-Loop", "Двухэтапная слепая валидация, Cohen и Fleiss Kappa.", "done",
+     "Протокол из 2 этапов для 3 экспертов в инструкции v2.0, Label Studio v2.0, <code>agreement</code> с Fleiss и Cohen.",
+     "Провести разметку."],
+  ]},
+  { g: "Входные данные", ref: "п. 3", items: [
+    ["3.1 Китайский препроцессинг", "Нормализация иероглифики, сегментация на стихи, очистка помет.", "done",
+     "NFC, таблица вариантных знаков, удаление скобочных помет и сносок, <code>--verse-lines</code>.",
+     "Расширять таблицу вариантов вместе с филологами."],
+    ["3.2 Казахский препроцессинг", "NFC и токенизация с сохранением аффиксов.", "done",
+     "NFC, исправление латинских букв-двойников в кириллических словах; словоформы сохраняются целиком.",
+     "—"],
+    ["3.3 Словари-ограничения", "Растения, животные, природа, абстрактные концепты.", "part",
+     "<code>data/lexicons/{zh,kk}.json</code>: около 50 записей на язык; для казахского учтены аффиксы, чередование к/г, қ/ғ, п/б и омонимы.",
+     "Расширить и проверить с филологами."],
+  ]},
+  { g: "Модули конвейера", ref: "п. 4", items: [
+    ["A. Препроцессинг и токенизация", "Мультиязычные и казахские модели, фертильность.", "done",
+     "Очистка, адаптеры моделей, замер фертильности.", "Добавить SozKZ после выбора идентификатора."],
+    ["B. Извлечение кандидатов", "Сущности с soft lexicon constraints.", "done",
+     "<code>lexicon.py</code>: кандидаты передаются модели и сохраняются в <code>candidates</code>.", "Расширять словари."],
+    ["C. Literal vs Metaphorical", "CoT и процедура MIP/MIPVU.", "done",
+     "CoT-схема (базовое значение → контекстное → контраст), <code>literal_candidates</code>, <code>usage_type</code>.", "—"],
+    ["D. Этикетирование и картирование", "Метки, тональность, source domains.", "done",
+     "<code>semantic_label</code>, <code>sentiment</code>, домены, межъязыковое сравнение.", "—"],
+    ["E. Валидация экспертами", "Проверка кандидатов филологами.", "part",
+     "Label Studio с подсказками словаря на 2-м этапе, <code>needs_review</code>, согласие экспертов.",
+     "Режим «принять / исправить» прямо в веб-интерфейсе."],
+  ]},
+  { g: "Генерация и формат", ref: "п. 4.1", items: [
+    ["Параметры декодирования", "T = 0.2, top-p = 0.95.", "done",
+     "<code>LLM_TEMPERATURE</code> и <code>LLM_TOP_P</code> во всех адаптерах; отказ провайдера фиксируется в <code>method</code>.", "—"],
+    ["Формат вывода", "Entity, Type, Context_Sentence, Usage_Type, Source/Target_Domain, Semantic_Label, Evidence_Reasoning.", "done",
+     "Поля в схеме результата; экспорт <code>format=tz</code> и CSV с колонками ТЗ.", "—"],
+  ]},
+  { g: "Гипотезы", ref: "п. 5", items: [
+    ["H1. Fine-tuning лучше промптинга", "IFT против zero/few-shot.", "part",
+     "<code>build-ift</code>, <code>finetune</code> (LoRA), backend <code>hf</code>, <code>experiment</code>.", "Нужны gold и GPU-прогоны."],
+    ["H2. Локальный токенизатор", "SozKZ против мультиязычных моделей.", "part",
+     "<code>fertility</code>, <code>train-tokenizer</code>, прогоны только на <code>kk</code>.", "Нужны корпус и SozKZ."],
+    ["H3. Средние слои", "Пробинг и MDL по слоям.", "part",
+     "<code>probe</code>: линейные пробы с GroupKFold и MDL online code.", "Нужны gold-кандидаты."],
+  ]},
+  { g: "Оценка качества", ref: "п. 6", items: [
+    ["Golden Test Set", "300–500 фрагментов, 3 эксперта.", "miss",
+     "Есть только 12 синтетических примеров для тестов кода.", "Разметить и зафиксировать до экспериментов."],
+    ["Entity Extraction, F1 ≥ 90%", "Precision, Recall, F1.", "part",
+     "Метрика <code>entity_extraction</code> и флаг цели в <code>tz_targets</code>.", "Значение не измерено."],
+    ["Literal vs Metaphor, F1 ≥ 82–85%", "Precision, Recall, F1.", "part",
+     "Метрика <code>usage_classification</code>, бутстрэп-интервалы.", "Значение не измерено."],
+    ["Semantic Labeling, F1 ≥ 75–78%", "Precision, Recall, F1.", "part",
+     "Метрика <code>semantic_labeling</code> и разбивка по полям.", "Значение не измерено."],
+    ["Согласие аннотаторов, κ ≥ 0.75", "Cohen и Fleiss Kappa.", "part",
+     "Fleiss и Cohen для 2+ аннотаторов, флаг цели.", "Значение не измерено."],
+  ]},
+  { g: "Календарный план", ref: "п. 7", items: [
+    ["Этап 1. Данные", "Корпуса, схема MIP/MIPVU, словари.", "part",
+     "Схема 2.0, импорт, стартовые словари.", "Собрать корпуса и расширить словари."],
+    ["Этап 2. Базовый конвейер", "Промпты, RAG, пилоты на моделях.", "part",
+     "Конвейер, все стратегии и адаптеры, раннер экспериментов.", "Провести пилотные прогоны."],
+    ["Этап 3. IFT и дообучение", "IFT Dataset, fine-tuning.", "part",
+     "Генератор датасета и LoRA-обучение.", "Нужны gold и GPU."],
+    ["Этап 4. Анализ и публикации", "Межкультурное сопоставление, Golden Set, error analysis.", "part",
+     "Агрегаты и семантическое сравнение, матрицы ошибок, бутстрэп.", "Результаты, статьи, публикация."],
+  ]},
+  { g: "Ожидаемые результаты", ref: "п. 8", items: [
+    ["Размеченный корпус метафор", "Сопоставительный zh/kk с доменами.", "miss", "Нет.", "После Golden Set."],
+    ["Открытый IFT-датасет", "Для обучения LLM.", "part", "Генератор и карточка датасета.", "Нужны gold-данные."],
+    ["Программный комплекс", "Pipeline на Python/Transformers.", "done",
+     "<code>app/nlp</code>, API, UI, CLI, 67 + 32 теста.", "Поддерживать."],
+    ["Научные публикации", "ACL / EMNLP / IJCAI / ВАК, Scopus.", "miss", "Нет результатов.", "После этапа 4."],
+  ]},
+];
+
+const all = DATA.flatMap(g => g.items);
+const n = { done: 0, part: 0, miss: 0 };
+all.forEach(i => n[i[2]]++);
+document.getElementById("counts").innerHTML = ["done", "part", "miss"].map(k =>
+  `<div class="count ${k}"><b>${n[k]}</b><span>${S[k]} из ${all.length}</span></div>`).join("");
+const bar = document.getElementById("bar");
+bar.innerHTML = ["done", "part", "miss"].map(k => `<i class="${k}" style="width:${(n[k] / all.length * 100).toFixed(2)}%"></i>`).join("");
+bar.setAttribute("aria-label", `Сделано ${n.done}, частично ${n.part}, нет ${n.miss} из ${all.length}`);
+
+function render(filter) {
+  const html = DATA.map(g => {
+    const rows = g.items.filter(i => filter === "all" || i[2] === filter);
+    if (!rows.length) return "";
+    return `<div class="group"><h3>${g.g} <small>${g.ref}</small></h3><div class="table">
+      <div class="row th"><div>Требование</div><div>Статус</div><div>Что есть</div><div>Что сделать</div></div>
+      ${rows.map(([t, d, s, have, todo]) => `<div class="row">
+        <div class="req cell"><b>${t}</b><span>${d}</span></div>
+        <div class="cell"><span class="chip ${s}">${S[s]}</span></div>
+        <div class="cell"><span class="lbl">Что есть</span>${have}</div>
+        <div class="cell"><span class="lbl">Что сделать</span>${todo}</div></div>`).join("")}
+    </div></div>`;
+  }).join("");
+  document.getElementById("ledger").innerHTML = html || `<p class="empty">Нет пунктов с этим статусом.</p>`;
+}
+let current = "all";
+try { current = localStorage.getItem("tz-filter") || "all"; } catch (e) {}
+document.querySelectorAll(".filters button").forEach(b => {
+  b.setAttribute("aria-pressed", String(b.dataset.f === current));
+  b.addEventListener("click", () => {
+    current = b.dataset.f;
+    document.querySelectorAll(".filters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    try { localStorage.setItem("tz-filter", current); } catch (e) {}
+    render(current);
+  });
+});
+render(current);
+</script>

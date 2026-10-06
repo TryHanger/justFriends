@@ -1,5 +1,97 @@
 {
   "$defs": {
+    "EntityCandidate": {
+      "additionalProperties": false,
+      "description": "Module B output: a possible carrier of figurative meaning and its usage decision.",
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "entity_type": {
+          "enum": [
+            "plant",
+            "animal",
+            "natural_phenomenon",
+            "landscape",
+            "celestial",
+            "body",
+            "person",
+            "artifact",
+            "abstract",
+            "other"
+          ],
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "usage_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "metaphorical",
+                "literal"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "None: extracted but not yet classified (module C)",
+          "title": "Usage Type"
+        },
+        "origin": {
+          "default": "model",
+          "description": "lexicon, model or human",
+          "title": "Origin",
+          "type": "string"
+        },
+        "lexicon_meaning": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lexicon Meaning"
+        },
+        "reasoning": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reasoning"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "entity_type"
+      ],
+      "title": "EntityCandidate",
+      "type": "object"
+    },
     "MetaphorSpan": {
       "additionalProperties": false,
       "properties": {
@@ -46,6 +138,95 @@
         "rationale": {
           "title": "Rationale",
           "type": "string"
+        },
+        "entity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Entity: key image word inside text",
+          "title": "Entity"
+        },
+        "entity_type": {
+          "anyOf": [
+            {
+              "enum": [
+                "plant",
+                "animal",
+                "natural_phenomenon",
+                "landscape",
+                "celestial",
+                "body",
+                "person",
+                "artifact",
+                "abstract",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Type"
+        },
+        "usage_type": {
+          "default": "metaphorical",
+          "enum": [
+            "metaphorical",
+            "literal"
+          ],
+          "title": "Usage Type",
+          "type": "string"
+        },
+        "context_sentence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Line or sentence of the source text containing the span",
+          "title": "Context Sentence"
+        },
+        "semantic_label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Short conventional meaning, e.g. 'благородный муж' for 兰",
+          "title": "Semantic Label"
+        },
+        "sentiment": {
+          "anyOf": [
+            {
+              "enum": [
+                "positive",
+                "neutral",
+                "negative"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sentiment"
         }
       },
       "required": [
@@ -94,6 +275,19 @@
       },
       "title": "Warnings",
       "type": "array"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/EntityCandidate"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "method": {
+      "additionalProperties": true,
+      "description": "Reproducibility record: prompt strategy, decoding parameters, lexicon version",
+      "title": "Method",
+      "type": "object"
     }
   },
   "required": [

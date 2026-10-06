@@ -49,6 +49,15 @@ const ru: Record<string, string> = {
   'Analysis Failed': 'Ошибка анализа', 'An unknown error occurred during analysis.': 'Во время анализа произошла неизвестная ошибка.',
   'Analysis warnings': 'Предупреждения анализа', 'This analysis needs manual review.': 'Требуется ручная проверка анализа.',
   'Found Metaphors': 'Найденные метафоры', 'No metaphors detected in this document.': 'В документе метафоры не обнаружены.',
+  Method: 'Метод', 'provider default decoding': 'декодирование по умолчанию провайдера',
+  'Fields of the technical specification': 'Поля из ТЗ: Entity, Type, Context_Sentence, Usage_Type…', 'TZ format': 'Формат ТЗ',
+  'Context:': 'Контекст:', positive: 'позитивная', neutral: 'нейтральная', negative: 'негативная',
+  'Entity candidates': 'Сущности-кандидаты', Entity: 'Сущность', Usage: 'Употребление',
+  'Found by the soft lexicon and the model; each is judged literal or metaphorical in context.': 'Найдены словарём-ограничением и моделью; для каждой в контексте решено, прямое это употребление или переносное.',
+  'Conventional reading / reasoning': 'Традиционное прочтение / обоснование',
+  metaphorical: 'переносное', literal: 'прямое', unclassified: 'не решено',
+  natural_phenomenon: 'Явление природы', landscape: 'Ландшафт', celestial: 'Небесное тело', artifact: 'Предмет', abstract: 'Абстракция',
+  Sentiment: 'Тональность', 'Entity types': 'Типы сущностей', 'Domain pairs': 'Пары «источник → мишень»', 'Semantic labels': 'Семантические метки',
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }

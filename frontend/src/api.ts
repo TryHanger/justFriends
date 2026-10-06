@@ -15,6 +15,24 @@ export interface Metaphor {
   target_domain: string;
   confidence: number;
   rationale: string;
+  // ТЗ п. 4.1 fields; absent in results of older analyses and non-LLM detectors.
+  entity?: string | null;
+  entity_type?: string | null;
+  usage_type?: 'metaphorical' | 'literal';
+  context_sentence?: string | null;
+  semantic_label?: string | null;
+  sentiment?: 'positive' | 'neutral' | 'negative' | null;
+}
+
+export interface EntityCandidate {
+  text: string;
+  start: number;
+  end: number;
+  entity_type: string;
+  usage_type: 'metaphorical' | 'literal' | null;
+  origin: string;
+  lexicon_meaning?: string | null;
+  reasoning?: string | null;
 }
 
 export interface AnalysisResult {
@@ -23,6 +41,8 @@ export interface AnalysisResult {
   metaphors: Metaphor[];
   needs_review?: boolean;
   warnings?: string[];
+  candidates?: EntityCandidate[];
+  method?: Record<string, unknown>;
 }
 
 export interface AnalysisResponse {
@@ -137,7 +157,7 @@ export const uploadLibraryBook = async (file: File, language = 'auto', title = '
   return res.data;
 };
 
-export const getExportUrl = (id: number, format: 'json' | 'csv') => {
+export const getExportUrl = (id: number, format: 'json' | 'csv' | 'tz') => {
   return `${API_BASE}/analyses/${id}/export?format=${format}`;
 };
 

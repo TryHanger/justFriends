@@ -1,6 +1,7 @@
 # Контракт NLP для Армана и Никиты
 
-Версия таксономии: **1.0**. Это реализованное предложение для согласования команды;
+Версия таксономии: **2.0** (добавлены поля ТЗ п. 4.1; все новые поля необязательны,
+результаты версии 1.0 читаются без изменений). Это реализованное предложение для согласования команды;
 файл распределения задач не задавал конкретный справочник типов и областей.
 Публичные поля стартового бэкенда сохранены.
 
@@ -65,6 +66,26 @@ BIO: `O`, `B-METAPHOR`, `I-METAPHOR`. Олицетворение имеет пр
 После завершения `GET status_url` возвращает этот NLP-объект внутри `result`.
 Готовые запросы, ответы очереди (`*.response.json`) и результаты завершённых заданий
 (`*.completed.json`) для обоих языков — в `contracts/examples/`.
+
+### Поля ТЗ (версия 2.0)
+
+| Поле ТЗ | Поле результата | Примечание |
+|---|---|---|
+| Entity | `metaphors[].entity`, `candidates[].text` | Слово-образ внутри выражения |
+| Type | `entity_type` | `plant`, `animal`, `natural_phenomenon`, `landscape`, `celestial`, `body`, `person`, `artifact`, `abstract`, `other` |
+| Context_Sentence | `metaphors[].context_sentence` | Строка или предложение исходного текста; вычисляется кодом |
+| Usage_Type | `metaphors[].usage_type`, `candidates[].usage_type` | `metaphorical` / `literal`; `null` у кандидата — ещё не классифицирован |
+| Source_Domain / Target_Domain | `source_domain` / `target_domain` | Справочник областей выше |
+| Semantic_Label | `metaphors[].semantic_label` | «благородный муж», «хитрость»… |
+| — | `metaphors[].sentiment` | `positive` / `neutral` / `negative` |
+| Evidence_Reasoning | `metaphors[].rationale`, `candidates[].reasoning` | При CoT включает шаги MIP |
+
+`candidates` — результат модуля B (словарь-ограничение и модель) с решением модуля C.
+`method` — запись воспроизводимости: стратегия промпта, хеш промпта, T и top-p,
+фактически применённые провайдером, версия словаря, документы RAG.
+Экспорт в именах полей ТЗ: `GET /api/v1/analyses/{id}/export?format=tz` (JSON) или
+`format=csv` (те же колонки). Схемы ответа LLM: `contracts/llm-output.schema.json`
+и `contracts/llm-output-cot.schema.json`.
 
 ### Границы
 
