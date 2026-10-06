@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Download, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
 import { getAnalysis, getExportUrl } from '../api';
 import type { AnalysisResponse } from '../api';
-import { tr, useLanguage } from '../i18n';
+import { tr, trWarning, useLanguage } from '../i18n';
 
 export default function AnalysisDetail() {
   const { language } = useLanguage();
@@ -152,7 +152,7 @@ export default function AnalysisDetail() {
               {needsReview && <p className="mt-1">{tr('This analysis needs manual review.', language)}</p>}
               {warnings.length > 0 && (
                 <ul className="mt-2 list-disc pl-5">
-                  {warnings.map((warning, index) => <li key={index}>{warning}</li>)}
+                  {warnings.map((warning, index) => <li key={index}>{trWarning(warning, language)}</li>)}
                 </ul>
               )}
             </div>

@@ -61,3 +61,40 @@ const ru: Record<string, string> = {
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }
+
+// Backend warnings are English and may contain numbers or offsets, so they are matched by pattern.
+const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^LLM preliminary annotation; confidence is self-reported and uncalibrated\.$/,
+    () => 'Предварительная разметка LLM: уверенность — самооценка модели, она не откалибрована.'],
+  [/^(\d+) (?:item|span)\(s\) omitted: the expression could not be aligned uniquely to the source text\.$/,
+    (m) => `Пропущено фрагментов: ${m[1]} — выражение не удалось однозначно найти в исходном тексте.`],
+  [/^(\d+) literal candidate\(s\) overlapped figurative spans and were dropped\.$/,
+    (m) => `Отброшено буквальных кандидатов: ${m[1]} — они пересекались с найденными фигурами.`],
+  [/^Provider rejected temperature\/top_p; its default decoding was used\.$/,
+    () => 'Провайдер не принял temperature и top-p, использованы его параметры по умолчанию.'],
+  [/^Lexical baseline has limited coverage; confidence is not calibrated\.$/,
+    () => 'Словарный baseline покрывает мало случаев; уверенность не откалибрована.'],
+  [/^Token probabilities are uncalibrated; domains unknown\.$/,
+    () => 'Вероятности XLM-R не откалиброваны; области не определены.'],
+  [/^Detection and attribute scores are uncalibrated\.$/,
+    () => 'Оценки обнаружения и атрибутов не откалиброваны.'],
+  [/^LLM did not confirm span \[(\d+), (\d+)\)\.$/,
+    (m) => `LLM не подтвердила фрагмент [${m[1]}, ${m[2]}).`],
+  [/^LLM-only span \[(\d+), (\d+)\)\.$/,
+    (m) => `Фрагмент [${m[1]}, ${m[2]}) нашла только LLM.`],
+  [/^Conflicting LLM boundary \[(\d+), (\d+)\); kept primary boundary for manual adjudication\.$/,
+    (m) => `Границы LLM [${m[1]}, ${m[2]}) расходятся с XLM-R; оставлены границы XLM-R для ручного решения.`],
+  [/^Candidate confidence is below review threshold ([\d.]+)\.$/,
+    (m) => `Уверенность ниже порога проверки ${m[1]}.`],
+  [/^Provider or parsing failure; empty prediction counted in metrics\.$/,
+    () => 'Ошибка провайдера или разбора ответа; в метриках учтён пустой результат.'],
+];
+
+export function trWarning(text: string, language: Language) {
+  if (language !== 'ru') return text;
+  for (const [pattern, render] of warningPatterns) {
+    const match = text.match(pattern);
+    if (match) return render(match);
+  }
+  return text;
+}
