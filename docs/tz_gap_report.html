@@ -1,0 +1,628 @@
+<title>Метафоры zh/kk: проект по ТЗ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,650&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column with a section index; pipeline as a numbered flow; reference tables; ТЗ ledger with filters. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6876;
+  --line: #d9e0e6;
+  --accent: #1f5f8b;
+  --accent-soft: #e3eef6;
+  --done: #2e7d4f;   --done-bg: #e2f2e8;
+  --part: #9a6a00;   --part-bg: #fbf0d6;
+  --miss: #b23a3a;   --miss-bg: #f8e3e1;
+  --code-bg: #eef2f5;
+  --f-display: "Literata", Georgia, "Times New Roman", serif;
+  --f-body: "Golos Text", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171d; --surface: #182029; --ink: #e4eaf0; --muted: #98a6b4; --line: #2a3541;
+  --accent: #7cb7e0; --accent-soft: #1c2f3e;
+  --done: #6fcf97; --done-bg: #183427; --part: #e8b84a; --part-bg: #3a2f14; --miss: #f08a84; --miss-bg: #3d1f1f;
+  --code-bg: #212b36; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #182029; --ink: #e4eaf0; --muted: #98a6b4; --line: #2a3541;
+  --accent: #7cb7e0; --accent-soft: #1c2f3e;
+  --done: #6fcf97; --done-bg: #183427; --part: #e8b84a; --part-bg: #3a2f14; --miss: #f08a84; --miss-bg: #3d1f1f;
+  --code-bg: #212b36; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--f-body); }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 72px; display: grid; gap: 52px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; font-weight: 650; }
+h1 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); line-height: 1.15; }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+a { color: var(--accent); }
+section { display: grid; gap: 16px; scroll-margin-top: 16px; }
+.eyebrow { font: 500 .74rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 70ch; }
+code { font: .82em var(--f-mono); background: var(--code-bg); padding: .08em .35em; border-radius: 4px; word-break: break-word; }
+header.top { display: grid; gap: 12px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: .85rem; }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px; }
+nav.toc a { font-size: .82rem; text-decoration: none; color: var(--ink); border: 1px solid var(--line); background: var(--surface); padding: 5px 11px; border-radius: 99px; }
+nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.card p, .card li { color: var(--muted); font-size: .93rem; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; }
+ul.clean { margin: 0; padding-left: 1.1em; display: grid; gap: 5px; }
+
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.count { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; }
+.count b { font: 650 1.9rem/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.count span { color: var(--muted); font-size: .85rem; }
+.count.done b { color: var(--done); } .count.part b { color: var(--part); } .count.miss b { color: var(--miss); }
+.bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--line); }
+.bar i { display: block; height: 100%; }
+.bar .done { background: var(--done); } .bar .part { background: var(--part); } .bar .miss { background: var(--miss); }
+.note { color: var(--muted); font-size: .84rem; }
+
+/* pipeline flow: a real sequence, so numbered */
+.flow { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; counter-reset: step; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 13px; display: grid; gap: 4px; align-content: start; position: relative; min-width: 0; }
+.step::before { counter-increment: step; content: counter(step); font: 600 .72rem var(--f-mono); color: var(--accent); }
+.step b { font-size: .92rem; }
+.step span { font-size: .8rem; color: var(--muted); }
+.step.key { border-color: var(--accent); background: var(--accent-soft); }
+
+.tbl { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+th, td { text-align: left; padding: 9px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { border-top: 0; background: var(--accent-soft); font: 500 .72rem var(--f-mono); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+td:first-child { font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+.cmd { display: grid; gap: 8px; }
+.cmd-row { display: flex; align-items: stretch; gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--code-bg); overflow: hidden; }
+.cmd-row pre { margin: 0; padding: 9px 12px; font: .8rem/1.5 var(--f-mono); overflow-x: auto; flex: 1; min-width: 0; white-space: pre; }
+.cmd-row button { border: 0; border-left: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 500 .75rem var(--f-body); padding: 0 12px; cursor: pointer; white-space: nowrap; }
+.cmd-row button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cmd-label { font-size: .82rem; color: var(--muted); }
+
+/* ledger */
+.ledger-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { font: 500 .82rem var(--f-body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 99px; padding: 6px 12px; cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.group { display: grid; gap: 8px; }
+.group > h3 { display: flex; gap: 10px; align-items: baseline; padding-top: 6px; }
+.group > h3 small { font: 500 .75rem var(--f-mono); color: var(--muted); }
+.ltable { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(0,1.05fr) 108px minmax(0,1.5fr) minmax(0,1.3fr); gap: 14px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.row:first-child { border-top: 0; }
+.row.th { background: var(--accent-soft); font: 500 .72rem var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-block: 9px; }
+.req b { font-weight: 600; display: block; }
+.req span { color: var(--muted); font-size: .82rem; }
+.cell { font-size: .9rem; min-width: 0; }
+.cell .lbl { display: none; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 .74rem var(--f-body); padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.done { color: var(--done); background: var(--done-bg); }
+.chip.part { color: var(--part); background: var(--part-bg); }
+.chip.miss { color: var(--miss); background: var(--miss-bg); }
+.empty { color: var(--muted); font-size: .9rem; padding: 14px 16px; }
+
+.lanes { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.lane { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; }
+.lane .tag { font: 600 .72rem var(--f-mono); color: var(--accent); }
+.lane ol { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: .9rem; }
+footer { color: var(--muted); font-size: .82rem; }
+
+@media (max-width: 960px) {
+  .flow { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .lanes, .grid3 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 720px) {
+  .grid2, .grid3, .lanes { grid-template-columns: 1fr; }
+  .flow { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .counts { gap: 8px; }
+  .count { padding: 10px 12px; }
+  .count b { font-size: 1.5rem; }
+  .row.th { display: none; }
+  .row { grid-template-columns: 1fr; gap: 8px; }
+  .cell .lbl { display: block; font: 500 .7rem var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">justFriends · LLM, метафоры, китайская и казахская поэзия</span>
+    <h1>Анализатор метафор: что сделано по ТЗ и как это устроено</h1>
+    <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
+    <div class="meta"><span>6 октября 2026</span><span>Ветка <code>feat/tz-alignment</code>, коммит <code>aa8c5d0</code></span><span>Python: 67 тестов</span><span>Frontend: 32 теста</span></div>
+    <nav class="toc" aria-label="Разделы">
+      <a href="#summary">Итог</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
+      <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
+      <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
+    </nav>
+  </header>
+
+  <section id="summary" aria-labelledby="sum-h">
+    <h2 id="sum-h">Итог</h2>
+    <div class="counts" id="counts"></div>
+    <div class="bar" id="bar" role="img"></div>
+    <p class="note">Подсчёт по 31 пункту ТЗ. «Сделано» — реализовано в коде, покрыто тестами и запускается. «Частично» — инструмент готов, но результат зависит от данных или прогонов, которых ещё нет. «Нет» — требует работы людей: сбора текстов, разметки, публикаций.</p>
+    <div class="grid2">
+      <div class="card"><h3>Готово</h3><p>Конвейер модулей A–E, все поля вывода из ТЗ, стратегии промптов (zero-shot, few-shot, CoT, RAG, словарь), адаптеры OpenAI, Claude, Ollama и локальных моделей, метрики раздела 6, инструменты под гипотезы H1–H3, веб-интерфейс и API.</p></div>
+      <div class="card"><h3>Не хватает данных</h3><p>Нет собранных корпусов и Golden Test Set от трёх экспертов. Поэтому значения F1 и гипотезы пока не проверены. Словари-ограничения и база RAG стартовые и требуют проверки филологами.</p></div>
+    </div>
+  </section>
+
+  <section id="how" aria-labelledby="how-h">
+    <h2 id="how-h">Как работает анализ</h2>
+    <p class="lede">Путь одного стихотворения от ввода до результата. Шаги 2–5 — модули A–D из ТЗ; шаг 6 — модуль E.</p>
+    <div class="flow">
+      <div class="step"><b>Ввод</b><span>Текст или файл TXT, PDF, DOCX. API ставит задание в очередь и сразу отвечает 202.</span></div>
+      <div class="step"><b>A. Подготовка</b><span>Определение языка, NFC; при подготовке корпуса — нормализация знаков и очистка помет.</span></div>
+      <div class="step"><b>B. Кандидаты</b><span>Словарь-ограничение находит растения, животных, явления, абстракции. Для казахского — со всеми аффиксами.</span></div>
+      <div class="step key"><b>C–D. LLM</b><span>Промпт по стратегии: инструкции MIP, примеры, шаги CoT, найденные фрагменты RAG, кандидаты. Ответ строго по JSON-схеме.</span></div>
+      <div class="step"><b>Проверка</b><span>Pydantic-схема, сверка смещений с исходным текстом, вычисление Context_Sentence, слияние кандидатов.</span></div>
+      <div class="step"><b>E. Результат</b><span>Сохранение в БД, показ в интерфейсе с пометкой «требует проверки», экспорт в формате ТЗ, разметка экспертами.</span></div>
+    </div>
+    <div class="grid3">
+      <div class="card"><h3>Что возвращает модель</h3><p>Для каждой фигуры: фрагмент и его смещения, Entity и её тип, тип фигуры, исходная и целевая области, семантическая метка, тональность, уверенность и обоснование. Отдельно — сущности, употреблённые буквально.</p></div>
+      <div class="card"><h3>Как защищены результаты</h3><p>Фрагмент, которого нет в тексте, отбрасывается с предупреждением, а не «угадывается». Язык ответа проверяется. Обоснования не на русском переводятся отдельным коротким запросом. Каждый результат помечен как требующий проверки.</p></div>
+      <div class="card"><h3>Воспроизводимость</h3><p>В поле <code>method</code> записаны стратегия, хеш промпта, фактически применённые T и top-p, версия словаря и документы RAG. Раннер экспериментов дополнительно хранит хеши данных.</p></div>
+    </div>
+  </section>
+
+  <section id="done" aria-labelledby="done-h">
+    <h2 id="done-h">Что сделано</h2>
+    <div class="grid3">
+      <div class="card"><h3>Формат и таксономия 2.0</h3><ul class="clean">
+        <li>Поля ТЗ: Entity, Type, Context_Sentence, Usage_Type, Source/Target_Domain, Semantic_Label, Evidence_Reasoning, а также тональность.</li>
+        <li>10 типов сущностей, 23 области, 5 типов фигур.</li>
+        <li>Старые результаты читаются без миграции.</li>
+      </ul></div>
+      <div class="card"><h3>Модули B–D</h3><ul class="clean">
+        <li>Словари zh и kk: около 50 записей на язык с традиционными прочтениями.</li>
+        <li>Решение literal/metaphorical для каждой сущности.</li>
+        <li>CoT по MIP: базовое значение → контекстное → контраст.</li>
+      </ul></div>
+      <div class="card"><h3>Методы и модели</h3><ul class="clean">
+        <li>Стратегии zero-shot, few-shot, CoT, RAG, lexicon в любых сочетаниях.</li>
+        <li>RAG на BM25 по базе MIP/MIPVU и комментариям.</li>
+        <li>OpenAI, Claude, Ollama, локальные Transformers с LoRA.</li>
+      </ul></div>
+      <div class="card"><h3>Метрики и эксперименты</h3><ul class="clean">
+        <li>F1 по сущностям, бинарной классификации, этикетированию.</li>
+        <li>Fleiss' и Cohen κ, бутстрэп по произведениям.</li>
+        <li>Раннер «метод × модель» со сводкой и флагами целей ТЗ.</li>
+      </ul></div>
+      <div class="card"><h3>Под гипотезы H1–H3</h3><ul class="clean">
+        <li>H1: генератор IFT-датасета и LoRA-дообучение.</li>
+        <li>H2: фертильность токенизаторов, казахский BPE на 50K.</li>
+        <li>H3: послойные пробы и MDL.</li>
+      </ul></div>
+      <div class="card"><h3>Данные, разметка, интерфейс</h3><ul class="clean">
+        <li>Импорт chinese-poetry («Чу Цы») и папок с CSV, очистка zh и kk.</li>
+        <li>Label Studio 2.0: сущности, тональность, метки, двухэтапная проверка.</li>
+        <li>UI: сущности, тональность, контекст, метод, экспорт ТЗ.</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section id="stack" aria-labelledby="stack-h">
+    <h2 id="stack-h">Стек и технологии</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Слой</th><th>Технологии</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td>Бэкенд</td><td>Python 3.11+, FastAPI, Uvicorn, Pydantic v2, pydantic-settings</td><td>REST API, фоновые задания, строгая валидация контрактов</td></tr>
+        <tr><td>Хранение</td><td>SQLAlchemy 2, SQLite локально, PostgreSQL 16 в Docker</td><td>История анализов, библиотека книг</td></tr>
+        <tr><td>Документы</td><td>pypdf, python-docx</td><td>Извлечение текста из PDF и DOCX</td></tr>
+        <tr><td>LLM-провайдеры</td><td>OpenAI SDK (Responses API, Structured Outputs), Anthropic SDK (Messages API, <code>output_config</code> с JSON-схемой), Ollama HTTP API</td><td>Анализ методами промптинга и RAG</td></tr>
+        <tr><td>Локальные модели</td><td>PyTorch, Transformers, PEFT (LoRA)</td><td>Qwen-2.5, LLaMA-3.1, SozKZ: инференс и дообучение</td></tr>
+        <tr><td>Классические модели</td><td>XLM-RoBERTa (BIO-тэггер), scikit-learn (TF-IDF, логистическая регрессия, пробы)</td><td>Опорные модели, классификаторы атрибутов, пробинг H3</td></tr>
+        <tr><td>Эмбеддинги</td><td>sentence-transformers, multilingual-e5-base</td><td>Поиск похожих образов между zh и kk</td></tr>
+        <tr><td>Токенизация</td><td>Hugging Face tokenizers (BPE, Metaspace, NFC)</td><td>Казахский BPE на 50K, замер фертильности</td></tr>
+        <tr><td>RAG</td><td>Собственный BM25 по словам и биграммам иероглифов</td><td>Без внешних зависимостей, воспроизводимо</td></tr>
+        <tr><td>Разметка</td><td>Label Studio</td><td>Экспертная разметка и проверка</td></tr>
+        <tr><td>Фронтенд</td><td>React 19, TypeScript, Vite, Tailwind CSS, React Router, axios, lucide-react</td><td>Анализ, сравнение, библиотека, стандарты</td></tr>
+        <tr><td>Качество</td><td>pytest, Vitest + Testing Library, Ruff, oxlint</td><td>67 тестов Python, 32 теста UI, линтеры</td></tr>
+        <tr><td>Развёртывание</td><td>Docker, docker-compose (web на nginx, api, db)</td><td>Общий стенд команды</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="modules" aria-labelledby="mod-h">
+    <h2 id="mod-h">Модули кода</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Файл</th><th>Роль</th></tr></thead>
+      <tbody>
+        <tr><td><code>app/nlp/pipeline.py</code></td><td>Сборка конвейера по настройкам, подстановка Context_Sentence и кандидатов</td></tr>
+        <tr><td><code>app/nlp/lexicon.py</code></td><td>Модуль B: словарь-ограничение, извлечение и слияние кандидатов</td></tr>
+        <tr><td><code>app/nlp/prompts.py</code></td><td>Стратегии промпта: zero-shot, few-shot, CoT, RAG, lexicon</td></tr>
+        <tr><td><code>app/nlp/rag.py</code></td><td>База знаний и BM25-поиск</td></tr>
+        <tr><td><code>app/nlp/llm.py</code></td><td>Общий поток LLM, разбор ответа, перевод обоснований, адаптеры OpenAI и Ollama</td></tr>
+        <tr><td><code>app/nlp/claude.py</code></td><td>Адаптер Claude</td></tr>
+        <tr><td><code>app/nlp/hf_local.py</code></td><td>Локальная генерация Transformers и LoRA-адаптеры</td></tr>
+        <tr><td><code>app/nlp/contracts.py</code></td><td>Схемы ответа LLM (обычная и CoT), проверка смещений, Context_Sentence</td></tr>
+        <tr><td><code>app/nlp/evaluation.py</code></td><td>Метрики раздела 6, Fleiss/Cohen κ, бутстрэп, Recall@k</td></tr>
+        <tr><td><code>app/nlp/experiment.py</code></td><td>Раннер сравнения методов и моделей</td></tr>
+        <tr><td><code>app/nlp/ift.py</code>, <code>finetune.py</code></td><td>IFT-датасет и LoRA-дообучение (H1)</td></tr>
+        <tr><td><code>app/nlp/tokenization.py</code></td><td>Фертильность и обучение BPE (H2)</td></tr>
+        <tr><td><code>app/nlp/probing.py</code></td><td>Послойные пробы и MDL (H3)</td></tr>
+        <tr><td><code>app/nlp/preprocess.py</code>, <code>importers.py</code>, <code>corpus.py</code></td><td>Нормализация zh и kk, импорт корпусов, схема корпуса, разделение без утечек</td></tr>
+        <tr><td><code>app/nlp/annotation.py</code></td><td>Экспорт и импорт Label Studio</td></tr>
+        <tr><td><code>app/nlp/baseline.py</code>, <code>xlmr.py</code>, <code>hybrid.py</code>, <code>comparison.py</code></td><td>Словарный baseline, XLM-R, гибрид, межъязыковой поиск на e5</td></tr>
+        <tr><td><code>app/services/export.py</code></td><td>Строки в формате ТЗ для JSON и CSV</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="methods" aria-labelledby="meth-h">
+    <h2 id="meth-h">Методы и модели</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Компонент стратегии</th><th>Что добавляет в запрос</th><th>≈ символов</th></tr></thead>
+      <tbody>
+        <tr><td><code>zero_shot</code></td><td>Только инструкции MIP, справочники и схема ответа</td><td class="num">5 700</td></tr>
+        <tr><td><code>lexicon</code></td><td>Кандидаты словаря; модель обязана решить по каждому</td><td class="num">+600</td></tr>
+        <tr><td><code>cot</code></td><td>Схема с полями basic_meaning, contextual_meaning, contrast перед решением</td><td class="num">+1 100</td></tr>
+        <tr><td><code>few_shot</code></td><td>Четыре синтетических примера, два zh и два kk, с отрицательными случаями</td><td class="num">+2 500</td></tr>
+        <tr><td><code>rag</code></td><td>Найденные фрагменты MIP/MIPVU, комментариев и словарных прочтений</td><td class="num">+3 400</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Стратегия по умолчанию: <code>few_shot+cot+rag+lexicon</code>. Задаётся <code>LLM_PROMPT_STRATEGY</code> или флагом <code>--strategy</code>.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Backend</th><th>Модели</th><th>Требования</th><th>Платно</th></tr></thead>
+      <tbody>
+        <tr><td><code>openai</code></td><td>Модель из <code>OPENAI_MODEL</code></td><td><code>OPENAI_API_KEY</code></td><td>Да</td></tr>
+        <tr><td><code>anthropic</code></td><td>Claude, по умолчанию <code>claude-opus-5-5</code></td><td><code>ANTHROPIC_API_KEY</code> или профиль <code>ant auth</code></td><td>Да</td></tr>
+        <tr><td><code>ollama</code></td><td>Qwen-2.5, LLaMA-3.1 и другие</td><td>Запущенная Ollama, <code>OLLAMA_MODEL</code></td><td>Нет</td></tr>
+        <tr><td><code>hf</code></td><td>Любая causal LM, в том числе SozKZ, с LoRA-адаптером</td><td><code>HF_MODEL</code>, <code>HF_ADAPTER</code>, GPU для 7B</td><td>Нет</td></tr>
+        <tr><td><code>baseline</code></td><td>Словарь фраз и кандидатов</td><td>Ничего</td><td>Нет</td></tr>
+        <tr><td><code>xlmr</code>, <code>hybrid</code></td><td>Дообученный XLM-R; гибрид с LLM</td><td>Чекпоинт <code>XLMR_MODEL_PATH</code></td><td>Гибрид — да</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Декодирование по ТЗ: T = 0.2, top-p = 0.95. Текущие Claude и reasoning-модели OpenAI эти параметры не принимают. Адаптер тогда повторяет запрос без них и ставит <code>method.sampling_applied = false</code> с предупреждением в результате.</p>
+  </section>
+
+  <section id="data" aria-labelledby="data-h">
+    <h2 id="data-h">Данные и ресурсы</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Путь</th><th>Содержимое</th><th>Статус</th></tr></thead>
+      <tbody>
+        <tr><td><code>data/lexicons/{zh,kk}.json</code></td><td>Словари-ограничения: термин, варианты, тип, традиционные прочтения, тональность, омонимы</td><td>Стартовые, на проверку филологам</td></tr>
+        <tr><td><code>data/knowledge/*.jsonl</code></td><td>База RAG: MIP, MIPVU, правила проекта, сигналы сравнения zh и kk, Ван И о «Ли Сао», образы жырау</td><td>Цитаты сверить с изданиями</td></tr>
+        <tr><td><code>data/prompts/fewshot.json</code></td><td>Синтетические примеры для few-shot</td><td>Не gold, не для оценки</td></tr>
+        <tr><td><code>data/normalization/zh_variants.json</code></td><td>Вариантные знаки → стандартная полная форма</td><td>Расширять по согласованию</td></tr>
+        <tr><td><code>contracts/*.schema.json</code></td><td>Схемы результата, корпуса, ответа LLM (обычная и CoT), таксономия</td><td>Генерируются скриптом</td></tr>
+        <tr><td><code>annotation/</code></td><td>Инструкция разметки 2.0, конфиг Label Studio</td><td>Готово</td></tr>
+        <tr><td><code>data/gold/</code>, <code>data/raw/</code></td><td>Корпуса и Golden Set (в .gitignore)</td><td>Пусто, нужен сбор</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="eval" aria-labelledby="eval-h">
+    <h2 id="eval-h">Оценка и гипотезы</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Метрика ТЗ</th><th>Поле отчёта</th><th>Цель</th><th>Измерено</th></tr></thead>
+      <tbody>
+        <tr><td>Извлечение сущностей</td><td><code>entity_extraction</code></td><td class="num">F1 ≥ 90%</td><td>Нет данных</td></tr>
+        <tr><td>Literal vs Metaphor</td><td><code>usage_classification</code></td><td class="num">F1 ≥ 82–85%</td><td>Нет данных</td></tr>
+        <tr><td>Семантическое этикетирование</td><td><code>semantic_labeling</code></td><td class="num">F1 ≥ 75–78%</td><td>Нет данных</td></tr>
+        <tr><td>Согласие аннотаторов</td><td><code>agreement → tz_target</code></td><td class="num">κ ≥ 0.75</td><td>Нет данных</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid3">
+      <div class="card"><h3>H1. Дообучение лучше промптинга</h3><p>Одна модель с zero-shot, few-shot и полным RAG против той же модели после LoRA на IFT-датасете. Сравнение на одном test, интервалы бутстрэпа.</p></div>
+      <div class="card"><h3>H2. Казахский токенизатор</h3><p>Фертильность SozKZ против Qwen, LLaMA и XLM-R на казахском корпусе и F1 только по <code>kk</code>, с учётом числа параметров.</p></div>
+      <div class="card"><h3>H3. Средние слои</h3><p>Пробы на каждом слое, F1 с GroupKFold по произведениям и сжатие MDL. Гипотеза подтверждается, если пик стабильно в средней трети слоёв.</p></div>
+    </div>
+    <p class="note">Раннер <code>experiment</code> сохраняет для каждого запуска предсказания, ошибки провайдера и метрики, а также сводку <code>summary.md</code> с флагами целей ТЗ. Ошибки считаются пустыми предсказаниями, поэтому тест не «сжимается». Готовые запуски не повторяются.</p>
+  </section>
+
+  <section id="api" aria-labelledby="api-h">
+    <h2 id="api-h">API и интерфейс</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Запрос</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST /api/v1/analyze</code></td><td>Текст на анализ, ответ 202 с <code>status_url</code></td></tr>
+        <tr><td><code>POST /api/v1/analyze/file</code></td><td>TXT, PDF или DOCX на анализ</td></tr>
+        <tr><td><code>GET /api/v1/analyses/{id}</code></td><td>Статус и результат</td></tr>
+        <tr><td><code>GET /api/v1/analyses</code></td><td>История с пагинацией</td></tr>
+        <tr><td><code>GET /api/v1/analyses/{id}/export?format=json|csv|tz</code></td><td>Выгрузка; <code>tz</code> и CSV — в полях ТЗ</td></tr>
+        <tr><td><code>POST /api/v1/compare</code></td><td>Сравнение zh и kk: типы, домены, пары, тональность, метки, употребление</td></tr>
+        <tr><td><code>POST /api/v1/compare/semantic</code></td><td>Похожие образы между языками на e5</td></tr>
+        <tr><td><code>GET|POST /api/v1/library/books</code></td><td>Библиотека книг</td></tr>
+        <tr><td><code>/api/v1/standards/…</code></td><td>Справочник стандартов, жизненный цикл, запуск проверок качества</td></tr>
+        <tr><td><code>GET /api/v1/health</code></td><td>Состояние API и БД</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid2">
+      <div class="card"><h3>Страницы интерфейса</h3><ul class="clean">
+        <li><b>Анализы</b>: ввод текста или файла, история.</li>
+        <li><b>Разбор анализа</b>: фигуры с сущностью, меткой, тональностью и контекстом; таблица кандидатов; метод; предупреждения; экспорт JSON, CSV и в формате ТЗ.</li>
+        <li><b>Сравнение</b>: частоты zh и kk, пары «источник → мишень», тональность, семантические метки, похожие образы.</li>
+        <li><b>Библиотека</b> и <b>Standards</b> (от коллег).</li>
+      </ul></div>
+      <div class="card"><h3>Поток данных</h3><p>Фронтенд на Vite проксирует <code>/api</code> на <code>localhost:8000</code>. API сохраняет задание со статусом <code>queued</code>, фоновая задача прогоняет конвейер и пишет результат. Интерфейс опрашивает статус каждые 3 секунды.</p></div>
+    </div>
+  </section>
+
+  <section id="cli" aria-labelledby="cli-h">
+    <h2 id="cli-h">Команды CLI</h2>
+    <p class="lede">Запуск: <code>python -m app.nlp &lt;команда&gt;</code> из корня репозитория.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Команда</th><th>Назначение</th></tr></thead>
+      <tbody>
+        <tr><td><code>import-chinese-poetry</code>, <code>import-texts</code></td><td>Импорт корпусов</td></tr>
+        <tr><td><code>validate</code>, <code>clean</code>, <code>split</code></td><td>Проверка, нормализация, разделение по произведениям</td></tr>
+        <tr><td><code>label-studio-export</code>, <code>label-studio-import</code></td><td>Задачи и разметка Label Studio</td></tr>
+        <tr><td><code>agreement</code></td><td>Согласие 2+ аннотаторов: Fleiss и Cohen</td></tr>
+        <tr><td><code>analyze</code>, <code>predict</code></td><td>Анализ файла или корпуса выбранным backend и стратегией</td></tr>
+        <tr><td><code>evaluate</code></td><td>Метрики, цели ТЗ, <code>--bootstrap</code></td></tr>
+        <tr><td><code>experiment</code></td><td>Сравнение методов и моделей по конфигурации</td></tr>
+        <tr><td><code>build-ift</code>, <code>finetune</code></td><td>IFT-датасет и LoRA</td></tr>
+        <tr><td><code>fertility</code>, <code>train-tokenizer</code></td><td>Токенизаторы</td></tr>
+        <tr><td><code>probe</code></td><td>Пробинг по слоям</td></tr>
+        <tr><td><code>train</code>, <code>train-attributes</code>, <code>compare</code>, <code>recall-at-k</code>, <code>demo</code></td><td>XLM-R, классификатор атрибутов, межъязыковой поиск, демо</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="config" aria-labelledby="cfg-h">
+    <h2 id="cfg-h">Настройки (.env)</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Переменная</th><th>По умолчанию</th><th>Смысл</th></tr></thead>
+      <tbody>
+        <tr><td><code>NLP_BACKEND</code></td><td><code>openai</code></td><td>Какой детектор использовать</td></tr>
+        <tr><td><code>LLM_PROMPT_STRATEGY</code></td><td><code>few_shot+cot+rag+lexicon</code></td><td>Стратегия промпта</td></tr>
+        <tr><td><code>LLM_TEMPERATURE</code>, <code>LLM_TOP_P</code></td><td><code>0.2</code>, <code>0.95</code></td><td>Декодирование по ТЗ</td></tr>
+        <tr><td><code>RAG_TOP_K</code></td><td><code>4</code></td><td>Сколько найденных документов добавлять</td></tr>
+        <tr><td><code>OPENAI_API_KEY</code>, <code>OPENAI_MODEL</code></td><td>—</td><td>OpenAI</td></tr>
+        <tr><td><code>ANTHROPIC_API_KEY</code>, <code>ANTHROPIC_MODEL</code></td><td>—, <code>claude-opus-5-5</code></td><td>Claude</td></tr>
+        <tr><td><code>OLLAMA_MODEL</code>, <code>OLLAMA_CONTEXT_WINDOW</code></td><td>—, <code>16384</code></td><td>Ollama</td></tr>
+        <tr><td><code>HF_MODEL</code>, <code>HF_ADAPTER</code></td><td>—</td><td>Локальная модель и LoRA</td></tr>
+        <tr><td><code>LEXICON_DIR</code>, <code>KNOWLEDGE_DIR</code></td><td><code>data/…</code></td><td>Свои словари и база RAG</td></tr>
+        <tr><td><code>DATABASE_URL</code></td><td>SQLite</td><td>PostgreSQL для общего стенда</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="run" aria-labelledby="run-h">
+    <h2 id="run-h">Запуск локально</h2>
+    <p class="lede">Из корня репозитория в PowerShell. Бэкенд слушает порт 8000, интерфейс — <code>http://localhost:5173</code>.</p>
+    <div class="cmd" id="cmds">
+      <span class="cmd-label">1. Окружение и зависимости (один раз)</span>
+      <div class="cmd-row"><pre>python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"</pre><button type="button" id="copy-1">Копировать</button></div>
+      <span class="cmd-label">Для XLM-R, эмбеддингов, пробинга и дообучения</span>
+      <div class="cmd-row"><pre>.\.venv\Scripts\python.exe -m pip install "torch>=2.6,&lt;3" --index-url https://download.pytorch.org/whl/cpu
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,nlp,finetune]"</pre><button type="button" id="copy-2">Копировать</button></div>
+      <span class="cmd-label">2. Бэкенд (для бесплатной проверки поставьте NLP_BACKEND=baseline в .env)</span>
+      <div class="cmd-row"><pre>.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000</pre><button type="button" id="copy-3">Копировать</button></div>
+      <span class="cmd-label">3. Фронтенд, во втором терминале</span>
+      <div class="cmd-row"><pre>npm --prefix frontend install
+npm --prefix frontend run dev</pre><button type="button" id="copy-4">Копировать</button></div>
+      <span class="cmd-label">Проверки</span>
+      <div class="cmd-row"><pre>.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check app scripts tests
+npm --prefix frontend test</pre><button type="button" id="copy-5">Копировать</button></div>
+    </div>
+  </section>
+
+  <section id="cost" aria-labelledby="cost-h">
+    <h2 id="cost-h">Стоимость запросов</h2>
+    <p class="lede">Токены тратят только <code>openai</code>, <code>anthropic</code> и <code>hybrid</code>. Один анализ — обычно один запрос; если модель написала обоснование не по-русски, добавляется короткий запрос на перевод.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Стратегия</th><th>≈ входных токенов</th><th>Пример для Claude Opus 5.5</th></tr></thead>
+      <tbody>
+        <tr><td><code>zero_shot</code></td><td class="num">~1,5 тыс.</td><td>Дешевле всего</td></tr>
+        <tr><td><code>cot+lexicon</code></td><td class="num">~2 тыс.</td><td>Хороший режим для повседневной работы</td></tr>
+        <tr><td><code>few_shot+cot+rag+lexicon</code></td><td class="num">~3,5–4,5 тыс.</td><td>≈ $0.03–0.06 за короткое стихотворение</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Ответ — примерно 150–300 токенов на каждую найденную фигуру; рассуждения «думающих» моделей тоже оплачиваются. Прогон Golden Set на 500 фрагментов — около $15–30 на одну пару «модель × стратегия». Это оценка, а не замер: подсчёт фактического расхода пока не встроен.</p>
+  </section>
+
+  <section id="ledger" aria-labelledby="led-h">
+    <div class="ledger-head">
+      <h2 id="led-h">Сверка с ТЗ по пунктам</h2>
+      <div class="filters" role="group" aria-label="Фильтр по статусу">
+        <button type="button" id="f-all" data-f="all" aria-pressed="true">Все</button>
+        <button type="button" id="f-done" data-f="done" aria-pressed="false">Сделано</button>
+        <button type="button" id="f-part" data-f="part" aria-pressed="false">Частично</button>
+        <button type="button" id="f-miss" data-f="miss" aria-pressed="false">Нет</button>
+      </div>
+    </div>
+    <div id="ledger" style="display:grid;gap:22px"></div>
+  </section>
+
+  <section id="next" aria-labelledby="road-h">
+    <h2 id="road-h">Что осталось</h2>
+    <p class="lede">Почти всё оставшееся — работа с данными и людьми. Код для каждого шага уже есть.</p>
+    <div class="lanes">
+      <div class="lane"><span class="tag">P0 · данные</span><h3>Корпуса</h3><ol>
+        <li>«Чу Цы» и танская поэзия через <code>import-chinese-poetry</code>.</li>
+        <li>Казахские эпос, жырау, Абай, современные поэты через <code>import-texts</code>.</li>
+        <li>Проверить лицензии, выставить <code>license_verified</code>.</li>
+        <li><code>clean --verse-lines</code>.</li>
+      </ol></div>
+      <div class="lane"><span class="tag">P0 · люди</span><h3>Golden Set</h3><ol>
+        <li>Пилот разметки по инструкции 2.0.</li>
+        <li>300–500 фрагментов, 3 эксперта, слепой первый этап.</li>
+        <li><code>agreement a b c</code>, цель κ ≥ 0.75.</li>
+        <li>Расширить словари и базу RAG со ссылками на издания.</li>
+      </ol></div>
+      <div class="lane"><span class="tag">P1 · этап 2</span><h3>Пилотные прогоны</h3><ol>
+        <li>Заполнить <code>experiments/pilot.example.json</code>.</li>
+        <li><code>experiment</code> на test.</li>
+        <li>Найти идентификатор SozKZ.</li>
+        <li>Разобрать ошибки.</li>
+      </ol></div>
+      <div class="lane"><span class="tag">P2 · этапы 3–4</span><h3>Гипотезы и публикация</h3><ol>
+        <li><code>build-ift</code> + <code>finetune</code> на GPU → H1.</li>
+        <li><code>fertility</code>, <code>train-tokenizer</code> → H2.</li>
+        <li><code>probe</code> по нескольким моделям → H3.</li>
+        <li>Межкультурный отчёт, датасет, веса, статьи.</li>
+      </ol></div>
+    </div>
+    <div class="card"><h3>Важно знать</h3><ul class="clean">
+      <li>Цитата Ван И в базе RAG и прочтения в словарях стартовые; до публикации их нужно сверить с изданиями.</li>
+      <li>Метрики сущностей считаются только по записям gold, где размечены <code>candidates</code>.</li>
+      <li>XLM-R оставлен опорной моделью, он не заменяет LLM.</li>
+      <li>Ветка <code>feat/tz-alignment</code> ещё не слита в <code>main</code>.</li>
+    </ul></div>
+  </section>
+
+  <footer>Требования: tz_llm_metaphors_poetry.docx. Описание соответствует коду ветки <code>feat/tz-alignment</code>; качество моделей на реальной поэзии пока не измерялось.</footer>
+</div>
+
+<script>
+const S = { done: "Сделано", part: "Частично", miss: "Нет" };
+const DATA = [
+  { g: "Задачи проекта", ref: "п. 2.2", items: [
+    ["2.2.1 Корпуса", "Китай: «Чу Цы», классика, современность. Казахстан: эпос, жырау, лирика.", "part",
+     "Импорт chinese-poetry (включая 楚辞) и папок с CSV-метаданными, схема корпуса, очистка, дедупликация, разделение по произведениям.",
+     "Собрать и сбалансировать реальные тексты, проверить лицензии."],
+    ["2.2.2 Методы LLM", "Zero/few-shot, CoT, RAG, fine-tuning Qwen-2.5, LLaMA-3.1, SozKZ.", "done",
+     "Стратегии в <code>prompts.py</code>, RAG в <code>rag.py</code>, LoRA в <code>finetune.py</code>, адаптеры OpenAI, Claude, Ollama и HF.",
+     "Провести прогоны на Golden Set."],
+    ["2.2.3 Токенизация для казахского", "BPE на 50K, снижение фрагментации агглютинативных слов.", "done",
+     "<code>train-tokenizer</code> (BPE, 50K, NFC), <code>fertility</code> — сравнение токенизаторов.",
+     "Замерить на собранном казахском корпусе."],
+    ["2.2.4 Картирование и тональность", "Source → Target, сентимент.", "done",
+     "Домены, тональность, семантические метки; <code>/compare</code> строит пары «источник → мишень», тональность и метки.",
+     "Интерпретировать на реальных данных."],
+    ["2.2.5 Human-in-the-Loop", "Двухэтапная слепая валидация, Cohen и Fleiss Kappa.", "done",
+     "Протокол из 2 этапов для 3 экспертов в инструкции 2.0, Label Studio 2.0, <code>agreement</code> с Fleiss и Cohen.",
+     "Провести разметку."],
+  ]},
+  { g: "Входные данные", ref: "п. 3", items: [
+    ["3.1 Китайский препроцессинг", "Нормализация иероглифики, сегментация на стихи, очистка помет.", "done",
+     "NFC, таблица вариантных знаков, удаление скобочных помет и сносок, <code>--verse-lines</code>.",
+     "Расширять таблицу вариантов вместе с филологами."],
+    ["3.2 Казахский препроцессинг", "NFC и токенизация с сохранением аффиксов.", "done",
+     "NFC, исправление латинских букв-двойников в кириллических словах; словоформы сохраняются целиком.", "—"],
+    ["3.3 Словари-ограничения", "Растения, животные, природа, абстрактные концепты.", "part",
+     "<code>data/lexicons/{zh,kk}.json</code>: около 50 записей на язык; для казахского учтены аффиксы, чередование к/г, қ/ғ, п/б и омонимы.",
+     "Расширить и проверить с филологами."],
+  ]},
+  { g: "Модули конвейера", ref: "п. 4", items: [
+    ["A. Препроцессинг и токенизация", "Мультиязычные и казахские модели, фертильность.", "done",
+     "Очистка, адаптеры моделей, замер фертильности.", "Добавить SozKZ после выбора идентификатора."],
+    ["B. Извлечение кандидатов", "Сущности с soft lexicon constraints.", "done",
+     "<code>lexicon.py</code>: кандидаты передаются модели и сохраняются в <code>candidates</code>.", "Расширять словари."],
+    ["C. Literal vs Metaphorical", "CoT и процедура MIP/MIPVU.", "done",
+     "CoT-схема (базовое значение → контекстное → контраст), <code>literal_candidates</code>, <code>usage_type</code>.", "—"],
+    ["D. Этикетирование и картирование", "Метки, тональность, source domains.", "done",
+     "<code>semantic_label</code>, <code>sentiment</code>, домены, межъязыковое сравнение.", "—"],
+    ["E. Валидация экспертами", "Проверка кандидатов филологами.", "part",
+     "Label Studio с подсказками словаря на 2-м этапе, <code>needs_review</code>, согласие экспертов.",
+     "Режим «принять / исправить» прямо в веб-интерфейсе."],
+  ]},
+  { g: "Генерация и формат", ref: "п. 4.1", items: [
+    ["Параметры декодирования", "T = 0.2, top-p = 0.95.", "done",
+     "<code>LLM_TEMPERATURE</code> и <code>LLM_TOP_P</code> во всех адаптерах; отказ провайдера фиксируется в <code>method</code>.", "—"],
+    ["Формат вывода", "Entity, Type, Context_Sentence, Usage_Type, Source/Target_Domain, Semantic_Label, Evidence_Reasoning.", "done",
+     "Поля в схеме результата; экспорт <code>format=tz</code> и CSV с колонками ТЗ.", "—"],
+  ]},
+  { g: "Гипотезы", ref: "п. 5", items: [
+    ["H1. Fine-tuning лучше промптинга", "IFT против zero/few-shot.", "part",
+     "<code>build-ift</code>, <code>finetune</code> (LoRA), backend <code>hf</code>, <code>experiment</code>.", "Нужны gold и GPU-прогоны."],
+    ["H2. Локальный токенизатор", "SozKZ против мультиязычных моделей.", "part",
+     "<code>fertility</code>, <code>train-tokenizer</code>, прогоны только на <code>kk</code>.", "Нужны корпус и SozKZ."],
+    ["H3. Средние слои", "Пробинг и MDL по слоям.", "part",
+     "<code>probe</code>: линейные пробы с GroupKFold и MDL online code.", "Нужны gold-кандидаты."],
+  ]},
+  { g: "Оценка качества", ref: "п. 6", items: [
+    ["Golden Test Set", "300–500 фрагментов, 3 эксперта.", "miss",
+     "Есть только 12 синтетических примеров для тестов кода.", "Разметить и зафиксировать до экспериментов."],
+    ["Entity Extraction, F1 ≥ 90%", "Precision, Recall, F1.", "part",
+     "Метрика <code>entity_extraction</code> и флаг цели в <code>tz_targets</code>.", "Значение не измерено."],
+    ["Literal vs Metaphor, F1 ≥ 82–85%", "Precision, Recall, F1.", "part",
+     "Метрика <code>usage_classification</code>, бутстрэп-интервалы.", "Значение не измерено."],
+    ["Semantic Labeling, F1 ≥ 75–78%", "Precision, Recall, F1.", "part",
+     "Метрика <code>semantic_labeling</code> и разбивка по полям.", "Значение не измерено."],
+    ["Согласие аннотаторов, κ ≥ 0.75", "Cohen и Fleiss Kappa.", "part",
+     "Fleiss и Cohen для 2+ аннотаторов, флаг цели.", "Значение не измерено."],
+  ]},
+  { g: "Календарный план", ref: "п. 7", items: [
+    ["Этап 1. Данные", "Корпуса, схема MIP/MIPVU, словари.", "part",
+     "Схема 2.0, импорт, стартовые словари.", "Собрать корпуса и расширить словари."],
+    ["Этап 2. Базовый конвейер", "Промпты, RAG, пилоты на моделях.", "part",
+     "Конвейер, все стратегии и адаптеры, раннер экспериментов.", "Провести пилотные прогоны."],
+    ["Этап 3. IFT и дообучение", "IFT Dataset, fine-tuning.", "part",
+     "Генератор датасета и LoRA-обучение.", "Нужны gold и GPU."],
+    ["Этап 4. Анализ и публикации", "Межкультурное сопоставление, Golden Set, error analysis.", "part",
+     "Агрегаты и семантическое сравнение, матрицы ошибок, бутстрэп.", "Результаты, статьи, публикация."],
+  ]},
+  { g: "Ожидаемые результаты", ref: "п. 8", items: [
+    ["Размеченный корпус метафор", "Сопоставительный zh/kk с доменами.", "miss", "Нет.", "После Golden Set."],
+    ["Открытый IFT-датасет", "Для обучения LLM.", "part", "Генератор и карточка датасета.", "Нужны gold-данные."],
+    ["Программный комплекс", "Pipeline на Python/Transformers.", "done",
+     "<code>app/nlp</code>, API, UI, CLI, 67 + 32 теста.", "Поддерживать."],
+    ["Научные публикации", "ACL / EMNLP / IJCAI / ВАК, Scopus.", "miss", "Нет результатов.", "После этапа 4."],
+  ]},
+];
+
+const all = DATA.flatMap(g => g.items);
+const n = { done: 0, part: 0, miss: 0 };
+all.forEach(i => n[i[2]]++);
+document.getElementById("counts").innerHTML = ["done", "part", "miss"].map(k =>
+  `<div class="count ${k}"><b>${n[k]}</b><span>${S[k]} из ${all.length}</span></div>`).join("");
+const bar = document.getElementById("bar");
+bar.innerHTML = ["done", "part", "miss"].map(k => `<i class="${k}" style="width:${(n[k] / all.length * 100).toFixed(2)}%"></i>`).join("");
+bar.setAttribute("aria-label", `Сделано ${n.done}, частично ${n.part}, нет ${n.miss} из ${all.length}`);
+
+function render(filter) {
+  const html = DATA.map(g => {
+    const rows = g.items.filter(i => filter === "all" || i[2] === filter);
+    if (!rows.length) return "";
+    return `<div class="group"><h3>${g.g} <small>${g.ref}</small></h3><div class="ltable">
+      <div class="row th"><div>Требование</div><div>Статус</div><div>Что есть</div><div>Что сделать</div></div>
+      ${rows.map(([t, d, s, have, todo]) => `<div class="row">
+        <div class="req cell"><b>${t}</b><span>${d}</span></div>
+        <div class="cell"><span class="chip ${s}">${S[s]}</span></div>
+        <div class="cell"><span class="lbl">Что есть</span>${have}</div>
+        <div class="cell"><span class="lbl">Что сделать</span>${todo}</div></div>`).join("")}
+    </div></div>`;
+  }).join("");
+  document.getElementById("ledger").innerHTML = html || `<p class="empty">Нет пунктов с этим статусом.</p>`;
+}
+let current = "all";
+try { current = localStorage.getItem("tz-filter") || "all"; } catch (e) {}
+document.querySelectorAll(".filters button").forEach(b => {
+  b.setAttribute("aria-pressed", String(b.dataset.f === current));
+  b.addEventListener("click", () => {
+    current = b.dataset.f;
+    document.querySelectorAll(".filters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    try { localStorage.setItem("tz-filter", current); } catch (e) {}
+    render(current);
+  });
+});
+render(current);
+
+document.querySelectorAll(".cmd-row button").forEach(button => {
+  button.addEventListener("click", () => {
+    const pre = button.previousElementSibling;
+    const done = () => { button.textContent = "Скопировано"; setTimeout(() => { button.textContent = "Копировать"; }, 1500); };
+    const select = () => {
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      button.textContent = "Выделено, Ctrl+C";
+    };
+    try {
+      navigator.clipboard.writeText(pre.textContent).then(done, select);
+    } catch (e) { select(); }
+  });
+});
+</script>

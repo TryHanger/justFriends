@@ -1,0 +1,16 @@
+{
+  "name": "pilot",
+  "gold": "data/gold/splits/test.jsonl",
+  "bootstrap": 1000,
+  "runs": [
+    {"name": "baseline", "backend": "baseline"},
+    {"name": "gpt-zero-shot", "backend": "openai", "strategy": "zero_shot"},
+    {"name": "gpt-few-shot-cot", "backend": "openai", "strategy": "few_shot+cot+lexicon"},
+    {"name": "gpt-full-rag", "backend": "openai", "strategy": "few_shot+cot+rag+lexicon"},
+    {"name": "claude-zero-shot", "backend": "anthropic", "model": "claude-opus-5-5", "strategy": "zero_shot"},
+    {"name": "claude-full-rag", "backend": "anthropic", "model": "claude-opus-5-5", "strategy": "few_shot+cot+rag+lexicon"},
+    {"name": "qwen-few-shot", "backend": "ollama", "model": "qwen2.5:7b-instruct", "strategy": "few_shot+lexicon"},
+    {"name": "llama-few-shot", "backend": "ollama", "model": "llama3.1:8b-instruct-q8_0", "strategy": "few_shot+lexicon"},
+    {"name": "qwen-ift", "backend": "hf", "model": "Qwen/Qwen2.5-7B-Instruct", "adapter": "models/qwen-ift", "strategy": "lexicon"}
+  ]
+}

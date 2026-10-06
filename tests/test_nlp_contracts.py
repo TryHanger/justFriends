@@ -125,11 +125,46 @@ def test_metrics_include_false_positives_and_missing_ids():
     assert annotation_agreement([records[0]], [records[0]])["character_kappa"] is None
 
 
+def llm_item(text="心海", start=0, **updates):
+    """One figurative expression in the strict LLM output format (ТЗ п. 4.1 fields)."""
+    item = dict(
+        text=text,
+        start=start,
+        end=start + len(text),
+        entity=text[-1],
+        entity_type="natural_phenomenon",
+        label="metaphor",
+        source_domain="water",
+        target_domain="emotion",
+        semantic_label="глубина чувств",
+        sentiment="neutral",
+        confidence=0.5,
+        rationale="Образ моря передаёт чувства.",
+    )
+    item.update(updates)
+    return item
+
+
+def llm_payload(*items, literal=(), language="zh"):
+    return {"language": language, "metaphors": list(items), "literal_candidates": list(literal)}
+
+
 def test_llm_invalid_output_and_model_version_owned_by_code():
-    payload = {"language": "zh", "metaphors": [span().model_dump()]}
+    payload = llm_payload(llm_item())
     result = parse_output(json.dumps(payload), "心海", "zh", "test-version")
     assert result.model_version == "test-version" and result.needs_review
-    payload["metaphors"][0]["end"] = 200
+    span_out = result.metaphors[0]
+    assert (span_out.entity, span_out.context_sentence, span_out.sentiment) == (
+        "海",
+        "心海",
+        "neutral",
+    )
+    assert [(c.text, c.usage_type) for c in result.candidates] == [("海", "metaphorical")]
+    # A fragment absent from the poem is omitted with a warning, never relocated by guess.
+    payload["metaphors"][0].update(text="海心", entity="海")
+    omitted = parse_output(json.dumps(payload), "心海", "zh", "test-version")
+    assert omitted.metaphors == [] and "omitted" in omitted.warnings[-1]
+    payload["metaphors"][0] = llm_item(label="invented")
     with pytest.raises(ValueError):
         parse_output(json.dumps(payload), "心海", "zh", "test-version")
     payload["metaphors"] = []

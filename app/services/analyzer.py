@@ -4,7 +4,6 @@ from functools import lru_cache
 
 from app.core.config import get_settings
 from app.nlp.contracts import NLPInputError, output_schema
-from app.nlp.llm import INSTRUCTIONS  # noqa: F401
 from app.nlp.pipeline import build_pipeline
 from app.schemas.analysis import AnalysisResult
 

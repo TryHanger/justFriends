@@ -51,5 +51,7 @@ class HybridDetector:
             metaphors=sorted(spans, key=lambda s: s.start),
             needs_review=True,
             warnings=list(dict.fromkeys(warnings)),
+            candidates=secondary.candidates,
+            method={"hybrid": True, "llm": secondary.method},
         )
         return validate_result(text, language, result)

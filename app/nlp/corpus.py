@@ -10,7 +10,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.nlp.contracts import ModelSpan, validate_spans
+from app.nlp.contracts import ModelSpan, validate_candidates, validate_spans
+from app.schemas.analysis import EntityCandidate
 
 
 class Poem(BaseModel):
@@ -32,13 +33,19 @@ class Poem(BaseModel):
     annotators: list[str] = Field(default_factory=list)
     adjudicator: str | None = None
     spans: list[ModelSpan] = Field(default_factory=list)
+    # Gold entity candidates with literal/metaphorical decisions (modules B and C evaluation).
+    # Empty means "not annotated at entity level"; such records are skipped by those metrics.
+    candidates: list[EntityCandidate] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def check_annotation(self):
         if not self.text.strip():
             raise ValueError("Empty poem")
         validate_spans(self.text, self.spans)
-        if self.annotation_status == "unlabeled" and self.spans:
+        validate_candidates(self.text, self.candidates)
+        if any(c.usage_type is None for c in self.candidates) and self.annotation_status == "gold":
+            raise ValueError("Gold candidates need a literal/metaphorical decision")
+        if self.annotation_status == "unlabeled" and (self.spans or self.candidates):
             raise ValueError("Unlabeled record cannot contain spans")
         if self.annotation_status == "gold" and (not self.annotators or not self.adjudicator):
             raise ValueError("Gold requires annotators and an adjudicator, including negatives")
@@ -75,13 +82,23 @@ def fingerprint(text: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def clean_corpus(records: list[Poem]) -> tuple[list[Poem], list[dict]]:
+def clean_corpus(
+    records: list[Poem], *, verse_lines: bool = False, remove_editorial: bool = True
+) -> tuple[list[Poem], list[dict]]:
+    from app.nlp.preprocess import normalize
+
     clean, report, seen = [], [], {}
     for record in records:
         text = record.text
         if record.annotation_status == "unlabeled":
             text = unicodedata.normalize("NFC", text.removeprefix("\ufeff"))
             text = text.replace("\r\n", "\n").replace("\r", "\n")
+            options = (
+                {"verse_lines": verse_lines, "remove_editorial": remove_editorial}
+                if record.language == "zh"
+                else {}
+            )
+            text = normalize(text, record.language, **options)
             text = "\n".join(line.rstrip() for line in text.split("\n")).strip()
         key = (record.language, fingerprint(text))
         if key in seen:

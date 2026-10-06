@@ -20,6 +20,16 @@ Scanned-PDF OCR and DOC/ODT/RTF conversion are intentionally left as the next do
 3. Start the API: `uvicorn app.main:app --reload`.
 4. Open `/docs` for the interactive API reference.
 
+Semantic comparison (`python -m app.nlp compare`) and the `xlmr`/`hybrid` backends need the NLP extras and the embedding model (~1 GB, downloaded once into the Hugging Face cache):
+
+```powershell
+pip install "torch>=2.6,<3" --index-url https://download.pytorch.org/whl/cpu
+pip install -e ".[dev,nlp]"
+python -c "from sentence_transformers import SentenceTransformer; print(SentenceTransformer('intfloat/multilingual-e5-base').encode(['query: test']).shape)"
+```
+
+The last command should print `(1, 768)`. Without these steps semantic comparison fails. The Docker image installs only the base dependencies, so semantic comparison is not available there.
+
 The service starts without an API key so health checks and documentation remain available. Without `OPENAI_API_KEY`, submitted jobs move to `failed` with a configuration error.
 
 For a shared local environment, copy `.env.example` to `.env`, set `OPENAI_API_KEY`, then run `docker compose up --build`.

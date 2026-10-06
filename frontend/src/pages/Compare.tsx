@@ -291,6 +291,29 @@ export default function Compare() {
                         ))}
                       </ul>
                     </div>
+
+                    {[
+                      ['Sentiment', data.by_sentiment],
+                      ['Domain pairs', data.by_domain_pair],
+                      ['Semantic labels', data.top_semantic_labels],
+                    ]
+                      .filter(([, values]) => values && Object.keys(values).length > 0)
+                      .map(([title, values]) => (
+                        <div key={title as string} className="border border-gray-200 rounded p-4">
+                          <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-1">{tr(title as string, language)}</h4>
+                          <ul className="space-y-1">
+                            {Object.entries(values as Record<string, number>)
+                              .sort(([, a], [, b]) => b - a)
+                              .slice(0, 8)
+                              .map(([key, count]) => (
+                                <li key={key} className="flex justify-between gap-3 text-sm">
+                                  <span className="text-gray-700 min-w-0 break-words">{title === 'Sentiment' ? tr(key, language) : key}</span>
+                                  <span className="font-mono bg-gray-100 px-1.5 rounded">{count}</span>
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      ))}
                   </div>
                 ))}
               </div>
