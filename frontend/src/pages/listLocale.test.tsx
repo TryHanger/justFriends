@@ -76,6 +76,9 @@ describe.each([
     let rejectRequest: (() => void) | undefined;
     let requests = 0;
     api.defaults.adapter = config => {
+      if (config.url === '/models') {
+        return Promise.resolve({ data: [], status: 200, statusText: 'OK', headers: {}, config });
+      }
       requests++;
       return new Promise((_, reject) => {
         rejectRequest = () => reject(new AxiosError('Network Error', AxiosError.ERR_NETWORK, config));

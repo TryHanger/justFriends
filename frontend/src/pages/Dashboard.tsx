@@ -36,7 +36,9 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    void listModels().then(setModels).catch((err) => console.error(err));
+    void listModels()
+      .then((items) => { if (Array.isArray(items)) setModels(items); })
+      .catch((err) => console.error(err));
   }, []);
 
   const selectedModel = models.find((model) => model.id === modelProfile);
@@ -118,7 +120,7 @@ export default function Dashboard() {
                 <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                   <p className="font-semibold">{selectedModel.name} · {selectedModel.supervision}</p>
                   <p>{selectedModel.description}</p>
-                  {selectedModel.metric_label && selectedModel.metric_value !== null && <p className="mt-1 font-medium">{selectedModel.metric_label}: {selectedModel.metric_value.toFixed(4)}</p>}
+                  {selectedModel.metric_label && typeof selectedModel.metric_value === 'number' && <p className="mt-1 font-medium">{selectedModel.metric_label}: {selectedModel.metric_value.toFixed(4)}</p>}
                 </div>
               )}
             </div>
@@ -181,7 +183,7 @@ export default function Dashboard() {
               <div className="flex items-start justify-between gap-2"><p className="font-semibold text-gray-900">{model.name}</p><span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">{model.supervision}</span></div>
               <p className="mt-2 text-xs text-gray-600">{model.description}</p>
               {model.training_records && <p className="mt-2 text-xs text-gray-500">{tr('Training records', uiLanguage)}: {model.training_records.toLocaleString()}</p>}
-              {model.metric_label && model.metric_value !== null && <p className="mt-1 text-xs font-medium text-indigo-700">{model.metric_label}: {model.metric_value.toFixed(4)}</p>}
+              {model.metric_label && typeof model.metric_value === 'number' && <p className="mt-1 text-xs font-medium text-indigo-700">{model.metric_label}: {model.metric_value.toFixed(4)}</p>}
             </button>)}
           </div>
         </div>

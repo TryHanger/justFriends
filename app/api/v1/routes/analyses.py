@@ -1,10 +1,10 @@
 import csv
 import json
 import logging
-from pathlib import Path
 from collections import Counter, defaultdict
 from functools import lru_cache
 from io import StringIO
+from pathlib import Path
 from typing import Literal
 
 from fastapi import (
@@ -33,8 +33,8 @@ from app.schemas.analysis import (
     CompareRequest,
     CompareResponse,
     ComparisonGroup,
-    ModelProfile,
     ModelInfo,
+    ModelProfile,
 )
 from app.schemas.comparison import ComparisonItem, ComparisonResult
 from app.services.analysis_jobs import create_analysis_job, process_analysis, read_result

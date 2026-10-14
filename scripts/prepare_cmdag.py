@@ -12,8 +12,8 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from app.nlp.corpus import Poem, fingerprint, write_corpus
 from app.nlp.contracts import ModelSpan
+from app.nlp.corpus import Poem, fingerprint, write_corpus
 
 CMDAG_REPOSITORY = "https://github.com/JasonShao55/Chinese_Metaphor_Explanation"
 SPLITS = {

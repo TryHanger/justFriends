@@ -8,8 +8,6 @@ Usage:
     python scripts/build_pilot_corpus.py
 """
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import html
@@ -137,7 +135,7 @@ def kazakh_records(limit: int, delay: float) -> tuple[list[dict], list[dict]]:
 
     records: list[dict] = []
     seen: set[str] = set()
-    for position, path in enumerate(paths):
+    for path in paths:
         page_url = f"{ABAI_BASE}{path}"
         page = fetch(page_url)
         title, author = poem_metadata(page)
