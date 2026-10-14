@@ -22,11 +22,13 @@ def process_analysis(analysis_id: int, model_profile: str = "default") -> None:
         db.commit()
 
         try:
-            result = analyze_text(
-                record.source_text,
-                record.language if record.language != "auto" else "auto",
-                model_profile,
-            )
+            language = record.language if record.language != "auto" else "auto"
+            # Keep the default path compatible with integrations that provide
+            # the original two-argument analyzer callable.
+            if model_profile == "default":
+                result = analyze_text(record.source_text, language)
+            else:
+                result = analyze_text(record.source_text, language, model_profile)
             record.language = result.language
             record.model_version = result.model_version
             record.result = result.model_dump(mode="json")
