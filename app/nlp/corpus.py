@@ -128,6 +128,17 @@ def require_gold(records: list[Poem], allow_synthetic: bool = False) -> None:
             raise ValueError(f"{record.id}: verify and record source license first")
 
 
+def require_silver_pilot(records: list[Poem]) -> None:
+    """Validate weakly supervised pilot inputs without misrepresenting them as Gold."""
+    if not records:
+        raise ValueError("Empty silver pilot set")
+    for record in records:
+        if record.annotation_status == "unlabeled":
+            raise ValueError(f"{record.id}: silver pilot needs model-labelled draft records")
+        if record.synthetic:
+            raise ValueError("Synthetic examples are not allowed in a silver pilot")
+
+
 def assert_disjoint(*splits: list[Poem]) -> None:
     seen_ids, seen_works, seen_texts = set(), set(), set()
     for records in splits:

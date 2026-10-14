@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_context_window: int = Field(default=16384, ge=4096)
     xlmr_model_path: str = "models/xlmr"
+    experimental_kk_xlmr_model_path: str = "models/xlmr-kk-silver-pilot-v2"
+    chinese_gold_xlmr_model_path: str = "models/cmdag-xlmr-mps-full-v2"
     attribute_model_path: str | None = None
     hybrid_llm_backend: Literal["openai", "anthropic", "ollama", "hf"] = "openai"
     nlp_review_threshold: float = Field(default=0.8, ge=0, le=1)

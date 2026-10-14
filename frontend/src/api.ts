@@ -106,15 +106,30 @@ export interface SubmitResponse {
   status_url: string;
 }
 
-export const submitText = async (text: string, language: string = 'auto') => {
-  const res = await api.post<SubmitResponse>('/analyze', { text, language });
+export type ModelProfile = 'default' | 'experimental_kk' | 'xlmr_zh_gold_v2' | 'baseline';
+
+export interface ModelInfo {
+  id: ModelProfile;
+  name: string;
+  description: string;
+  languages: Array<'auto' | 'zh' | 'kk'>;
+  supervision: string;
+  training_records?: number | null;
+  metric_label?: string | null;
+  metric_value?: number | null;
+  available: boolean;
+}
+
+export const submitText = async (text: string, language: string = 'auto', modelProfile: ModelProfile = 'default') => {
+  const res = await api.post<SubmitResponse>('/analyze', { text, language, model_profile: modelProfile });
   return res.data;
 };
 
-export const submitFile = async (file: File, language: string = 'auto') => {
+export const submitFile = async (file: File, language: string = 'auto', modelProfile: ModelProfile = 'default') => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('language', language);
+  formData.append('model_profile', modelProfile);
   const res = await api.post<SubmitResponse>('/analyze/file', formData);
   return res.data;
 };
@@ -126,6 +141,11 @@ export const getAnalysis = async (id: number) => {
 
 export const listAnalyses = async (limit = 20, offset = 0) => {
   const res = await api.get<AnalysisListResponse>(`/analyses`, { params: { limit, offset } });
+  return res.data;
+};
+
+export const listModels = async () => {
+  const res = await api.get<ModelInfo[]>('/models');
   return res.data;
 };
 

@@ -63,6 +63,7 @@ export default function AnalysisDetail() {
   const warnings = analysis.result?.warnings ?? [];
   const candidates = analysis.result?.candidates || [];
   const method = analysis.result?.method || {};
+  const isLegacyBaseline = analysis.result?.model_version === 'lexical-demo-v1';
   const sentimentStyle: Record<string, string> = {
     positive: 'bg-green-50 text-green-700 ring-green-600/20',
     neutral: 'bg-gray-50 text-gray-600 ring-gray-500/20',
@@ -146,6 +147,12 @@ export default function AnalysisDetail() {
 
       {isComplete && (
         <div className="space-y-4">
+          {isLegacyBaseline && (
+            <div role="alert" className="rounded-lg border border-blue-300 bg-blue-50 p-4 text-blue-950">
+              <h2 className="font-semibold">{tr('Archived baseline result', language)}</h2>
+              <p className="mt-1 text-sm">{tr('This analysis used the old dictionary baseline, not the current XLM-R or GPT model. Create a new analysis to use the current model.', language)}</p>
+            </div>
+          )}
           {(needsReview || warnings.length > 0) && (
             <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
               <h2 className="font-semibold">{tr('Analysis warnings', language)}</h2>

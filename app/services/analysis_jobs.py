@@ -11,7 +11,7 @@ from app.services.analyzer import analyze_text
 logger = logging.getLogger(__name__)
 
 
-def process_analysis(analysis_id: int) -> None:
+def process_analysis(analysis_id: int, model_profile: str = "default") -> None:
     """Run one persisted analysis job using an independent DB session."""
     db: Session = SessionLocal()
     try:
@@ -25,6 +25,7 @@ def process_analysis(analysis_id: int) -> None:
             result = analyze_text(
                 record.source_text,
                 record.language if record.language != "auto" else "auto",
+                model_profile,
             )
             record.language = result.language
             record.model_version = result.model_version
@@ -45,11 +46,11 @@ def process_analysis(analysis_id: int) -> None:
 
 
 def create_analysis_job(
-    db: Session, source_text: str, language: str, source_name: str | None
+    db: Session, source_text: str, language: str, source_name: str | None, model_profile: str = "default"
 ) -> AnalysisRecord:
     record = AnalysisRecord(
         language=language,
-        model_version="pending",
+        model_version=model_profile if model_profile != "default" else "pending",
         status="queued",
         source_name=source_name,
         source_text=source_text,

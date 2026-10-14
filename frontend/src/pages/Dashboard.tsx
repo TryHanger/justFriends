@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, Plus, Loader2 } from 'lucide-react';
-import { listAnalyses, submitText, submitFile } from '../api';
+import { Upload, FileText, Plus, Loader2, BrainCircuit } from 'lucide-react';
+import { listAnalyses, listModels, submitText, submitFile } from '../api';
+import type { ModelInfo, ModelProfile } from '../api';
 import { getApiErrorMessage } from '../apiErrors';
 import type { AnalysisResponse } from '../api';
 import { tr, useLanguage } from '../i18n';
@@ -10,11 +11,13 @@ export default function Dashboard() {
   const { language: uiLanguage } = useLanguage();
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisResponse[]>([]);
+  const [models, setModels] = useState<ModelInfo[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState(false);
   
   const [text, setText] = useState('');
   const [analysisLanguage, setAnalysisLanguage] = useState('auto');
+  const [modelProfile, setModelProfile] = useState<ModelProfile>('default');
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -32,6 +35,12 @@ export default function Dashboard() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    void listModels().then(setModels).catch((err) => console.error(err));
+  }, []);
+
+  const selectedModel = models.find((model) => model.id === modelProfile);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text && !file) {
@@ -43,9 +52,9 @@ export default function Dashboard() {
     try {
       let res;
       if (file) {
-        res = await submitFile(file, analysisLanguage);
+        res = await submitFile(file, analysisLanguage, modelProfile);
       } else {
-        res = await submitText(text, analysisLanguage);
+        res = await submitText(text, analysisLanguage, modelProfile);
       }
       navigate(`/analyses/${res.analysis_id}`);
     } catch (err: unknown) {
@@ -88,6 +97,30 @@ export default function Dashboard() {
                 <option value="zh">{tr('Chinese (zh)', uiLanguage)}</option>
                 <option value="kk">{tr('Kazakh (kk)', uiLanguage)}</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{tr('Analysis model', uiLanguage)}</label>
+              <select
+                value={modelProfile}
+                onChange={(e) => {
+                  const profile = e.target.value as ModelProfile;
+                  setModelProfile(profile);
+                  if (profile === 'experimental_kk') setAnalysisLanguage('kk');
+                  if (profile === 'xlmr_zh_gold_v2') setAnalysisLanguage('zh');
+                }}
+                className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border"
+              >
+                {models.length === 0 && <option value="default">{tr('Configured project model', uiLanguage)}</option>}
+                {models.map((model) => <option key={model.id} value={model.id} disabled={!model.available}>{model.name}{model.available ? '' : ` — ${tr('unavailable', uiLanguage)}`}</option>)}
+              </select>
+              {selectedModel && (
+                <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  <p className="font-semibold">{selectedModel.name} · {selectedModel.supervision}</p>
+                  <p>{selectedModel.description}</p>
+                  {selectedModel.metric_label && selectedModel.metric_value !== null && <p className="mt-1 font-medium">{selectedModel.metric_label}: {selectedModel.metric_value.toFixed(4)}</p>}
+                </div>
+              )}
             </div>
             
             {!file ? (
@@ -141,6 +174,17 @@ export default function Dashboard() {
       </div>
 
       <div className="md:col-span-2">
+        <div className="mb-6 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><BrainCircuit className="w-5 h-5 text-indigo-600" />{tr('Model catalog', uiLanguage)}</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {models.map((model) => <button key={model.id} type="button" onClick={() => { if (model.available) { setModelProfile(model.id); if (model.languages.length === 1) setAnalysisLanguage(model.languages[0]); } }} disabled={!model.available} className={`rounded-lg border p-4 text-left transition ${modelProfile === model.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-indigo-300'} disabled:cursor-not-allowed disabled:opacity-50`}>
+              <div className="flex items-start justify-between gap-2"><p className="font-semibold text-gray-900">{model.name}</p><span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">{model.supervision}</span></div>
+              <p className="mt-2 text-xs text-gray-600">{model.description}</p>
+              {model.training_records && <p className="mt-2 text-xs text-gray-500">{tr('Training records', uiLanguage)}: {model.training_records.toLocaleString()}</p>}
+              {model.metric_label && model.metric_value !== null && <p className="mt-1 text-xs font-medium text-indigo-700">{model.metric_label}: {model.metric_value.toFixed(4)}</p>}
+            </button>)}
+          </div>
+        </div>
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-xl font-bold mb-4">{tr('Recent Analyses', uiLanguage)}</h2>
           {loadingList ? (

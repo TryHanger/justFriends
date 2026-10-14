@@ -47,6 +47,17 @@ def main():
     train.add_argument("--base-model", default="FacebookAI/xlm-roberta-base")
     train.add_argument("--epochs", type=int, default=3)
     train.add_argument("--batch-size", type=int, default=4)
+    train.add_argument(
+        "--kazakh-sampling-weight",
+        type=float,
+        default=1.0,
+        help="Oversample Kazakh records during mixed-language training (>= 1).",
+    )
+    train.add_argument(
+        "--allow-silver-pilot",
+        action="store_true",
+        help="Permit draft Silver data; experiment metadata remains explicitly non-Gold.",
+    )
     attributes = commands.add_parser("train-attributes")
     attributes.add_argument("--train", required=True)
     attributes.add_argument("--output", required=True)
@@ -219,6 +230,8 @@ def run(args):
             model_name=args.base_model,
             epochs=args.epochs,
             batch_size=args.batch_size,
+            allow_silver_pilot=args.allow_silver_pilot,
+            kazakh_sampling_weight=args.kazakh_sampling_weight,
         )
     elif command == "train-attributes":
         from app.nlp.attributes import train_attributes

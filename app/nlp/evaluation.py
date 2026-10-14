@@ -133,19 +133,24 @@ def _sum(rows: list[dict], name: str):
     return [sum(values) for values in zip(*present, strict=True)], len(present)
 
 
-def _check(gold: list[Poem], predictions: dict[str, AnalysisResult]) -> None:
+def _check(
+    gold: list[Poem], predictions: dict[str, AnalysisResult], *, allow_non_gold: bool = False
+) -> None:
     if not gold or len({r.id for r in gold}) != len(gold):
         raise ValueError("Gold must be nonempty with unique IDs")
     if set(predictions) != {r.id for r in gold}:
         raise ValueError("Prediction IDs must exactly match gold, including empty predictions")
     for record in gold:
-        if record.annotation_status != "gold":
+        if not allow_non_gold and record.annotation_status != "gold":
             raise ValueError("Evaluation requires gold records, including annotated negatives")
         validate_result(record.text, record.language, predictions[record.id])
 
 
-def evaluate(gold: list[Poem], predictions: dict[str, AnalysisResult]) -> dict:
-    _check(gold, predictions)
+def evaluate(
+    gold: list[Poem], predictions: dict[str, AnalysisResult], *, allow_non_gold: bool = False
+) -> dict:
+    """Evaluate predictions; non-Gold data is allowed only for explicitly marked pilots."""
+    _check(gold, predictions, allow_non_gold=allow_non_gold)
     counts = {r.id: record_counts(r, predictions[r.id]) for r in gold}
     report = {}
     for language in ("all", "zh", "kk"):
@@ -166,6 +171,11 @@ def evaluate(gold: list[Poem], predictions: dict[str, AnalysisResult]) -> dict:
         report[language] = section
     report["tz_targets"] = tz_targets(report["all"])
     report["synthetic"] = any(r.synthetic for r in gold)
+    report["supervision"] = "non-gold-pilot" if allow_non_gold else "gold"
+    if allow_non_gold:
+        report["warning"] = (
+            "Weakly supervised pilot metric only; it is not an independent Gold evaluation."
+        )
     return report
 
 

@@ -6,11 +6,13 @@ from app.core.limits import MAX_ANALYSIS_CHARS
 from app.schemas.taxonomy import EntityType, MetaphorLabel, Sentiment, UsageType
 
 Language = Literal["auto", "zh", "kk"]
+ModelProfile = Literal["default", "experimental_kk", "xlmr_zh_gold_v2", "baseline"]
 
 
 class AnalyzeRequest(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_ANALYSIS_CHARS)
     language: Language = "auto"
+    model_profile: ModelProfile = "default"
 
     @field_validator("text")
     @classmethod
@@ -116,6 +118,18 @@ class AnalysisListResponse(BaseModel):
     items: list[AnalysisStatusResponse]
     limit: int
     offset: int
+
+
+class ModelInfo(BaseModel):
+    id: ModelProfile
+    name: str
+    description: str
+    languages: list[Literal["zh", "kk", "auto"]]
+    supervision: str
+    training_records: int | None = None
+    metric_label: str | None = None
+    metric_value: float | None = None
+    available: bool
 
 
 class CompareRequest(BaseModel):
