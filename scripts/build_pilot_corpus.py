@@ -19,7 +19,6 @@ from pathlib import Path
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "data" / "raw" / "pilot"
 GITHUB_RAW = "https://raw.githubusercontent.com/chinese-poetry/chinese-poetry/master"
