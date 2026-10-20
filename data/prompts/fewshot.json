@@ -1,0 +1,67 @@
+{
+  "note": "Искусственные иллюстративные примеры для few-shot промптов. Не цитаты из корпуса и не gold; не использовать в оценке. Смещения вычисляются кодом по полю text.",
+  "examples": [
+    {
+      "language": "zh",
+      "poem": "君子如兰，独处深谷亦芳香。",
+      "metaphors": [
+        {
+          "text": "君子如兰",
+          "basic_meaning": "兰 — орхидея, душистое растение.",
+          "contextual_meaning": "Качества благородного человека, который сохраняет достоинство в безвестности.",
+          "contrast": "Растение и человек принадлежат разным областям; качество человека понимается через образ цветка, сигнал сравнения 如.",
+          "entity": "兰",
+          "entity_type": "plant",
+          "label": "simile",
+          "source_domain": "plant",
+          "target_domain": "person",
+          "semantic_label": "благородный муж",
+          "sentiment": "positive",
+          "confidence": 0.9,
+          "rationale": "Явное сравнение через 如: благородный человек уподоблен орхидее, которая благоухает и в глухой долине."
+        }
+      ],
+      "literal_candidates": []
+    },
+    {
+      "language": "zh",
+      "poem": "狐狸夜入村，月照小桥边。",
+      "metaphors": [],
+      "literal_candidates": [
+        {"text": "狐狸", "entity_type": "animal", "reasoning": "Описано реальное животное, пришедшее в деревню; переноса на человека нет."},
+        {"text": "月", "entity_type": "celestial", "reasoning": "Луна освещает мост — буквальный пейзаж без переноса значения."}
+      ]
+    },
+    {
+      "language": "kk",
+      "poem": "Ер жігіт — қыран, биікке самғар.",
+      "metaphors": [
+        {
+          "text": "қыран",
+          "basic_meaning": "Қыран — ловчая хищная птица.",
+          "contextual_meaning": "Отважный молодой мужчина, стремящийся к высоким целям.",
+          "contrast": "Птица и человек — разные области; качества героя понимаются через образ хищной птицы.",
+          "entity": "қыран",
+          "entity_type": "animal",
+          "label": "metaphor",
+          "source_domain": "animal",
+          "target_domain": "person",
+          "semantic_label": "герой, бесстрашие",
+          "sentiment": "positive",
+          "confidence": 0.85,
+          "rationale": "Жігіт прямо назван қыран: отвага и стремление ввысь переданы через образ ловчей птицы."
+        }
+      ],
+      "literal_candidates": []
+    },
+    {
+      "language": "kk",
+      "poem": "Далада бөрі ұлиды, түн суық.",
+      "metaphors": [],
+      "literal_candidates": [
+        {"text": "Далада", "entity_type": "landscape", "reasoning": "Степь — место действия, переноса нет."},
+        {"text": "бөрі", "entity_type": "animal", "reasoning": "Воет настоящий волк; признаков переноса на человека нет."}
+      ]
+    }
+  ]
+}

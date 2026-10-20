@@ -1,0 +1,17 @@
+# Isolated, reproducible environment for model training.  The API image remains
+# lightweight and never needs PyTorch or downloaded transformer checkpoints.
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    HF_HOME=/service/.cache/huggingface
+
+WORKDIR /service
+COPY pyproject.toml README.md ./
+COPY app ./app
+# The default Linux wheel brings CUDA libraries. Training is CPU-only on the
+# local Docker runtime, so install the much smaller CPU wheel first.
+RUN pip install --no-cache-dir torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir '.[nlp]'
+
+ENTRYPOINT ["python", "-m", "app.nlp"]

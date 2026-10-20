@@ -23,6 +23,17 @@ LEXICON = {
 
 
 class LexicalDetector:
+    """Lower bound for every comparison: phrase lexicon for spans, soft lexicon for candidates.
+
+    A candidate counts as metaphorical only inside a known metaphor phrase; everything else
+    is predicted literal. This is the trivial baseline for the binary task of module C.
+    """
+
+    def __init__(self, lexicon_dir: str | None = None):
+        from app.nlp.lexicon import CandidateExtractor
+
+        self.extractor = CandidateExtractor(lexicon_dir)
+
     def analyze(self, text: str, language: str = "auto") -> AnalysisResult:
         language = resolve_language(text, language)
         spans = []
@@ -43,10 +54,22 @@ class LexicalDetector:
                         rationale="Lexical candidate; context requires human verification.",
                     )
                 )
+        candidates = [
+            c.model_copy(
+                update={
+                    "usage_type": "metaphorical"
+                    if any(s.start <= c.start and c.end <= s.end for s in spans)
+                    else "literal"
+                }
+            )
+            for c in self.extractor.extract(text, language)
+        ]
         return AnalysisResult(
             language=language,
             model_version="lexical-demo-v1",
             metaphors=sorted(spans, key=lambda s: s.start),
             needs_review=True,
             warnings=["Lexical baseline has limited coverage; confidence is not calibrated."],
+            candidates=candidates,
+            method={"strategy": "lexicon-baseline", "lexicon": self.extractor.version(language)},
         )

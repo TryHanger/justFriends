@@ -132,7 +132,16 @@ class XLMRDetector:
             raise ValueError("Expected XLM-R and a fast tokenizer")
         if self.model.config.id2label != dict(enumerate(BIO_LABELS)):
             raise ValueError("Checkpoint must be trained with O, B-METAPHOR, I-METAPHOR")
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        if device is None:
+            self.device = (
+                "cuda"
+                if torch.cuda.is_available()
+                else "mps"
+                if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available()
+                else "cpu"
+            )
+        else:
+            self.device = device
         self.model.to(self.device).eval()
         self.max_length, self.stride = max_length, stride
         self.version = getattr(

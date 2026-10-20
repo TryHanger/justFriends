@@ -1,22 +1,84 @@
 {
   "$defs": {
-    "ModelSpan": {
+    "LLMLiteral": {
       "additionalProperties": false,
+      "description": "A candidate entity that the model judged to be used literally.",
       "properties": {
         "text": {
-          "minLength": 1,
-          "title": "Text",
+          "description": "Exact substring of the poem",
           "type": "string"
         },
         "start": {
-          "minimum": 0,
-          "title": "Start",
+          "description": "Zero-based Unicode code point offset",
           "type": "integer"
         },
         "end": {
-          "exclusiveMinimum": 0,
-          "title": "End",
+          "description": "Exclusive end offset",
           "type": "integer"
+        },
+        "entity_type": {
+          "enum": [
+            "plant",
+            "animal",
+            "natural_phenomenon",
+            "landscape",
+            "celestial",
+            "body",
+            "person",
+            "artifact",
+            "abstract",
+            "other"
+          ],
+          "type": "string"
+        },
+        "reasoning": {
+          "description": "Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "entity_type",
+        "reasoning"
+      ],
+      "type": "object"
+    },
+    "LLMMetaphor": {
+      "additionalProperties": false,
+      "description": "Modules C+D for one figurative expression; every field is required for strict outputs.",
+      "properties": {
+        "text": {
+          "description": "Exact substring of the poem",
+          "type": "string"
+        },
+        "start": {
+          "description": "Zero-based Unicode code point offset",
+          "type": "integer"
+        },
+        "end": {
+          "description": "Exclusive end offset",
+          "type": "integer"
+        },
+        "entity": {
+          "description": "Key image word inside text, e.g. 兰 or бөрі",
+          "type": "string"
+        },
+        "entity_type": {
+          "enum": [
+            "plant",
+            "animal",
+            "natural_phenomenon",
+            "landscape",
+            "celestial",
+            "body",
+            "person",
+            "artifact",
+            "abstract",
+            "other"
+          ],
+          "type": "string"
         },
         "label": {
           "enum": [
@@ -26,7 +88,6 @@
             "metonymy",
             "idiom"
           ],
-          "title": "Label",
           "type": "string"
         },
         "source_domain": {
@@ -55,7 +116,6 @@
             "other",
             "unknown"
           ],
-          "title": "Source Domain",
           "type": "string"
         },
         "target_domain": {
@@ -84,19 +144,26 @@
             "other",
             "unknown"
           ],
-          "title": "Target Domain",
+          "type": "string"
+        },
+        "semantic_label": {
+          "description": "Short meaning of the image in context. Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
+          "type": "string"
+        },
+        "sentiment": {
+          "enum": [
+            "positive",
+            "neutral",
+            "negative"
+          ],
           "type": "string"
         },
         "confidence": {
-          "maximum": 1,
-          "minimum": 0,
-          "title": "Confidence",
+          "description": "Self-estimate 0..1, not a calibrated probability",
           "type": "number"
         },
         "rationale": {
-          "description": "Write the explanation exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; leave the quoted source expression unchanged.",
-          "minLength": 1,
-          "title": "Rationale",
+          "description": "Evidence-based reasoning. Write exclusively in Russian using Cyrillic. Never use Chinese, Kazakh, or English here; quoted source words stay unchanged.",
           "type": "string"
         }
       },
@@ -104,13 +171,16 @@
         "text",
         "start",
         "end",
+        "entity",
+        "entity_type",
         "label",
         "source_domain",
         "target_domain",
+        "semantic_label",
+        "sentiment",
         "confidence",
         "rationale"
       ],
-      "title": "ModelSpan",
       "type": "object"
     }
   },
@@ -121,21 +191,25 @@
         "zh",
         "kk"
       ],
-      "title": "Language",
       "type": "string"
     },
     "metaphors": {
       "items": {
-        "$ref": "#/$defs/ModelSpan"
+        "$ref": "#/$defs/LLMMetaphor"
       },
-      "title": "Metaphors",
+      "type": "array"
+    },
+    "literal_candidates": {
+      "items": {
+        "$ref": "#/$defs/LLMLiteral"
+      },
       "type": "array"
     }
   },
   "required": [
     "language",
-    "metaphors"
+    "metaphors",
+    "literal_candidates"
   ],
-  "title": "ModelOutput",
   "type": "object"
 }

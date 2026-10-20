@@ -15,13 +15,35 @@
         "source_domain": "water",
         "target_domain": "emotion",
         "confidence": 0.5,
-        "rationale": "Lexical candidate; context requires human verification."
+        "rationale": "Lexical candidate; context requires human verification.",
+        "entity": null,
+        "entity_type": null,
+        "usage_type": "metaphorical",
+        "context_sentence": null,
+        "semantic_label": null,
+        "sentiment": null
       }
     ],
     "needs_review": true,
     "warnings": [
       "Lexical baseline has limited coverage; confidence is not calibrated."
-    ]
+    ],
+    "candidates": [
+      {
+        "text": "心",
+        "start": 2,
+        "end": 3,
+        "entity_type": "abstract",
+        "usage_type": "metaphorical",
+        "origin": "lexicon",
+        "lexicon_meaning": "душа; чувства",
+        "reasoning": null
+      }
+    ],
+    "method": {
+      "strategy": "lexicon-baseline",
+      "lexicon": "lexicon-zh-0.1"
+    }
   },
   "error": null
 }

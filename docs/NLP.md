@@ -27,11 +27,12 @@
 ## Запуск в Windows / PyCharm
 
 Открыть корень `justFriends` как проект. Выбрать Python 3.11 или новее.
-Для текущей проверки создана `.venv` с доступом к уже установленному PyTorch.
-Для чистой воспроизводимой установки можно создать обычную отдельную среду:
+Создать отдельную среду и поставить зависимости (torch лучше ставить первым,
+CPU-сборка легче и не требует CUDA):
 
 ```powershell
 python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install "torch>=2.6,<3" --index-url https://download.pytorch.org/whl/cpu
 .\.venv\Scripts\python.exe -m pip install -e ".[dev,nlp]"
 .\.venv\Scripts\python.exe -m app.nlp demo
 ```
@@ -40,10 +41,35 @@ python -m venv .venv
 `runs/demo/predictions.json` и `runs/demo/metrics.json`.
 Минимальный набор для baseline/LLM: `pip install -e ".[dev]"`.
 `.[nlp]` нужен для обучения, embeddings и проверки нейросетевого пути.
+
+Для сопоставления (`compare`) нужна модель `intfloat/multilingual-e5-base` (~1 ГБ).
+Она скачивается с Hugging Face один раз при первом запуске; скачать заранее и проверить:
+
+```powershell
+.\.venv\Scripts\python.exe -c "from sentence_transformers import SentenceTransformer; print(SentenceTransformer('intfloat/multilingual-e5-base').encode(['query: test']).shape)"
+```
+
+Должно вывести `(1, 768)`. Если Hugging Face недоступен, задать `$env:HF_ENDPOINT="https://hf-mirror.com"`
+или скачать модель в папку (`hf download intfloat/multilingual-e5-base --local-dir models/e5-base`)
+и указать `EMBEDDING_MODEL=models/e5-base` в `.env`.
 Версии, реально использованные при проверке, записаны в `docs/NLP_VERIFICATION.md`.
 
 Запускать команды ниже из корня репозитория. В PyCharm можно создать Python-конфигурацию
 с **Module name** `app.nlp`, **Parameters** `demo`, **Working directory** — корень проекта.
+
+## Соответствие ТЗ
+
+| Требование ТЗ | Где реализовано |
+|---|---|
+| Модуль A: препроцессинг, токенизация | `clean` (NFC, вариантные знаки, редакторские пометы, `--verse-lines`, латиница в казахских словах), `fertility`, `train-tokenizer` |
+| Модуль B: кандидаты с soft lexicon | `app/nlp/lexicon.py`, `data/lexicons/{zh,kk}.json` |
+| Модуль C: literal vs metaphorical, CoT, MIP/MIPVU | `app/nlp/prompts.py` (компонент `cot`), `candidates[].usage_type` |
+| Модуль D: метки, тональность, домены | поля `semantic_label`, `sentiment`, `source/target_domain`; `/compare` |
+| Модуль E: экспертная проверка | Label Studio v2.0, `agreement` (Fleiss/Cohen), `needs_review` |
+| п. 4.1 параметры и формат | `LLM_TEMPERATURE=0.2`, `LLM_TOP_P=0.95`, экспорт `format=tz` |
+| Prompting / RAG / Fine-tuning | стратегии `zero_shot`, `few_shot`, `cot`, `rag`, `lexicon`; `build-ift`, `finetune`, backend `hf` |
+| Модели | OpenAI, Claude (`anthropic`), Qwen-2.5 / LLaMA-3.1 (Ollama или `hf`), SozKZ (`hf`) |
+| H1–H3, метрики п. 6 | `experiment`, `evaluate --bootstrap`, `fertility`, `probe` |
 
 ## Режимы анализа
 
@@ -51,6 +77,8 @@ python -m venv .venv
 |---|---|---|
 | `baseline` | Простой словарный поиск для демонстрации и нижней точки сравнения | Без моделей и ключей |
 | `openai` | Предварительная разметка через существующий Responses API | `OPENAI_API_KEY`, доступный `OPENAI_MODEL` |
+| `anthropic` | Claude через Messages API со структурированным выводом | `ANTHROPIC_API_KEY` или профиль `ant auth`, `ANTHROPIC_MODEL` |
+| `hf` | Локальная модель Transformers, в том числе с LoRA-адаптером | `HF_MODEL`, при необходимости `HF_ADAPTER`; `.[nlp,finetune]` |
 | `ollama` | LLM через Ollama | Запущенная Ollama и уже установленная модель в `OLLAMA_MODEL` |
 | `xlmr` | Локальный обученный BIO-детектор | `XLMR_MODEL_PATH` с нашим checkpoint |
 | `hybrid` | XLM-R и дополнительная проверка всего текста LLM | Checkpoint и настроенный LLM-провайдер |
@@ -62,6 +90,15 @@ python -m venv .venv
 ```powershell
 $env:NLP_BACKEND = "baseline"
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+Стратегия LLM задаётся `LLM_PROMPT_STRATEGY` (по умолчанию `few_shot+cot+rag+lexicon`)
+или `--strategy` в CLI: `zero_shot` либо комбинация `few_shot`, `cot`, `rag`, `lexicon`
+через `+`. База знаний RAG — `data/knowledge/*.jsonl` (MIP/MIPVU, комментарии Ван И,
+образы жырау); новые комментарии добавлять в том же формате с полем `source`.
+
+```powershell
+python -m app.nlp analyze --text-file poem.txt --language zh --backend anthropic --strategy cot+lexicon --output runs/r.json
 ```
 
 Вызовы `/api/v1/analyze` и `/api/v1/analyze/file` используют выбранный режим.
@@ -82,7 +119,7 @@ LLM-адаптеры требуют строгий JSON, проверяют яз
 совпадение текста. Незавершённые, выдуманные и пересекающиеся фрагменты отклоняются.
 Текст передаётся как данные; команды, написанные внутри стихотворения, не являются
 инструкциями анализатору. Ошибочный ответ не заменяется пустым успешным результатом.
-Ollama получает явный `num_ctx` из `OLLAMA_CONTEXT_WINDOW` (по умолчанию 8192),
+Ollama получает явный `num_ctx` из `OLLAMA_CONTEXT_WINDOW` (по умолчанию 16384),
 лимит генерации 2048 и консервативную предварительную проверку объёма по UTF-8 байтам
 с резервом на ответ. Для длинного произведения увеличить контекст в пределах возможностей
 модели и памяти либо явно подготовить меньший контекст. Ответ, оборванный лимитом, отклоняется.
@@ -140,16 +177,44 @@ python -m app.nlp train-attributes --train data/gold/splits/train.jsonl --output
 ```powershell
 python -m app.nlp predict data/gold/splits/test.jsonl --backend xlmr --output runs/xlmr-test.json
 python -m app.nlp evaluate --gold data/gold/splits/test.jsonl --predictions runs/xlmr-test.json --output runs/xlmr-metrics.json
-python -m app.nlp agreement runs/annotator-a.jsonl runs/annotator-b.jsonl --output runs/agreement.json
+python -m app.nlp agreement runs/annotator-a.jsonl runs/annotator-b.jsonl runs/annotator-c.jsonl --output runs/agreement.json
 ```
 
 `metaphor_detection` — Precision/Recall/F1 по точным границам метафор и олицетворений.
+`entity_extraction`, `usage_classification`, `semantic_labeling` — метрики ТЗ п. 6;
+блок `tz_targets` сравнивает их с целями. `--bootstrap 1000` добавляет 95% интервалы
+по произведениям. Метрики сущностей считаются на записях, где gold содержит `candidates`.
 `typed_figures` — точные границы и тип всех пяти фигур. Отчёт содержит `all`, `zh`, `kk`.
 Ошибки областей и матрицы ошибок типов считаются отдельно на совпавших границах;
 это условная оценка, её нельзя выдавать за end-to-end точность классификации.
 Нельзя удалять отрицательные тексты и отсутствующие предсказания из знаменателя.
 Согласие: exact-span F1 и бинарная Cohen kappa по символам; при вырожденном случае
 kappa равна `null`. Это не kappa по словам и не полная оценка всех атрибутов.
+
+## Эксперименты по ТЗ
+
+```powershell
+# Корпуса
+python -m app.nlp import-chinese-poetry chinese-poetry/楚辞/chuci.json --era "Warring States" --genre chuci --revision <commit> --output data/raw/chuci.jsonl
+python -m app.nlp import-texts data/raw/kk_texts --metadata data/raw/kk_texts.csv --output data/raw/kk.jsonl
+python -m app.nlp clean data/raw/chuci.jsonl --verse-lines --output data/processed/chuci.jsonl
+# Сравнение методов на Golden Test Set (пример конфигурации: experiments/pilot.example.json)
+python -m app.nlp experiment --config experiments/pilot.example.json --output runs/pilot
+# H1: IFT-датасет и LoRA
+python -m app.nlp build-ift data/gold/splits/train.jsonl --output data/ift/train.jsonl
+python -m app.nlp build-ift data/gold/splits/validation.jsonl --output data/ift/validation.jsonl
+python -m app.nlp finetune --train data/ift/train.jsonl --validation data/ift/validation.jsonl --base-model Qwen/Qwen2.5-7B-Instruct --output models/qwen-ift
+# H2: фертильность токенизаторов и казахский BPE на 50K
+python -m app.nlp fertility data/processed/kk.jsonl --language kk --tokenizers FacebookAI/xlm-roberta-base Qwen/Qwen2.5-7B-Instruct <SozKZ-id> --output runs/fertility-kk.json
+python -m app.nlp train-tokenizer data/processed/kk.jsonl --language kk --vocab-size 50000 --output models/kk-bpe
+# H3: послойный пробинг
+python -m app.nlp probe data/gold/corpus.jsonl --model FacebookAI/xlm-roberta-base --output runs/probe-xlmr.json
+```
+
+`experiment` пишет для каждого запуска `predictions.json`, `failures.json`, `metrics.json`
+и общие `summary.csv`/`summary.md` с флагами достижения целей ТЗ. Готовые запуски не
+повторяются. `finetune` требует `pip install -e ".[nlp,finetune]"` и GPU для моделей 7B.
+Идентификатор SozKZ на Hugging Face указать после проверки карточки модели.
 
 ## Межъязыковое сравнение
 

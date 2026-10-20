@@ -1,0 +1,535 @@
+{
+  "version": "0.1",
+  "language": "kk",
+  "status": "seed: стартовый словарь, требует проверки филологами; значения — традиционные символические прочтения, а не решение о метафоричности",
+  "matching": "zh: подстрока, длиннейшее совпадение; kk: словоформа, начинающаяся с основы (от 4 букв, с чередованием к/г, қ/ғ, п/б) или из списка forms",
+  "entries": [
+    {
+      "term": "арыстан",
+      "entity_type": "animal",
+      "meanings": [
+        "мужество",
+        "сила"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "бөрі",
+      "entity_type": "animal",
+      "meanings": [
+        "свобода",
+        "сила рода"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "қасқыр",
+      "entity_type": "animal",
+      "meanings": [
+        "свобода",
+        "хищность"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "animal"
+    },
+    {
+      "term": "тұлпар",
+      "entity_type": "animal",
+      "meanings": [
+        "герой",
+        "благородство"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "арғымақ",
+      "entity_type": "animal",
+      "meanings": [
+        "благородство"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "сұңқар",
+      "entity_type": "animal",
+      "meanings": [
+        "батыр",
+        "свобода"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "қыран",
+      "entity_type": "animal",
+      "meanings": [
+        "герой",
+        "зоркость"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "бүркіт",
+      "entity_type": "animal",
+      "meanings": [
+        "сила",
+        "высота духа"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "аққу",
+      "entity_type": "animal",
+      "meanings": [
+        "красота",
+        "чистота",
+        "верность"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "қарлығаш",
+      "entity_type": "animal",
+      "meanings": [
+        "весна",
+        "вестник"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "бұлбұл",
+      "entity_type": "animal",
+      "meanings": [
+        "поэт",
+        "красноречие"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "түлкі",
+      "entity_type": "animal",
+      "meanings": [
+        "хитрость"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal"
+    },
+    {
+      "term": "жылан",
+      "entity_type": "animal",
+      "meanings": [
+        "коварство"
+      ],
+      "sentiment": "negative",
+      "source_domain": "animal"
+    },
+    {
+      "term": "құлан",
+      "entity_type": "animal",
+      "meanings": [
+        "свобода",
+        "степь"
+      ],
+      "sentiment": "positive",
+      "source_domain": "animal"
+    },
+    {
+      "term": "қой",
+      "entity_type": "animal",
+      "meanings": [
+        "кротость",
+        "покорность"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "animal",
+      "forms": [
+        "қой",
+        "қойдай",
+        "қойлар",
+        "қойы"
+      ],
+      "note": "омоним: повелительное «положи»"
+    },
+    {
+      "term": "ат",
+      "entity_type": "animal",
+      "meanings": [
+        "верный спутник"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "animal",
+      "forms": [
+        "ат",
+        "атым",
+        "аты",
+        "атқа",
+        "аттың",
+        "атпен"
+      ],
+      "note": "омоним: «имя», «стреляй»"
+    },
+    {
+      "term": "бәйтерек",
+      "entity_type": "plant",
+      "meanings": [
+        "род",
+        "опора народа"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "терек",
+      "entity_type": "plant",
+      "meanings": [
+        "стойкость",
+        "опора"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "жусан",
+      "entity_type": "plant",
+      "meanings": [
+        "родина",
+        "тоска по родине"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "гүл",
+      "entity_type": "plant",
+      "meanings": [
+        "красота",
+        "юность"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant",
+      "forms": [
+        "гүл",
+        "гүлі",
+        "гүлдер",
+        "гүлдей",
+        "гүлге",
+        "гүлдің",
+        "гүлім"
+      ]
+    },
+    {
+      "term": "раушан",
+      "entity_type": "plant",
+      "meanings": [
+        "красота",
+        "любовь"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "бәйшешек",
+      "entity_type": "plant",
+      "meanings": [
+        "весна",
+        "юность"
+      ],
+      "sentiment": "positive",
+      "source_domain": "plant"
+    },
+    {
+      "term": "қамыс",
+      "entity_type": "plant",
+      "meanings": [
+        "хрупкость"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "plant"
+    },
+    {
+      "term": "тал",
+      "entity_type": "plant",
+      "meanings": [
+        "гибкость",
+        "юность"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "plant",
+      "forms": [
+        "тал",
+        "талдай",
+        "талы",
+        "талдар"
+      ],
+      "note": "омоним: «утомись»"
+    },
+    {
+      "term": "ай",
+      "entity_type": "celestial",
+      "meanings": [
+        "красавица",
+        "свет"
+      ],
+      "sentiment": "positive",
+      "source_domain": "light",
+      "forms": [
+        "ай",
+        "айым",
+        "айдай",
+        "айға",
+        "айдың",
+        "айы",
+        "айдан"
+      ],
+      "note": "также «месяц»; основа не сопоставляется с айт-"
+    },
+    {
+      "term": "күн",
+      "entity_type": "celestial",
+      "meanings": [
+        "жизнь",
+        "свет",
+        "радость"
+      ],
+      "sentiment": "positive",
+      "source_domain": "light",
+      "forms": [
+        "күн",
+        "күні",
+        "күндей",
+        "күнге",
+        "күннің",
+        "күнім"
+      ],
+      "note": "также «день»"
+    },
+    {
+      "term": "жұлдыз",
+      "entity_type": "celestial",
+      "meanings": [
+        "судьба",
+        "надежда"
+      ],
+      "sentiment": "positive",
+      "source_domain": "light"
+    },
+    {
+      "term": "жел",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "перемены",
+        "молва"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "nature",
+      "forms": [
+        "жел",
+        "желі",
+        "желдей",
+        "желге",
+        "желдің"
+      ]
+    },
+    {
+      "term": "бұлт",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "печаль",
+        "препятствие"
+      ],
+      "sentiment": "negative",
+      "source_domain": "nature"
+    },
+    {
+      "term": "боран",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "бедствие",
+        "смута"
+      ],
+      "sentiment": "negative",
+      "source_domain": "nature"
+    },
+    {
+      "term": "қар",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "чистота",
+        "старость"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "nature",
+      "forms": [
+        "қар",
+        "қары",
+        "қардай"
+      ]
+    },
+    {
+      "term": "өзен",
+      "entity_type": "landscape",
+      "meanings": [
+        "течение жизни",
+        "время"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "water"
+    },
+    {
+      "term": "теңіз",
+      "entity_type": "landscape",
+      "meanings": [
+        "безбрежность чувств",
+        "мудрость"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "water"
+    },
+    {
+      "term": "тау",
+      "entity_type": "landscape",
+      "meanings": [
+        "величие",
+        "незыблемость"
+      ],
+      "sentiment": "positive",
+      "source_domain": "space",
+      "forms": [
+        "тау",
+        "тауы",
+        "таудай",
+        "тауға",
+        "таудың",
+        "таулар"
+      ]
+    },
+    {
+      "term": "дала",
+      "entity_type": "landscape",
+      "meanings": [
+        "родина",
+        "простор",
+        "свобода"
+      ],
+      "sentiment": "positive",
+      "source_domain": "space"
+    },
+    {
+      "term": "от",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "страсть",
+        "очаг рода"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "fire",
+      "forms": [
+        "от",
+        "оты",
+        "оттай",
+        "отқа",
+        "оттың"
+      ]
+    },
+    {
+      "term": "су",
+      "entity_type": "natural_phenomenon",
+      "meanings": [
+        "жизнь",
+        "очищение"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "water",
+      "forms": [
+        "су",
+        "суы",
+        "судай",
+        "суға",
+        "судың"
+      ]
+    },
+    {
+      "term": "жүрек",
+      "entity_type": "body",
+      "meanings": [
+        "чувства",
+        "мужество"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "body"
+    },
+    {
+      "term": "көңіл",
+      "entity_type": "abstract",
+      "meanings": [
+        "душа",
+        "настроение"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "emotion"
+    },
+    {
+      "term": "жан",
+      "entity_type": "abstract",
+      "meanings": [
+        "душа",
+        "жизнь"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "life",
+      "forms": [
+        "жан",
+        "жаным",
+        "жаны",
+        "жанға",
+        "жанның"
+      ],
+      "note": "омоним: «бок», «рядом»"
+    },
+    {
+      "term": "өмір",
+      "entity_type": "abstract",
+      "meanings": [
+        "жизнь"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "life"
+    },
+    {
+      "term": "ғылым",
+      "entity_type": "abstract",
+      "meanings": [
+        "знание"
+      ],
+      "sentiment": "positive",
+      "source_domain": "mind"
+    },
+    {
+      "term": "ақыл",
+      "entity_type": "abstract",
+      "meanings": [
+        "разум"
+      ],
+      "sentiment": "positive",
+      "source_domain": "mind"
+    },
+    {
+      "term": "уақыт",
+      "entity_type": "abstract",
+      "meanings": [
+        "время"
+      ],
+      "sentiment": "neutral",
+      "source_domain": "time"
+    }
+  ]
+}

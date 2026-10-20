@@ -15,6 +15,24 @@ export interface Metaphor {
   target_domain: string;
   confidence: number;
   rationale: string;
+  // ТЗ п. 4.1 fields; absent in results of older analyses and non-LLM detectors.
+  entity?: string | null;
+  entity_type?: string | null;
+  usage_type?: 'metaphorical' | 'literal';
+  context_sentence?: string | null;
+  semantic_label?: string | null;
+  sentiment?: 'positive' | 'neutral' | 'negative' | null;
+}
+
+export interface EntityCandidate {
+  text: string;
+  start: number;
+  end: number;
+  entity_type: string;
+  usage_type: 'metaphorical' | 'literal' | null;
+  origin: string;
+  lexicon_meaning?: string | null;
+  reasoning?: string | null;
 }
 
 export interface AnalysisResult {
@@ -23,6 +41,8 @@ export interface AnalysisResult {
   metaphors: Metaphor[];
   needs_review?: boolean;
   warnings?: string[];
+  candidates?: EntityCandidate[];
+  method?: Record<string, unknown>;
 }
 
 export interface AnalysisResponse {
@@ -86,15 +106,30 @@ export interface SubmitResponse {
   status_url: string;
 }
 
-export const submitText = async (text: string, language: string = 'auto') => {
-  const res = await api.post<SubmitResponse>('/analyze', { text, language });
+export type ModelProfile = 'default' | 'experimental_kk' | 'xlmr_zh_gold_v2' | 'baseline';
+
+export interface ModelInfo {
+  id: ModelProfile;
+  name: string;
+  description: string;
+  languages: Array<'auto' | 'zh' | 'kk'>;
+  supervision: string;
+  training_records?: number | null;
+  metric_label?: string | null;
+  metric_value?: number | null;
+  available: boolean;
+}
+
+export const submitText = async (text: string, language: string = 'auto', modelProfile: ModelProfile = 'default') => {
+  const res = await api.post<SubmitResponse>('/analyze', { text, language, model_profile: modelProfile });
   return res.data;
 };
 
-export const submitFile = async (file: File, language: string = 'auto') => {
+export const submitFile = async (file: File, language: string = 'auto', modelProfile: ModelProfile = 'default') => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('language', language);
+  formData.append('model_profile', modelProfile);
   const res = await api.post<SubmitResponse>('/analyze/file', formData);
   return res.data;
 };
@@ -106,6 +141,11 @@ export const getAnalysis = async (id: number) => {
 
 export const listAnalyses = async (limit = 20, offset = 0) => {
   const res = await api.get<AnalysisListResponse>(`/analyses`, { params: { limit, offset } });
+  return res.data;
+};
+
+export const listModels = async () => {
+  const res = await api.get<ModelInfo[]>('/models');
   return res.data;
 };
 
@@ -137,7 +177,7 @@ export const uploadLibraryBook = async (file: File, language = 'auto', title = '
   return res.data;
 };
 
-export const getExportUrl = (id: number, format: 'json' | 'csv') => {
+export const getExportUrl = (id: number, format: 'json' | 'csv' | 'tz') => {
   return `${API_BASE}/analyses/${id}/export?format=${format}`;
 };
 

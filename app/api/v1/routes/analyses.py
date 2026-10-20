@@ -4,6 +4,7 @@ import logging
 from collections import Counter, defaultdict
 from functools import lru_cache
 from io import StringIO
+from pathlib import Path
 from typing import Literal
 
 from fastapi import (
@@ -32,14 +33,32 @@ from app.schemas.analysis import (
     CompareRequest,
     CompareResponse,
     ComparisonGroup,
+    ModelInfo,
+    ModelProfile,
 )
 from app.schemas.comparison import ComparisonItem, ComparisonResult
 from app.services.analysis_jobs import create_analysis_job, process_analysis, read_result
 from app.services.document_loader import extract_text
+from app.services.export import TZ_COLUMNS, tz_rows
 
 router = APIRouter()
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+
+def _model_catalog() -> list[ModelInfo]:
+    return [
+        ModelInfo(id="default", name="GPT-4o-mini", description="Основная LLM-модель анализа с объяснением метафор.", languages=["auto", "zh", "kk"], supervision="LLM", available=bool(settings.openai_api_key)),
+        ModelInfo(id="xlmr_zh_gold_v2", name="XLM-R Chinese Gold v2", description="Дообученная XLM-R для китайских метафор.", languages=["zh"], supervision="Gold", training_records=18043, metric_label="Chinese Gold span F1", metric_value=0.6713, available=Path(settings.chinese_gold_xlmr_model_path).is_dir()),
+        ModelInfo(id="experimental_kk", name="XLM-R Kazakh Silver pilot v2", description="Экспериментальная казахская XLM-R; необходима ручная проверка.", languages=["kk"], supervision="Silver-pilot", training_records=119, metric_label="Kazakh Silver control F1", metric_value=0.1458, available=Path(settings.experimental_kk_xlmr_model_path).is_dir()),
+        ModelInfo(id="baseline", name="Lexical baseline", description="Словарный baseline для сравнения; покрытие ограничено.", languages=["auto", "zh", "kk"], supervision="lexicon", available=True),
+    ]
+
+
+@router.get("/models", response_model=list[ModelInfo])
+def list_models() -> list[ModelInfo]:
+    """Visible catalog: makes training provenance and limitations auditable in the UI."""
+    return _model_catalog()
 
 
 @lru_cache(maxsize=1)
@@ -60,9 +79,15 @@ def _enqueue_analysis(
     text: str,
     language: str,
     source_name: str | None = None,
+    model_profile: ModelProfile = "default",
 ) -> AnalysisJobResponse:
-    record = create_analysis_job(db, text, language, source_name)
-    background_tasks.add_task(process_analysis, record.id)
+    restricted_languages = {"experimental_kk": "kk", "xlmr_zh_gold_v2": "zh"}
+    if model_profile in restricted_languages and language != restricted_languages[model_profile]:
+        raise HTTPException(
+            status_code=422, detail=f"Selected model requires language={restricted_languages[model_profile]}"
+        )
+    record = create_analysis_job(db, text, language, source_name, model_profile)
+    background_tasks.add_task(process_analysis, record.id, model_profile)
     return AnalysisJobResponse(
         analysis_id=record.id,
         status="queued",
@@ -76,7 +101,9 @@ def analyze(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> AnalysisJobResponse:
-    return _enqueue_analysis(background_tasks, db, request.text, request.language)
+    return _enqueue_analysis(
+        background_tasks, db, request.text, request.language, model_profile=request.model_profile
+    )
 
 
 @router.post("/analyze/file", response_model=AnalysisJobResponse, status_code=202)
@@ -84,12 +111,13 @@ async def analyze_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     language: str = Form("auto"),
+    model_profile: ModelProfile = Form("default"),
     db: Session = Depends(get_db),
 ) -> AnalysisJobResponse:
     if language not in {"auto", "zh", "kk"}:
         raise HTTPException(status_code=422, detail="language must be auto, zh, or kk")
     text, filename = await extract_text(file, settings.max_upload_mb)
-    return _enqueue_analysis(background_tasks, db, text, language, filename)
+    return _enqueue_analysis(background_tasks, db, text, language, filename, model_profile)
 
 
 @router.get("/analyses/{analysis_id}", response_model=AnalysisStatusResponse)
@@ -141,7 +169,7 @@ def list_analyses(
 @router.get("/analyses/{analysis_id}/export")
 def export_analysis(
     analysis_id: int,
-    format: Literal["json", "csv"] = "json",
+    format: Literal["json", "csv", "tz"] = "json",
     db: Session = Depends(get_db),
 ) -> Response:
     record = db.get(AnalysisRecord, analysis_id)
@@ -168,28 +196,34 @@ def export_analysis(
             headers={"Content-Disposition": f'attachment; filename="analysis-{record.id}.json"'},
         )
 
+    rows = tz_rows(result, record.source_text)
+    if format == "tz":
+        content = json.dumps(
+            {"analysis_id": record.id, "language": result.language, "items": rows},
+            ensure_ascii=False,
+            indent=2,
+        )
+        return Response(
+            content=content,
+            media_type="application/json; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="analysis-{record.id}-tz.json"'
+            },
+        )
+
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(
-        [
-            "analysis_id", "language", "text", "start", "end", "label",
-            "source_domain", "target_domain", "confidence", "rationale",
-        ]
-    )
-    for span in result.metaphors:
+    writer.writerow(["analysis_id", "language", *TZ_COLUMNS, "start", "end", "confidence"])
+    for row in rows:
         values = [
             record.id,
             result.language,
-            span.text,
-            span.start,
-            span.end,
-            span.label,
-            span.source_domain,
-            span.target_domain,
-            span.confidence,
-            span.rationale,
+            *(row[column] for column in TZ_COLUMNS),
+            row["start"],
+            row["end"],
+            row["confidence"],
         ]
-        writer.writerow([_csv_safe(value) for value in values])
+        writer.writerow([_csv_safe("" if value is None else value) for value in values])
     return Response(
         content="\ufeff" + buffer.getvalue(),
         media_type="text/csv; charset=utf-8",
@@ -233,6 +267,11 @@ def compare_analyses(
         labels: Counter[str] = Counter()
         source_domains: Counter[str] = Counter()
         target_domains: Counter[str] = Counter()
+        sentiments: Counter[str] = Counter()
+        entity_types: Counter[str] = Counter()
+        pairs: Counter[str] = Counter()
+        semantic: Counter[str] = Counter()
+        usage: Counter[str] = Counter()
         metaphor_count = 0
         for record in language_records:
             result = read_result(record)
@@ -242,12 +281,26 @@ def compare_analyses(
             labels.update(span.label for span in result.metaphors)
             source_domains.update(span.source_domain for span in result.metaphors)
             target_domains.update(span.target_domain for span in result.metaphors)
+            sentiments.update(span.sentiment for span in result.metaphors if span.sentiment)
+            entity_types.update(span.entity_type for span in result.metaphors if span.entity_type)
+            pairs.update(f"{s.source_domain}→{s.target_domain}" for s in result.metaphors)
+            semantic.update(
+                f"{s.entity or s.text}: {s.semantic_label}"
+                for s in result.metaphors
+                if s.semantic_label
+            )
+            usage.update(c.usage_type or "unclassified" for c in result.candidates)
         output[language] = ComparisonGroup(
             analysis_count=len(language_records),
             metaphor_count=metaphor_count,
             by_label=dict(labels),
             by_source_domain=dict(source_domains),
             by_target_domain=dict(target_domains),
+            by_sentiment=dict(sentiments),
+            by_entity_type=dict(entity_types),
+            by_domain_pair=dict(pairs.most_common(30)),
+            top_semantic_labels=dict(semantic.most_common(30)),
+            candidate_usage=dict(usage),
         )
 
     return CompareResponse(

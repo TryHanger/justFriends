@@ -15,13 +15,45 @@
         "source_domain": "water",
         "target_domain": "life",
         "confidence": 0.5,
-        "rationale": "Lexical candidate; context requires human verification."
+        "rationale": "Lexical candidate; context requires human verification.",
+        "entity": null,
+        "entity_type": null,
+        "usage_type": "metaphorical",
+        "context_sentence": null,
+        "semantic_label": null,
+        "sentiment": null
       }
     ],
     "needs_review": true,
     "warnings": [
       "Lexical baseline has limited coverage; confidence is not calibrated."
-    ]
+    ],
+    "candidates": [
+      {
+        "text": "Өмір",
+        "start": 0,
+        "end": 4,
+        "entity_type": "abstract",
+        "usage_type": "metaphorical",
+        "origin": "lexicon",
+        "lexicon_meaning": "жизнь",
+        "reasoning": null
+      },
+      {
+        "text": "өзені",
+        "start": 5,
+        "end": 10,
+        "entity_type": "landscape",
+        "usage_type": "metaphorical",
+        "origin": "lexicon",
+        "lexicon_meaning": "течение жизни; время",
+        "reasoning": null
+      }
+    ],
+    "method": {
+      "strategy": "lexicon-baseline",
+      "lexicon": "lexicon-kk-0.1"
+    }
   },
   "error": null
 }

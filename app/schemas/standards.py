@@ -13,6 +13,7 @@ class StandardInfo(BaseModel):
     source_url: str
     project_evidence: list[str]
 
+
 class LifecycleProcess(BaseModel):
     id: str
     name: str
@@ -23,6 +24,7 @@ class LifecycleProcess(BaseModel):
     status: Literal["evidenced", "partial", "missing"]
     evidence: list[str]
     gaps: list[str]
+
 
 class LifecycleState(BaseModel):
     processes: list[LifecycleProcess]
@@ -36,12 +38,14 @@ class QualityCase(BaseModel):
     status: Literal["passed", "failed", "error", "skipped"]
     message: str = ""
 
+
 class QualityMetric(BaseModel):
     characteristic: str
     criterion: str
     method: str
     status: Literal["passed", "failed", "not_evaluated"]
     observed: str
+
 
 class QualityReport(BaseModel):
     overall_status: Literal["PASS", "FAIL", "INCOMPLETE"]

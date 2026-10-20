@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "labels": [
     "metaphor",
     "simile",
@@ -31,6 +31,27 @@
     "spirituality",
     "other",
     "unknown"
+  ],
+  "entity_types": [
+    "plant",
+    "animal",
+    "natural_phenomenon",
+    "landscape",
+    "celestial",
+    "body",
+    "person",
+    "artifact",
+    "abstract",
+    "other"
+  ],
+  "usage_types": [
+    "metaphorical",
+    "literal"
+  ],
+  "sentiments": [
+    "positive",
+    "neutral",
+    "negative"
   ],
   "bio_positive_labels": [
     "metaphor",

@@ -18,6 +18,13 @@ const ru: Record<string, string> = {
   'Paste poem text here...': 'Вставьте текст стихотворения…', OR: 'ИЛИ', 'Upload Document': 'Загрузить документ',
   Remove: 'Удалить', Analyze: 'Анализировать', 'Recent Analyses': 'Последние анализы',
   'Could not load analysis history. Check that the backend is available.': 'Не удалось загрузить историю. Проверьте доступность сервера.',
+  'Analysis model': 'Модель анализа', 'Configured project model': 'Основная модель проекта',
+  'Experimental Kazakh model (XLM-R)': 'Экспериментальная казахская модель (XLM-R)',
+  'Experimental model': 'Экспериментальная модель',
+  'Model catalog': 'Каталог моделей', 'Training records': 'Примеров обучения', unavailable: 'недоступна',
+  'Archived baseline result': 'Архивный результат словарного baseline',
+  'This analysis used the old dictionary baseline, not the current XLM-R or GPT model. Create a new analysis to use the current model.': 'Этот анализ выполнен старым словарным baseline, а не текущей XLM-R или GPT-моделью. Создайте новый анализ, чтобы использовать актуальную модель.',
+  'Trained on a small Silver dataset. The result requires manual review and is not a Gold-quality measurement.': 'Обучена на небольшом Silver-наборе. Результат требует ручной проверки и не является Gold-метрикой качества.',
   'Please provide text or select a file.': 'Введите текст или выберите файл.', 'Failed to submit analysis.': 'Не удалось отправить текст на анализ.',
   'Text input': 'Ввод текста', 'No analyses yet. Submit your first poem!': 'Пока нет анализов. Отправьте первое стихотворение!',
   ID: 'ID', Source: 'Источник', Status: 'Статус', Date: 'Дата',
@@ -49,6 +56,52 @@ const ru: Record<string, string> = {
   'Analysis Failed': 'Ошибка анализа', 'An unknown error occurred during analysis.': 'Во время анализа произошла неизвестная ошибка.',
   'Analysis warnings': 'Предупреждения анализа', 'This analysis needs manual review.': 'Требуется ручная проверка анализа.',
   'Found Metaphors': 'Найденные метафоры', 'No metaphors detected in this document.': 'В документе метафоры не обнаружены.',
+  Method: 'Метод', 'provider default decoding': 'декодирование по умолчанию провайдера',
+  'Fields of the technical specification': 'Поля из ТЗ: Entity, Type, Context_Sentence, Usage_Type…', 'TZ format': 'Формат ТЗ',
+  'Context:': 'Контекст:', positive: 'позитивная', neutral: 'нейтральная', negative: 'негативная',
+  'Entity candidates': 'Сущности-кандидаты', Entity: 'Сущность', Usage: 'Употребление',
+  'Found by the soft lexicon and the model; each is judged literal or metaphorical in context.': 'Найдены словарём-ограничением и моделью; для каждой в контексте решено, прямое это употребление или переносное.',
+  'Conventional reading / reasoning': 'Традиционное прочтение / обоснование',
+  metaphorical: 'переносное', literal: 'прямое', unclassified: 'не решено',
+  natural_phenomenon: 'Явление природы', landscape: 'Ландшафт', celestial: 'Небесное тело', artifact: 'Предмет', abstract: 'Абстракция',
+  Sentiment: 'Тональность', 'Entity types': 'Типы сущностей', 'Domain pairs': 'Пары «источник → мишень»', 'Semantic labels': 'Семантические метки',
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }
+
+// Backend warnings are English and may contain numbers or offsets, so they are matched by pattern.
+const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^LLM preliminary annotation; confidence is self-reported and uncalibrated\.$/,
+    () => 'Предварительная разметка LLM: уверенность — самооценка модели, она не откалибрована.'],
+  [/^(\d+) (?:item|span)\(s\) omitted: the expression could not be aligned uniquely to the source text\.$/,
+    (m) => `Пропущено фрагментов: ${m[1]} — выражение не удалось однозначно найти в исходном тексте.`],
+  [/^(\d+) literal candidate\(s\) overlapped figurative spans and were dropped\.$/,
+    (m) => `Отброшено буквальных кандидатов: ${m[1]} — они пересекались с найденными фигурами.`],
+  [/^Provider rejected temperature\/top_p; its default decoding was used\.$/,
+    () => 'Провайдер не принял temperature и top-p, использованы его параметры по умолчанию.'],
+  [/^Lexical baseline has limited coverage; confidence is not calibrated\.$/,
+    () => 'Словарный baseline покрывает мало случаев; уверенность не откалибрована.'],
+  [/^Token probabilities are uncalibrated; domains unknown\.$/,
+    () => 'Вероятности XLM-R не откалиброваны; области не определены.'],
+  [/^Detection and attribute scores are uncalibrated\.$/,
+    () => 'Оценки обнаружения и атрибутов не откалиброваны.'],
+  [/^LLM did not confirm span \[(\d+), (\d+)\)\.$/,
+    (m) => `LLM не подтвердила фрагмент [${m[1]}, ${m[2]}).`],
+  [/^LLM-only span \[(\d+), (\d+)\)\.$/,
+    (m) => `Фрагмент [${m[1]}, ${m[2]}) нашла только LLM.`],
+  [/^Conflicting LLM boundary \[(\d+), (\d+)\); kept primary boundary for manual adjudication\.$/,
+    (m) => `Границы LLM [${m[1]}, ${m[2]}) расходятся с XLM-R; оставлены границы XLM-R для ручного решения.`],
+  [/^Candidate confidence is below review threshold ([\d.]+)\.$/,
+    (m) => `Уверенность ниже порога проверки ${m[1]}.`],
+  [/^Provider or parsing failure; empty prediction counted in metrics\.$/,
+    () => 'Ошибка провайдера или разбора ответа; в метриках учтён пустой результат.'],
+];
+
+export function trWarning(text: string, language: Language) {
+  if (language !== 'ru') return text;
+  for (const [pattern, render] of warningPatterns) {
+    const match = text.match(pattern);
+    if (match) return render(match);
+  }
+  return text;
+}

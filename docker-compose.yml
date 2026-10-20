@@ -9,6 +9,11 @@ services:
 
   api:
     build: .
+    volumes:
+      # NLP dictionaries, RAG knowledge and prompt examples are runtime data.
+      - ./data:/service/data:ro
+      # Local fine-tuned checkpoints; ignored by Git because they are large artifacts.
+      - ./models:/service/models:ro
     environment:
       ENVIRONMENT: local
       DATABASE_URL: postgresql+psycopg://metaphor:metaphor@db:5432/metaphors
@@ -17,6 +22,7 @@ services:
       NLP_BACKEND: ${NLP_BACKEND:-baseline}
       QUALITY_RUNNER_ENABLED: ${QUALITY_RUNNER_ENABLED:-false}
       QUALITY_FRONTEND_WORKER_ENABLED: ${QUALITY_RUNNER_ENABLED:-false}
+      EXPERIMENTAL_KK_XLMR_MODEL_PATH: ${EXPERIMENTAL_KK_XLMR_MODEL_PATH:-models/xlmr-kk-silver-pilot-v2}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
     depends_on:
       db:
@@ -58,10 +64,18 @@ services:
       timeout: 5s
       retries: 10
 
+  label-studio:
+    image: heartexlabs/label-studio:latest
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - label_studio_data:/label-studio/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  label_studio_data:
 
 networks:
   checks_internal:
     internal: true
-
