@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getLifecycleState, getStandardsReference, runQualityChecks } from '../api';
-import type { LifecycleState, QualityReport, StandardInfo } from '../api';
+import { getLifecycleState, getStandardsReference } from '../api';
+import type { LifecycleState, StandardInfo } from '../api';
 import { getApiErrorMessage } from '../apiErrors';
+import QualityCenter from './QualityCenter';
+import QualityDashboard from './QualityDashboard';
 
-type Tab = 'catalog' | 'lifecycle' | 'quality';
+type Tab = 'catalog' | 'lifecycle' | 'quality' | 'checks';
 const badge = (tone: 'good' | 'warn' | 'bad' | 'neutral') => ({
   good: 'bg-emerald-100 text-emerald-800', warn: 'bg-amber-100 text-amber-800',
   bad: 'bg-rose-100 text-rose-800', neutral: 'bg-slate-100 text-slate-700',
@@ -13,11 +15,10 @@ export default function Standards() {
   const [tab, setTab] = useState<Tab>('catalog');
   const [standards, setStandards] = useState<StandardInfo[]>([]);
   const [lifecycle, setLifecycle] = useState<LifecycleState | null>(null);
-  const [quality, setQuality] = useState<QualityReport | null>(null);
+  const [sourceRunId, setSourceRunId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
   const requestVersion = useRef(0);
 
@@ -43,17 +44,7 @@ export default function Standards() {
     acc[item.domain] = (acc[item.domain] || 0) + 1; return acc;
   }, {})).sort((a, b) => b[1] - a[1]), [standards]);
 
-  async function runChecks() {
-    setRunning(true); setError(''); setQuality(null);
-    try { setQuality(await runQualityChecks()); }
-    catch (e) { setError(getApiErrorMessage(e, 'Проверка недоступна.')); }
-    finally {
-      setRunning(false);
-      try { setLifecycle(await getLifecycleState()); } catch { /* The quality result remains visible. */ }
-    }
-  }
-
-  const tabLabels: Record<Tab, string> = { catalog: 'Каталог', lifecycle: 'Жизненный цикл', quality: 'Качество и тесты' };
+  const tabLabels: Record<Tab, string> = { catalog: 'Каталог', lifecycle: 'Жизненный цикл', quality: 'Качество и тесты', checks: 'Проверки проекта' };
   return <div className="space-y-6 text-slate-900">
     <section className="rounded-2xl bg-slate-900 px-6 py-7 text-white shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">Инженерная панель · учебная адаптация лабораторных №1–6</p>
@@ -62,7 +53,7 @@ export default function Standards() {
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">{standards.length}</div><div className="text-xs text-slate-300">стандартов в выборке</div></div>
         <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">{lifecycle?.processes.length ?? '—'}</div><div className="text-xs text-slate-300">процессов в модели</div></div>
-        <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">{quality ? `${quality.passed_tests}/${quality.total_tests}` : '—'}</div><div className="text-xs text-slate-300">тестов пройдено в последнем запуске</div></div>
+        <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">5</div><div className="text-xs text-slate-300">видов проверок проекта</div></div>
       </div>
     </section>
 
@@ -108,15 +99,8 @@ export default function Standards() {
       </article>)}</div>
     </div>}
 
-    {!loading && tab === 'quality' && <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5"><div><h2 className="text-lg font-bold">ISO/IEC 25010:2023 · профиль качества</h2><p className="text-sm text-slate-600">Девять характеристик; измеренные проверки отделены от непроверенных.</p></div><button onClick={runChecks} disabled={running} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{running ? 'Тесты выполняются…' : 'Запустить тесты'}</button></div>
-      {quality ? <>
-        <div className={`rounded-xl p-5 ${quality.overall_status === 'PASS' ? 'bg-emerald-50' : quality.overall_status === 'FAIL' ? 'bg-rose-50' : 'bg-amber-50'}`}><div className="text-xl font-bold">{quality.overall_status}</div><p className="text-sm">Пройдено {quality.passed_tests} из {quality.total_tests}; ошибок {quality.failed_tests}; пропущено {quality.skipped_tests}. Время {quality.duration_seconds.toFixed(2)} с.</p></div>
-        <div className="grid gap-3 md:grid-cols-2">{quality.metrics.map(m => <article key={m.characteristic} className="rounded-xl border border-slate-200 bg-white p-4"><div className="flex justify-between gap-2"><h3 className="font-bold">{m.characteristic}</h3><span className={`rounded-full px-2 py-1 text-xs font-semibold ${badge(m.status === 'passed' ? 'good' : m.status === 'failed' ? 'bad' : 'neutral')}`}>{m.status === 'passed' ? 'пройдено' : m.status === 'failed' ? 'ошибка' : 'не оценено'}</span></div><p className="mt-2 text-sm">{m.criterion}</p><p className="mt-1 text-xs text-slate-500">Метод: {m.method}</p><p className="mt-2 text-sm text-slate-700">{m.observed}</p></article>)}</div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-bold">Результаты отдельных тестов</h3><div className="mt-3 max-h-96 overflow-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b"><th className="py-2">Тест</th><th className="py-2">Статус</th><th className="py-2">Сообщение</th></tr></thead><tbody>{quality.cases.map(c => <tr key={c.name} className="border-b align-top"><td className="py-2 pr-3 font-mono text-xs">{c.name}</td><td className="py-2 pr-3">{c.status}</td><td className="py-2 text-rose-700">{c.message}</td></tr>)}</tbody></table></div></div>
-        {quality.limitations.map(note => <p key={note} className="text-xs text-slate-500">{note}</p>)}
-      </> : <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Запустите тесты, чтобы увидеть проверенный отчёт. До запуска оценки нет.</p>}
-    </div>}
+    {!loading && tab === 'quality' && <QualityDashboard onOpenRun={id => { setSourceRunId(id); setTab('checks'); }} />}
+    {tab === 'checks' && <QualityCenter initialRunId={sourceRunId} />}
   </div>;
 }
 

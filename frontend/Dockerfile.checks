@@ -1,0 +1,14 @@
+FROM node:24-alpine
+
+WORKDIR /site
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY index.html tsconfig*.json vite.config.ts postcss.config.js tailwind.config.js ./
+COPY public ./public
+COPY src ./src
+COPY checks-runner.mjs ./checks-runner.mjs
+RUN chown -R node:node /site
+
+USER node
+EXPOSE 9090
+CMD ["node", "checks-runner.mjs"]

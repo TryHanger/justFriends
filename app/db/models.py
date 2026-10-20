@@ -37,3 +37,21 @@ class BookRecord(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
+
+
+class CheckRunRecord(Base):
+    __tablename__ = "quality_check_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    check_id: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
+    exit_code: Mapped[int | None] = mapped_column(Integer)
+    summary: Mapped[str] = mapped_column(String(500), default="")
+    diagnostics: Mapped[str] = mapped_column(Text, default="")
+    cases: Mapped[list] = mapped_column(JSON, default=list)
+    counts: Mapped[dict] = mapped_column(JSON, default=dict)
+    project_version: Mapped[str | None] = mapped_column(String(40))
+    environment: Mapped[str] = mapped_column(String(30), nullable=False)

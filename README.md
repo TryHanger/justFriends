@@ -32,6 +32,11 @@ for the scope, verification steps, and remaining gaps. The test-run endpoint is
 available only in local mode. Compose publishes only the site on the host loopback address;
 Nginx proxies API requests inside the Docker network.
 
+The new **Project checks** tab adds persisted runs of pytest, Ruff, Vitest, TypeScript
+and frontend build, with details, history and comparison. It is disabled by default;
+see [local setup and safety rules](docs/CHECKS_CENTER.md). No launch token is required
+even for the legacy quality-run endpoint.
+
 To open the site locally, run `docker compose up --build -d` and visit
 `http://localhost:8080/standards`. The default NLP backend in Compose is the
 offline baseline, so example analyses work without an API key. Set
@@ -68,7 +73,7 @@ Set `NLP_BACKEND=baseline` to analyze without API keys; other modes are
 All runtime settings come from environment variables. Do not commit `.env` or API keys. Set `DATABASE_URL` to a PostgreSQL URL for shared deployments; SQLite is the local default.
 The default CORS allowlist supports Vite on localhost port 5173; set `CORS_ORIGINS` to a JSON array when the frontend uses another origin.
 
-The automated test report is a test pass rate, not ISO certification or a measure of performance. Its `INCOMPLETE` status means at least one test was skipped, even if every executed test passed. The optional neural-model test is skipped in the default Docker image because torch and transformers are not installed there; install the `nlp` extra in a separate environment to run it. The image includes the lightweight `quality` extra and the test fixtures required for the report.
+The quality dashboard reports the pass rate among executed tests, not ISO certification or overall product quality. It shows optional skips separately, including their reasons. The compatibility report API still uses `INCOMPLETE` when a test was skipped; the dashboard presents this as tests passed with skips if every executed test succeeded. The optional neural-model test is skipped in the default Docker image because torch and transformers are not installed there; install the `nlp` extra in a separate environment to run it. The image includes the lightweight `quality` extra and the test fixtures required for the report.
 
 ## Document limits
 

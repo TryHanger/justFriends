@@ -14,6 +14,7 @@ COPY frontend/src ./frontend/src
 COPY ARCHITECTURE.md Dockerfile docker-compose.yml ./
 COPY .github ./.github
 RUN pip install --no-cache-dir '.[dev]'
+COPY scripts ./scripts
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

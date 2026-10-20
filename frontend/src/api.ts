@@ -198,6 +198,19 @@ export interface QualityReport {
   limitations: string[];
 }
 
+export interface ProductMeasurement {
+  id: string; title: string; characteristic: string;
+  state: 'measured' | 'not_measured'; value: number | null; unit: string;
+  numerator: number | null; denominator: number | null; skipped: number | null;
+  source_run_id: string | null; observed_at: string | null;
+  previous_value?: number | null; previous_run_id?: string | null; previous_observed_at?: string | null;
+  method: string; limitation: string;
+}
+export interface ProductMeasurementsReport {
+  standard: string; source_url: string;
+  measurements: ProductMeasurement[]; limitations: string[];
+}
+
 export const getStandardsReference = async () => {
   const res = await api.get<StandardInfo[]>('/standards/reference');
   return res.data;
@@ -208,8 +221,46 @@ export const getLifecycleState = async () => {
   return res.data;
 };
 
+const localCheckHeaders = { 'X-Quality-Local': '1' };
 export const runQualityChecks = async () => {
-  const res = await api.post<QualityReport>('/standards/quality/run');
+  const res = await api.post<QualityReport>('/standards/quality/run', null, { headers: localCheckHeaders });
   return res.data;
 };
+
+export const getProductMeasurements = async () =>
+  (await api.get<ProductMeasurementsReport>('/standards/quality/measurements', {
+    headers: localCheckHeaders,
+  })).data;
+
+export type CheckStatus = 'queued' | 'running' | 'passed' | 'failed' | 'skipped' | 'unavailable' | 'timeout' | 'error' | 'interrupted';
+export interface ProjectCheck {
+  id: string; name: string; description: string; category: string;
+  available: boolean; reason: string | null; last_run_id: string | null;
+  last_status: CheckStatus | null; last_duration_seconds: number | null;
+  characteristics: string[];
+  project_requirement: string; standard_refs: string[];
+}
+export interface CheckCase { name: string; status: string; duration_seconds: number; message: string }
+export interface CheckRun {
+  id: string; check_id: string; status: CheckStatus; created_at: string;
+  finished_at: string | null; duration_seconds: number | null; exit_code: number | null;
+  summary: string; diagnostics: string; cases: CheckCase[];
+  counts: Record<string, number>; project_version: string | null; environment: string;
+}
+export interface CheckComparison {
+  comparable: boolean; reason: string | null; first: CheckRun; second: CheckRun;
+  became_passed?: string[]; became_failed?: string[]; appeared?: string[]; disappeared?: string[];
+  duration_delta_seconds?: number; count_delta?: Record<string, number>;
+}
+export const listProjectChecks = async () => (await api.get<ProjectCheck[]>('/standards/checks')).data;
+export const listCheckRuns = async (check_id?: string, status?: string) =>
+  (await api.get<CheckRun[]>('/standards/checks/runs/history', {
+    headers: localCheckHeaders, params: { check_id: check_id || undefined, status: status || undefined },
+  })).data;
+export const startCheckRun = async (checkId: string) =>
+  (await api.post<CheckRun>(`/standards/checks/${checkId}/runs`, null, { headers: localCheckHeaders })).data;
+export const getCheckRun = async (id: string) =>
+  (await api.get<CheckRun>(`/standards/checks/runs/${id}`, { headers: localCheckHeaders })).data;
+export const compareCheckRuns = async (first: string, second: string) =>
+  (await api.get<CheckComparison>(`/standards/checks/runs/${first}/compare/${second}`, { headers: localCheckHeaders })).data;
 

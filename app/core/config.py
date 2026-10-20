@@ -8,6 +8,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Metaphor Analyzer API"
     environment: str = "local"
+    quality_runner_enabled: bool = False
+    quality_frontend_worker_enabled: bool = False
     api_prefix: str = "/api/v1"
     database_url: str = "sqlite:///./metaphors.db"
     openai_api_key: str | None = None
