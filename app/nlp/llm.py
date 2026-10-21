@@ -6,6 +6,7 @@ strategies (ТЗ п. 2.2.2), soft-lexicon candidates (module B), output parsing 
 """
 
 import json
+import logging
 import re
 import threading
 from urllib.request import Request, urlopen
@@ -23,6 +24,7 @@ from app.nlp.prompts import PromptStrategy, build_prompt
 from app.schemas.analysis import AnalysisResult, EntityCandidate, MetaphorSpan
 
 DEFAULT_STRATEGY = "few_shot+cot+rag+lexicon"
+logger = logging.getLogger(__name__)
 _MIP_KEYS = ("basic_meaning", "contextual_meaning", "contrast")
 
 
@@ -30,14 +32,18 @@ _KAZAKH_LETTERS = frozenset("әғқңөұүһіӘҒҚҢӨҰҮҺІ")
 
 
 def _russian(value: str) -> bool:
-    """Cyrillic text that is not Kazakh: Kazakh is Cyrillic too, so a Kazakh explanation
-    must not pass as Russian. Quoted source words («жүрек») are ignored; a few unquoted
-    Kazakh words inside Russian prose stay under the threshold."""
+    """Russian prose: Cyrillic must dominate and must not be Kazakh.
+
+    Kazakh is Cyrillic too, so a Kazakh explanation must not pass as Russian. A Chinese
+    explanation must not pass either just because our own Russian MIP labels
+    ("базовое:", "контраст:") are appended to it. Quoted source words («жүрек», «心»)
+    are ignored; a few unquoted source words inside Russian prose stay under the limits."""
     unquoted = re.sub(r"«[^»]*»|\"[^\"]*\"|“[^”]*”", "", value)
-    letters = [char for char in unquoted if "Ѐ" <= char <= "ӿ"]
-    if not letters:
+    letters = [char for char in unquoted if char.isalpha()]
+    cyrillic = [char for char in letters if "Ѐ" <= char <= "ӿ"]
+    if not cyrillic or len(cyrillic) / len(letters) < 0.7:
         return False
-    return sum(char in _KAZAKH_LETTERS for char in letters) / len(letters) < 0.04
+    return sum(char in _KAZAKH_LETTERS for char in cyrillic) / len(cyrillic) < 0.04
 
 
 def _align(text: str, fragment: str, start: int, end: int) -> tuple[int, int] | None:
@@ -283,35 +289,51 @@ class LLMDetector:
             for name in ("rationale", "semantic_label")
             if getattr(span, name) and not _russian(getattr(span, name))
         ]
-        if not fields:
-            return result
-        items = [
-            {"expression": result.metaphors[i].text, "value": getattr(result.metaphors[i], name)}
-            for i, name in fields
-        ]
-        raw, _ = self._complete(
-            "Translate each value into clear, concise Russian. Return Russian Cyrillic only. "
-            "Preserve meaning and do not add claims. Return exactly one translated string per "
-            "input item, in the same order.",
-            json.dumps({"items": items}, ensure_ascii=False),
-            _TRANSLATION_SCHEMA,
-            {"temperature": None, "top_p": None},
-        )
-        translations = json.loads(raw)["translations"]
-        if len(translations) != len(fields):
-            raise ValueError("LLM returned a wrong number of Russian translations")
+        spans = list(result.metaphors)
+        # Models tend to "translate" Kazakh by returning Kazakh: one more pass for leftovers.
+        for attempt in range(2):
+            if not fields:
+                break
+            translations = self._translate(
+                [
+                    {"expression": spans[i].text, "value": getattr(spans[i], name)}
+                    for i, name in fields
+                ],
+                # Deterministic first; a retry at temperature 0 would repeat the same answer.
+                temperature=0.0 if attempt == 0 else None,
+            )
+            leftover = []
+            for (index, name), value in zip(fields, translations, strict=True):
+                if value.strip() and _russian(value):
+                    spans[index] = spans[index].model_copy(update={name: value})
+                else:
+                    leftover.append((index, name))
+                    logger.warning("Rejected Russian translation of %s: %r", name, value[:160])
+            fields = leftover
         # A failed translation of one explanation must not discard the whole analysis:
         # keep the original text and flag it for the reviewer instead.
-        spans, untranslated = list(result.metaphors), 0
-        for (index, name), value in zip(fields, translations, strict=True):
-            if value.strip() and _russian(value):
-                spans[index] = spans[index].model_copy(update={name: value})
-            else:
-                untranslated += 1
+        untranslated = len(fields)
         warnings = list(result.warnings)
         if untranslated:
             warnings.append(f"{untranslated} explanation(s) could not be translated into Russian.")
         return result.model_copy(update={"metaphors": spans, "warnings": warnings})
+
+    def _translate(self, items: list[dict], temperature: float | None) -> list[str]:
+        raw, _ = self._complete(
+            "Translate each value from Chinese or Kazakh into clear, concise Russian. "
+            "The answer must be Russian: Kazakh is not Russian, so never return text with the "
+            "letters ә, ғ, қ, ң, ө, ұ, ү, һ, і and never return the value unchanged or "
+            "wrapped in quotes. Single source words such as 舟 or жүрек may stay inside the "
+            "Russian sentence. Preserve meaning and do not add claims. Return exactly one "
+            "translated string per input item, in the same order.",
+            json.dumps({"items": items}, ensure_ascii=False),
+            _TRANSLATION_SCHEMA,
+            {"temperature": temperature, "top_p": None},
+        )
+        translations = json.loads(raw)["translations"]
+        if len(translations) != len(items):
+            raise ValueError("LLM returned a wrong number of Russian translations")
+        return translations
 
 
 class OpenAIDetector(LLMDetector):

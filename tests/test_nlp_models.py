@@ -63,7 +63,7 @@ def test_openai_adapter_strategy_sampling_and_russian_pass():
             raise ValueError(
                 "Unsupported parameter: 'temperature' is not supported with this model"
             )
-        if len(calls) == 3:
+        if "translations" in json.dumps(kwargs["text"]["format"]["schema"]):
             return SimpleNamespace(
                 status="completed",
                 output_text=json.dumps({"translations": ["Образ моря передаёт чувства."]}),
@@ -78,11 +78,12 @@ def test_openai_adapter_strategy_sampling_and_russian_pass():
         detector.analyze("心海", "zh")
     calls.clear()
     result = OpenAIDetector("test", "test", client, strategy="lexicon").analyze("心海", "zh")
-    first, retry, translation = calls
+    first, retry, translation, translation_retry = calls
     assert first["temperature"] == 0.2 and first["top_p"] == 0.95
     assert "temperature" not in retry and retry["text"]["format"]["strict"] is True
     assert json.loads(retry["input"])["candidates"][0]["text"] == "心"
-    assert "Translate" in translation["instructions"]
+    assert "Translate" in translation["instructions"] and translation["temperature"] == 0.0
+    assert "temperature" not in translation_retry  # rejected sampling falls back here too
     assert result.metaphors[0].rationale.startswith("Образ моря")
     assert result.method["strategy"] == "lexicon" and result.method["sampling_applied"] is False
     assert any("rejected temperature" in w for w in result.warnings)

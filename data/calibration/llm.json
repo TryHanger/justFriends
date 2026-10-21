@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "models": {
+    "openai:gpt-4o-mini": {
+      "zh": {
+        "a": 2.21473564223889,
+        "b": -2.962482973254877,
+        "source": "CMDAG test sample (gold, 200 sentences)",
+        "spans": 194,
+        "precision": 0.7680412371134021,
+        "mean_self_reported": 0.8693298969072166,
+        "ece_before": 0.1012886597938145,
+        "ece_after": 0.019143686844201594
+      },
+      "kk": {
+        "a": 1.5990471808673121,
+        "b": -2.6428380622991363,
+        "source": "Kazakh explanatory dictionary «ауыс.» quotations (160)",
+        "spans": 40,
+        "precision": 0.575,
+        "mean_self_reported": 0.85875,
+        "ece_before": 0.2837499999999999,
+        "ece_after": 0.11469183668819483
+      }
+    }
+  }
+}

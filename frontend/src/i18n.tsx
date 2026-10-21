@@ -69,10 +69,22 @@ const ru: Record<string, string> = {
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }
 
+function calibrationSource(source: string) {
+  if (source.startsWith('CMDAG')) return 'эталон CMDAG';
+  if (source.startsWith('Kazakh explanatory dictionary')) return 'толковый словарь казахского языка';
+  return source;
+}
+
 // Backend warnings are English and may contain numbers or offsets, so they are matched by pattern.
 const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^LLM preliminary annotation; confidence is self-reported and uncalibrated\.$/,
     () => 'Предварительная разметка LLM: уверенность — самооценка модели, она не откалибрована.'],
+  [/^Confidence calibrated on (.+) \((\d+) figures\): the probability that a figure is correct\.$/,
+    (m) => `Уверенность откалибрована на экспертных данных (${calibrationSource(m[1])}, ${m[2]} фигур): это вероятность того, что фигура найдена верно.`],
+  [/^(\d+) of (\d+) figure\(s\) below the review threshold (\d+)%: check them first\.$/,
+    (m) => `Проверьте в первую очередь фигуры с уверенностью ниже ${m[3]}%: ${m[1]} из ${m[2]}.`],
+  [/^No figures found; models miss many figures, so review the text\.$/,
+    () => 'Фигуры не найдены. Модели пропускают много фигур, поэтому проверьте текст вручную.'],
   [/^(\d+) (?:item|span)\(s\) omitted: the expression could not be aligned uniquely to the source text\.$/,
     (m) => `Пропущено фрагментов: ${m[1]} — выражение не удалось однозначно найти в исходном тексте.`],
   [/^(\d+) literal candidate\(s\) overlapped figurative spans and were dropped\.$/,

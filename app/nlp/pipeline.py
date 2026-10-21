@@ -7,8 +7,9 @@ from app.nlp.contracts import NLPInputError, context_sentence, validate_result
 class MetaphorPipeline:
     """Modules A-D in order; module E (expert review) works on the stored result."""
 
-    def __init__(self, detector, classifier=None, extractor=None):
+    def __init__(self, detector, classifier=None, extractor=None, calibrator=None):
         self.detector, self.classifier, self.extractor = detector, classifier, extractor
+        self.calibrator = calibrator
 
     def analyze(self, text: str, language: str = "auto"):
         if not text.strip() or len(text) > MAX_ANALYSIS_CHARS:
@@ -29,7 +30,10 @@ class MetaphorPipeline:
         if self.extractor and not result.candidates:
             # Detectors without module B (XLM-R) still expose soft-lexicon candidates.
             update["candidates"] = self.extractor.extract(text, result.language)
-        return validate_result(text, language, result.model_copy(update=update))
+        result = result.model_copy(update=update)
+        if self.calibrator:
+            result = self.calibrator.apply(result)
+        return validate_result(text, language, result)
 
 
 LLM_BACKENDS = {"openai", "anthropic", "ollama", "hf"}
@@ -108,6 +112,12 @@ def build_pipeline(settings, strategy: str | None = None):
         from app.nlp.attributes import AttributeClassifier
 
         classifier = AttributeClassifier(settings.attribute_model_path)
+    from app.nlp.calibration import Calibrator
     from app.nlp.lexicon import CandidateExtractor
 
-    return MetaphorPipeline(detector, classifier, CandidateExtractor(settings.lexicon_dir))
+    return MetaphorPipeline(
+        detector,
+        classifier,
+        CandidateExtractor(settings.lexicon_dir),
+        Calibrator.load(settings.nlp_review_threshold),
+    )

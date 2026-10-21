@@ -124,7 +124,7 @@ def test_failed_russian_translation_keeps_analysis_with_warning():
 
     def create(**kwargs):
         calls.append(kwargs)
-        if len(calls) == 2:
+        if "translations" in json.dumps(kwargs["text"]["format"]["schema"]):
             return SimpleNamespace(
                 status="completed", output_text=json.dumps({"translations": ["not russian"]})
             )
@@ -133,6 +133,7 @@ def test_failed_russian_translation_keeps_analysis_with_warning():
 
     client = SimpleNamespace(responses=SimpleNamespace(create=create))
     result = OpenAIDetector("m", "k", client, strategy="zero_shot").analyze("心海", "zh")
+    assert len(calls) == 3  # analysis, translation, one retry of the rejected translation
     assert result.metaphors[0].rationale == "English rationale"
     assert any("could not be translated" in w for w in result.warnings)
 
@@ -155,6 +156,17 @@ def test_kazakh_explanation_is_not_taken_for_russian():
     assert len(calls) == 2  # Kazakh Cyrillic triggered the Russian pass
     assert result.metaphors[0].rationale.startswith("Сердце уподоблено морю")
     assert not any("could not be translated" in w for w in result.warnings)
+
+
+def test_chinese_explanation_with_russian_mip_labels_is_translated():
+    from app.nlp.llm import _russian
+
+    chinese = "国家被比作船，暗示其在人民的支持下才能航行。 (MIP — базовое: 国 — 国家; контраст: 不同领域)"
+    russian = (
+        "Государство уподоблено лодке: «国如舟» держится на народе. (MIP — базовое: 国 — страна)"
+    )
+    assert not _russian(chinese)  # our own Cyrillic labels must not make it "Russian"
+    assert _russian(russian)  # quoted and short source words inside Russian prose are fine
 
 
 def test_review_report_flags_unchanged_suggestions():
@@ -202,3 +214,37 @@ def test_review_report_flags_unchanged_suggestions():
         1,
     )
     assert summary["tasks_accepted_without_changes"] == 1 and summary["warning"] is None
+
+
+def test_calibrator_rescales_confidence_and_flags_low_figures():
+    from app.nlp.calibration import UNCALIBRATED, Calibrator, platt
+    from app.schemas.analysis import AnalysisResult
+
+    def figure(start, confidence):
+        return {
+            "text": "心海"[start],
+            "start": start,
+            "end": start + 1,
+            "label": "metaphor",
+            "source_domain": "water",
+            "target_domain": "emotion",
+            "confidence": confidence,
+            "rationale": "Образ.",
+        }
+
+    result = AnalysisResult(
+        language="zh",
+        model_version="openai:m",
+        warnings=[UNCALIBRATED],
+        metaphors=[figure(0, 0.95), figure(1, 0.6)],
+    )
+    fit = {"a": 1.0, "b": -1.5, "source": "CMDAG", "spans": 120, "ece_after": 0.05}
+    calibrated = Calibrator({"openai:m": {"zh": fit}}, threshold=0.7).apply(result)
+    assert calibrated.metaphors[0].confidence == round(platt(0.95, 1.0, -1.5), 3)
+    assert calibrated.metaphors[0].confidence < 0.95  # an overconfident model is pulled down
+    assert UNCALIBRATED not in calibrated.warnings
+    # 0.95 -> 0.81 stays above the 0.7 threshold, 0.6 -> 0.35 falls below it.
+    assert any(w.startswith("1 of 2 figure(s) below") for w in calibrated.warnings)
+    assert calibrated.needs_review and calibrated.method["calibration"]["spans"] == 120
+    # Unknown model or language: untouched.
+    assert Calibrator({}, threshold=0.7).apply(result) == result
