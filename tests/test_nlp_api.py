@@ -154,12 +154,15 @@ def test_fine_tuned_models_need_torch(monkeypatch, tmp_path):
     monkeypatch.setattr(analyses.settings, "chinese_gold_xlmr_model_path", str(tmp_path))
     real_find_spec = analyses.importlib.util.find_spec
 
-    def without_torch(name, *args):
-        return None if name == "torch" else real_find_spec(name, *args)
+    def torch_installed(installed):
+        # Pretend either way, so the test does not depend on this environment (CI has no torch).
+        def find_spec(name, *args):
+            if name == "torch":
+                return object() if installed else None
+            return real_find_spec(name, *args)
 
-    monkeypatch.setattr(analyses.importlib.util, "find_spec", without_torch)
-    catalog = {model.id: model for model in analyses.list_models()}
-    assert catalog["xlmr_zh_gold_v2"].available is False  # weights exist, PyTorch does not
-    monkeypatch.setattr(analyses.importlib.util, "find_spec", real_find_spec)
-    catalog = {model.id: model for model in analyses.list_models()}
-    assert catalog["xlmr_zh_gold_v2"].available is True
+        monkeypatch.setattr(analyses.importlib.util, "find_spec", find_spec)
+        return {model.id: model for model in analyses.list_models()}["xlmr_zh_gold_v2"]
+
+    assert torch_installed(False).available is False  # weights exist, PyTorch does not
+    assert torch_installed(True).available is True

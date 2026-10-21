@@ -248,3 +248,29 @@ def test_calibrator_rescales_confidence_and_flags_low_figures():
     assert calibrated.needs_review and calibrated.method["calibration"]["spans"] == 120
     # Unknown model or language: untouched.
     assert Calibrator({}, threshold=0.7).apply(result) == result
+
+
+def test_candidate_reasoning_is_translated_too():
+    def create(**kwargs):
+        if "translations" in json.dumps(kwargs["text"]["format"]["schema"]):
+            items = json.loads(kwargs["input"])["items"]
+            return SimpleNamespace(
+                status="completed",
+                output_text=json.dumps({"translations": ["Перевод на русский."] * len(items)}),
+            )
+        literal = {
+            "text": "山",
+            "start": 2,
+            "end": 3,
+            "entity_type": "body",
+            "reasoning": "Жүрек — орган, нақты мағынада қолданылған.",
+        }
+        item = llm_item(rationale="Образ моря передаёт чувства.")
+        payload = llm_payload(item, literal=[literal])
+        return SimpleNamespace(status="completed", output_text=json.dumps(payload))
+
+    client = SimpleNamespace(responses=SimpleNamespace(create=create))
+    result = OpenAIDetector("m", "k", client, strategy="zero_shot").analyze("心海山", "zh")
+    literal = next(c for c in result.candidates if c.usage_type == "literal")
+    assert literal.reasoning == "Перевод на русский."
+    assert result.metaphors[0].rationale == "Образ моря передаёт чувства."  # already Russian

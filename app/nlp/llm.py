@@ -282,32 +282,43 @@ class LLMDetector:
         return validate_result(text, language, result)
 
     def _ensure_russian(self, result: AnalysisResult) -> AnalysisResult:
-        """Translate Russian-only fields in a narrowly scoped pass when the model ignored the rule."""
+        """Translate Russian-only fields in a narrowly scoped pass when the model ignored the rule.
+
+        Covers the figures' explanations and the candidates' readings and reasoning: the
+        interface is Russian-only, while the poem-language fields (tenor, ground) stay."""
+        items = {
+            "metaphors": (list(result.metaphors), ("rationale", "semantic_label")),
+            "candidates": (list(result.candidates), ("lexicon_meaning", "reasoning")),
+        }
         fields = [
-            (index, name)
-            for index, span in enumerate(result.metaphors)
-            for name in ("rationale", "semantic_label")
-            if getattr(span, name) and not _russian(getattr(span, name))
+            (group, index, name)
+            for group, (objects, names) in items.items()
+            for index, obj in enumerate(objects)
+            for name in names
+            if getattr(obj, name) and not _russian(getattr(obj, name))
         ]
-        spans = list(result.metaphors)
         # Models tend to "translate" Kazakh by returning Kazakh: one more pass for leftovers.
         for attempt in range(2):
             if not fields:
                 break
             translations = self._translate(
                 [
-                    {"expression": spans[i].text, "value": getattr(spans[i], name)}
-                    for i, name in fields
+                    {
+                        "expression": items[group][0][i].text,
+                        "value": getattr(items[group][0][i], name),
+                    }
+                    for group, i, name in fields
                 ],
                 # Deterministic first; a retry at temperature 0 would repeat the same answer.
                 temperature=0.0 if attempt == 0 else None,
             )
             leftover = []
-            for (index, name), value in zip(fields, translations, strict=True):
+            for (group, index, name), value in zip(fields, translations, strict=True):
+                objects = items[group][0]
                 if value.strip() and _russian(value):
-                    spans[index] = spans[index].model_copy(update={name: value})
+                    objects[index] = objects[index].model_copy(update={name: value})
                 else:
-                    leftover.append((index, name))
+                    leftover.append((group, index, name))
                     logger.warning("Rejected Russian translation of %s: %r", name, value[:160])
             fields = leftover
         # A failed translation of one explanation must not discard the whole analysis:
@@ -316,7 +327,13 @@ class LLMDetector:
         warnings = list(result.warnings)
         if untranslated:
             warnings.append(f"{untranslated} explanation(s) could not be translated into Russian.")
-        return result.model_copy(update={"metaphors": spans, "warnings": warnings})
+        return result.model_copy(
+            update={
+                "metaphors": items["metaphors"][0],
+                "candidates": items["candidates"][0],
+                "warnings": warnings,
+            }
+        )
 
     def _translate(self, items: list[dict], temperature: float | None) -> list[str]:
         raw, _ = self._complete(
