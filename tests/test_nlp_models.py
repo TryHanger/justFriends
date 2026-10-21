@@ -92,6 +92,28 @@ def test_openai_adapter_strategy_sampling_and_russian_pass():
         OpenAIDetector("test", "test", client, temperature=None, top_p=None).analyze("心海", "zh")
 
 
+def test_openai_adapter_caps_output_and_retries_an_incomplete_answer():
+    calls = []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            return SimpleNamespace(status="incomplete")  # e.g. a repetition loop hit the cap
+        if "translations" in json.dumps(kwargs["text"]["format"]["schema"]):
+            return SimpleNamespace(
+                status="completed",
+                output_text=json.dumps({"translations": ["Образ моря передаёт чувства."]}),
+            )
+        item = llm_item(rationale="The sea image conveys feelings.")
+        return SimpleNamespace(status="completed", output_text=json.dumps(llm_payload(item)))
+
+    client = SimpleNamespace(responses=SimpleNamespace(create=create))
+    result = OpenAIDetector("test", "test", client, strategy="lexicon").analyze("心海", "zh")
+    assert calls[0]["max_output_tokens"] == OpenAIDetector.max_output_tokens
+    assert calls[1]["input"] == calls[0]["input"]  # the same request sampled again
+    assert result.metaphors[0].text == "心海"
+
+
 def test_cot_output_keeps_mip_steps_in_rationale():
     item = llm_item(basic_meaning="море", contextual_meaning="чувства", contrast="есть контраст")
     result = parse_output(json.dumps(llm_payload(item)), "心海", "zh", "t", cot=True)

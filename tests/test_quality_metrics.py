@@ -137,6 +137,26 @@ def test_failed_russian_translation_keeps_analysis_with_warning():
     assert any("could not be translated" in w for w in result.warnings)
 
 
+def test_kazakh_explanation_is_not_taken_for_russian():
+    calls = []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 2:
+            translated = "Сердце уподоблено морю: образ «теңіз» передаёт безбрежность чувств."
+            return SimpleNamespace(
+                status="completed", output_text=json.dumps({"translations": [translated]})
+            )
+        item = llm_item(rationale="Жүрек теңізге теңелген, бұл шексіз сезімдерді білдіреді.")
+        return SimpleNamespace(status="completed", output_text=json.dumps(llm_payload(item)))
+
+    client = SimpleNamespace(responses=SimpleNamespace(create=create))
+    result = OpenAIDetector("m", "k", client, strategy="zero_shot").analyze("心海", "zh")
+    assert len(calls) == 2  # Kazakh Cyrillic triggered the Russian pass
+    assert result.metaphors[0].rationale.startswith("Сердце уподоблено морю")
+    assert not any("could not be translated" in w for w in result.warnings)
+
+
 def test_review_report_flags_unchanged_suggestions():
     from app.nlp.annotation import review_report
 

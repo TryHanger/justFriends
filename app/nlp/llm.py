@@ -6,6 +6,7 @@ strategies (ТЗ п. 2.2.2), soft-lexicon candidates (module B), output parsing 
 """
 
 import json
+import re
 import threading
 from urllib.request import Request, urlopen
 
@@ -25,8 +26,18 @@ DEFAULT_STRATEGY = "few_shot+cot+rag+lexicon"
 _MIP_KEYS = ("basic_meaning", "contextual_meaning", "contrast")
 
 
-def _cyrillic(value: str) -> bool:
-    return any("Ѐ" <= char <= "ӿ" for char in value)
+_KAZAKH_LETTERS = frozenset("әғқңөұүһіӘҒҚҢӨҰҮҺІ")
+
+
+def _russian(value: str) -> bool:
+    """Cyrillic text that is not Kazakh: Kazakh is Cyrillic too, so a Kazakh explanation
+    must not pass as Russian. Quoted source words («жүрек») are ignored; a few unquoted
+    Kazakh words inside Russian prose stay under the threshold."""
+    unquoted = re.sub(r"«[^»]*»|\"[^\"]*\"|“[^”]*”", "", value)
+    letters = [char for char in unquoted if "Ѐ" <= char <= "ӿ"]
+    if not letters:
+        return False
+    return sum(char in _KAZAKH_LETTERS for char in letters) / len(letters) < 0.04
 
 
 def _align(text: str, fragment: str, start: int, end: int) -> tuple[int, int] | None:
@@ -270,7 +281,7 @@ class LLMDetector:
             (index, name)
             for index, span in enumerate(result.metaphors)
             for name in ("rationale", "semantic_label")
-            if getattr(span, name) and not _cyrillic(getattr(span, name))
+            if getattr(span, name) and not _russian(getattr(span, name))
         ]
         if not fields:
             return result
@@ -293,7 +304,7 @@ class LLMDetector:
         # keep the original text and flag it for the reviewer instead.
         spans, untranslated = list(result.metaphors), 0
         for (index, name), value in zip(fields, translations, strict=True):
-            if value.strip() and _cyrillic(value):
+            if value.strip() and _russian(value):
                 spans[index] = spans[index].model_copy(update={name: value})
             else:
                 untranslated += 1
@@ -305,6 +316,9 @@ class LLMDetector:
 
 class OpenAIDetector(LLMDetector):
     provider = "openai"
+    # A typical answer is under 1k tokens. Without a cap, a rare degenerate repetition
+    # runs to the model maximum and the analysis hangs for minutes before failing.
+    max_output_tokens = 6000
 
     def __init__(self, model: str, api_key: str, client=None, **kwargs):
         super().__init__(model, **kwargs)
@@ -327,6 +341,7 @@ class OpenAIDetector(LLMDetector):
                     "schema": schema,
                 }
             },
+            max_output_tokens=self.max_output_tokens,
         )
         params = {k: v for k, v in sampling.items() if v is not None}
         applied = bool(params)
@@ -337,8 +352,12 @@ class OpenAIDetector(LLMDetector):
             message = str(exc).lower()
             if not params or not any(key in message for key in params):
                 raise
+            params = {}
             response = self.client.responses.create(**request)
             applied = False
+        if response.status == "incomplete":
+            # Usually a one-off repetition loop that hit the cap: sample once more.
+            response = self.client.responses.create(**request, **params)
         if response.status != "completed":
             raise ValueError("LLM response is incomplete")
         usage = getattr(response, "usage", None)

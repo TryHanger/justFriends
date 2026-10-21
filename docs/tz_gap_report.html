@@ -144,7 +144,7 @@ footer { color: var(--muted); font-size: .82rem; }
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
     <div class="meta"><span>Обновлено 19 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -327,6 +327,40 @@ footer { color: var(--muted); font-size: .82rem; }
       <li>Модели: <code>models/zhuxi-stanza-sikuroberta-v1</code> (417 МБ) и <code>models/zhuxi-stanza-xlmr-v1</code> (1.1 ГБ), обе обучены на всех 968 строфах. Отчёты — <code>data/processed/zhuxi/stanza_classifier*.json</code>, код — <code>scripts/train_stanza_classifier.py</code>.</li>
     </ul></div>
     <p class="note">Код: <code>scripts/extract_zhuxi.py</code> (извлечение, тексты в упрощённом письме для моделей, оффсеты строф), <code>scripts/eval_zhuxi.py</code> (оценка любых предсказаний). Данные: <code>data/processed/zhuxi/</code>. Лицензия: текст и комментарий — общественное достояние, транскрипция Wikisource — CC BY-SA 4.0.</p>
+  </section>
+  <section id="kkdict" aria-labelledby="kkdict-h">
+    <h2 id="kkdict-h">Казахский: экспертная разметка из толкового словаря</h2>
+    <p class="lede">«Қазақ әдеби тілінің сөздігі» (15 томов, Институт языкознания им. А. Байтурсынулы, 2011; опубликован на sozdikqor.kz) помечает переносные значения «ауыс.» и иллюстрирует каждое значение цитатами из литературы. Цитата под значением «ауыс.» — решение лексикографов, что слово употреблено переносно; под прямым значением — буквально. Это проверочный набор для модуля C (прямое/переносное употребление) без своих аннотаторов.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Набор</th><th class="num">Количество</th></tr></thead>
+      <tbody>
+        <tr><td>Слов-образов запрошено (лексикон проекта, образы ансамбля, частые образы поэзии)</td><td class="num">187</td></tr>
+        <tr><td>Слов со статьёй и цитатами</td><td class="num">135</td></tr>
+        <tr><td>Цитат всего</td><td class="num">1 434</td></tr>
+        <tr><td>Переносное употребление («ауыс.»), слов</td><td class="num">216 цитат, 51 слово</td></tr>
+        <tr><td>Прямое употребление</td><td class="num">1 218</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Как модели отличают переносное от прямого</h3>
+    <p>Слово считается переносным по мнению модели, если найденная фигура перекрывает его. Сбалансированная выборка: 80 переносных и 80 прямых цитат.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th class="num">Цитат</th><th class="num">Точность</th><th class="num">Полнота</th><th class="num">F1</th><th class="num">κ со словарём</th><th class="num">Ложно в прямых</th></tr></thead>
+      <tbody>
+        <tr><td>gpt-4o-mini</td><td class="num">160</td><td class="num">0.57</td><td class="num">0.29</td><td class="num">0.38</td><td class="num">0.07</td><td class="num">21%</td></tr>
+        <tr><td>XLM-R kk silver pilot v2</td><td class="num">160</td><td class="num">0.55</td><td class="num">0.45</td><td class="num">0.49</td><td class="num">0.07</td><td class="num">38%</td></tr>
+        <tr><td>XLM-R zh gold + kk silver</td><td class="num">160</td><td class="num">0.62</td><td class="num">0.31</td><td class="num">0.42</td><td class="num">0.12</td><td class="num">19%</td></tr>
+        <tr><td>XLM-R kk silver pilot v2, все цитаты</td><td class="num">1 434</td><td class="num">0.18</td><td class="num">0.43</td><td class="num">0.25</td><td class="num">0.05</td><td class="num">36%</td></tr>
+        <tr><td>XLM-R zh gold + kk silver, все цитаты</td><td class="num">1 434</td><td class="num">0.24</td><td class="num">0.28</td><td class="num">0.26</td><td class="num">0.12</td><td class="num">15%</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>Вывод</h3><ul class="clean">
+      <li>Ни одна модель не отличает переносное употребление от прямого: κ со словарём 0.05–0.12. gpt-4o-mini находит меньше трети переносных употреблений.</li>
+      <li>Это объясняет слабое согласие ансамбля (κ 0.11): участники не просто расходятся во вкусах, они плохо различают переносное значение в казахском.</li>
+      <li>Оговорка: «ауыс.» в словаре — устоявшиеся переносные значения (например, ақыл «выход из положения»), часть из них модели могут честно считать обычным словом. И наоборот, слово в прямом значении может попасть внутрь более длинной фигуры и засчитаться как ложное срабатывание.</li>
+      <li>Стоимость прогона gpt-4o-mini: 519k + 50k токенов, ≈ $0.11. XLM-R — локально, бесплатно.</li>
+      <li>Следующий шаг — дообучить классификатор употребления на этих цитатах, как классификатор строф для «Ши цзин», с проверкой на словах, которых модель не видела.</li>
+    </ul></div>
+    <p class="note">Код: <code>scripts/build_kk_usage_set.py</code> (выкачка с кэшем, 1 запрос в секунду, три варианта вёрстки статей), <code>scripts/eval_kk_usage.py</code>. Данные: <code>data/processed/kk_usage/</code>. Словарь защищён авторским правом: набор только для исследовательской оценки, в git и публичный доступ не выкладывается.</p>
   </section>
   <section id="labelstudio" aria-labelledby="ls-h">
     <h2 id="ls-h">Разметка в Label Studio</h2>

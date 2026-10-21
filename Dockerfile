@@ -16,7 +16,9 @@ COPY docs ./docs
 COPY frontend/src ./frontend/src
 COPY ARCHITECTURE.md Dockerfile docker-compose.yml ./
 COPY .github ./.github
-RUN pip install --no-cache-dir '.[dev]'
+# Fine-tuned XLM-R profiles need PyTorch: the CPU build keeps the image ~2 GB smaller
+# than the default CUDA wheels, and inference on short poems is fast enough on CPU.
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu     && pip install --no-cache-dir '.[dev,nlp]'
 COPY scripts ./scripts
 
 EXPOSE 8000
