@@ -88,4 +88,5 @@ class TransformersDetector(LLMDetector):
         if len(generated) >= self.max_new_tokens:
             raise ValueError("Generation hit max_new_tokens; the JSON answer is incomplete")
         text = self.tokenizer.decode(generated, skip_special_tokens=True)
+        self._record_usage(inputs["input_ids"].shape[1], len(generated))
         return extract_json(text), do_sample

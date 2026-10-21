@@ -279,6 +279,58 @@
           ],
           "default": null,
           "title": "Sentiment"
+        },
+        "tenor": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Tenor: what is described, e.g. 火",
+          "title": "Tenor"
+        },
+        "tenor_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tenor Start"
+        },
+        "tenor_end": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tenor End"
+        },
+        "ground": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Ground: shared property, e.g. 折磨的感觉",
+          "title": "Ground"
         }
       },
       "required": [

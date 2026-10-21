@@ -186,14 +186,16 @@ def run(args):
             export_tasks(read_corpus(args.input), prefill_candidates=args.prefill_candidates),
         )
     elif command == "label-studio-import":
-        from app.nlp.annotation import import_tasks
+        from app.nlp.annotation import import_tasks, review_report
 
+        tasks = load_json(args.input)
         write_corpus(
             args.output,
-            import_tasks(
-                load_json(args.input), offset_unit=args.offset_unit, adjudicator=args.adjudicator
-            ),
+            import_tasks(tasks, offset_unit=args.offset_unit, adjudicator=args.adjudicator),
         )
+        report = review_report(tasks)
+        save_json(str(args.output) + ".review.json", report)
+        print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
     elif command == "analyze":
         # Preserve CRLF: offsets must refer to exactly the loaded text.
         with open(args.text_file, encoding="utf-8", newline="") as stream:

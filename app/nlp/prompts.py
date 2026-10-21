@@ -30,7 +30,9 @@ simile for explicit comparison, metonymy for contiguity, idiom for a fixed idiom
 Prefer personification over metaphor when both fit. Idiomaticity alone is not proof of metaphor.
 A conventional symbolic reading (orchid = noble man, fox = cunning) is not proof either: decide by context.
 Annotate minimal complete metaphor-bearing expressions, not whole lines by default.
-For each expression give: entity = the key image word inside text; entity_type; source_domain = the
+For each expression give: entity = the key image word inside text; entity_type; tenor = what the
+image describes (copy the exact words from the poem, or "" if the tenor is implicit); ground = the
+property shared by tenor and image, a short phrase in the poem's language; source_domain = the
 concrete image; target_domain = what it describes (unknown if unclear); semantic_label = short meaning
 of the image in this context in Russian; sentiment toward the described target (positive, neutral,
 negative); confidence = self-estimate, not a calibrated probability; rationale = short evidence-based

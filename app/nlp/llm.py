@@ -6,6 +6,7 @@ strategies (ТЗ п. 2.2.2), soft-lexicon candidates (module B), output parsing 
 """
 
 import json
+import threading
 from urllib.request import Request, urlopen
 
 from app.nlp.contracts import (
@@ -41,6 +42,23 @@ def _align(text: str, fragment: str, start: int, end: int) -> tuple[int, int] | 
     return position, position + len(fragment)
 
 
+def locate_tenor(text: str, tenor: str, start: int, end: int) -> tuple[int, int] | None:
+    """Offsets of the tenor occurrence nearest to the image span, or None if implicit."""
+    if not tenor:
+        return None
+    best, position = None, text.find(tenor)
+    while position >= 0:
+        distance = (
+            0
+            if position < end and position + len(tenor) > start
+            else min(abs(position - end), abs(start - (position + len(tenor))))
+        )
+        if best is None or distance < best[0]:
+            best = (distance, position)
+        position = text.find(tenor, position + 1)
+    return None if best is None else (best[1], best[1] + len(tenor))
+
+
 def parse_output(
     raw: str, text: str, language: str, model_version: str, *, cot: bool = False
 ) -> AnalysisResult:
@@ -63,6 +81,8 @@ def parse_output(
             rationale = f"{rationale} (MIP — {steps})"
         entity = item.entity if item.entity and item.entity in item.text else None
         confidence = min(1.0, max(0.0, item.confidence))
+        tenor = item.tenor.strip() or None
+        tenor_bounds = locate_tenor(text, tenor, start, end) if tenor else None
         metaphors.append(
             MetaphorSpan(
                 text=item.text,
@@ -79,6 +99,10 @@ def parse_output(
                 context_sentence=context_sentence(text, start, end),
                 semantic_label=item.semantic_label.strip() or None,
                 sentiment=item.sentiment,
+                tenor=tenor,
+                tenor_start=tenor_bounds[0] if tenor_bounds else None,
+                tenor_end=tenor_bounds[1] if tenor_bounds else None,
+                ground=item.ground.strip() or None,
             )
         )
         if entity:
@@ -172,6 +196,16 @@ class LLMDetector:
         self.temperature, self.top_p = temperature, top_p
         self.extractor = extractor or CandidateExtractor()
         self.knowledge, self.rag_k = knowledge, rag_k
+        # Per-thread token counter: background jobs may share one detector instance.
+        self._local = threading.local()
+
+    def _record_usage(self, input_tokens, output_tokens) -> None:
+        usage = getattr(self._local, "usage", None)
+        if usage is None:
+            return
+        usage["requests"] += 1
+        usage["input_tokens"] += int(input_tokens or 0)
+        usage["output_tokens"] += int(output_tokens or 0)
 
     # Provider hook: return the raw JSON text and whether sampling parameters were applied.
     def _complete(
@@ -201,6 +235,7 @@ class LLMDetector:
         )
         cot = "cot" in self.strategy
         sampling = {"temperature": self.temperature, "top_p": self.top_p}
+        self._local.usage = {"requests": 0, "input_tokens": 0, "output_tokens": 0}
         raw, applied = self._complete(
             prompt.instructions, prompt.user, output_schema(cot), sampling
         )
@@ -213,6 +248,8 @@ class LLMDetector:
             "temperature": self.temperature if applied else None,
             "top_p": self.top_p if applied else None,
             "sampling_applied": applied,
+            # Includes the optional Russian translation pass; reported by the provider.
+            "usage": dict(self._local.usage),
         }
         warnings = list(result.warnings)
         if not applied and (self.temperature is not None or self.top_p is not None):
@@ -250,14 +287,20 @@ class LLMDetector:
             {"temperature": None, "top_p": None},
         )
         translations = json.loads(raw)["translations"]
-        if len(translations) != len(fields) or not all(
-            value.strip() and _cyrillic(value) for value in translations
-        ):
-            raise ValueError("LLM returned invalid Russian translations")
-        spans = list(result.metaphors)
+        if len(translations) != len(fields):
+            raise ValueError("LLM returned a wrong number of Russian translations")
+        # A failed translation of one explanation must not discard the whole analysis:
+        # keep the original text and flag it for the reviewer instead.
+        spans, untranslated = list(result.metaphors), 0
         for (index, name), value in zip(fields, translations, strict=True):
-            spans[index] = spans[index].model_copy(update={name: value})
-        return result.model_copy(update={"metaphors": spans})
+            if value.strip() and _cyrillic(value):
+                spans[index] = spans[index].model_copy(update={name: value})
+            else:
+                untranslated += 1
+        warnings = list(result.warnings)
+        if untranslated:
+            warnings.append(f"{untranslated} explanation(s) could not be translated into Russian.")
+        return result.model_copy(update={"metaphors": spans, "warnings": warnings})
 
 
 class OpenAIDetector(LLMDetector):
@@ -298,6 +341,8 @@ class OpenAIDetector(LLMDetector):
             applied = False
         if response.status != "completed":
             raise ValueError("LLM response is incomplete")
+        usage = getattr(response, "usage", None)
+        self._record_usage(getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0))
         return response.output_text, applied
 
 
@@ -354,4 +399,5 @@ class OllamaDetector(LLMDetector):
             payload = json.load(response)
         if not payload.get("done") or payload.get("done_reason") == "length":
             raise ValueError("Ollama response is incomplete")
+        self._record_usage(payload.get("prompt_eval_count"), payload.get("eval_count"))
         return payload["message"]["content"], any(v is not None for v in sampling.values())

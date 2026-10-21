@@ -12,6 +12,8 @@
           "contrast": "Растение и человек принадлежат разным областям; качество человека понимается через образ цветка, сигнал сравнения 如.",
           "entity": "兰",
           "entity_type": "plant",
+          "tenor": "君子",
+          "ground": "品格高洁，自有芬芳",
           "label": "simile",
           "source_domain": "plant",
           "target_domain": "person",
@@ -28,8 +30,16 @@
       "poem": "狐狸夜入村，月照小桥边。",
       "metaphors": [],
       "literal_candidates": [
-        {"text": "狐狸", "entity_type": "animal", "reasoning": "Описано реальное животное, пришедшее в деревню; переноса на человека нет."},
-        {"text": "月", "entity_type": "celestial", "reasoning": "Луна освещает мост — буквальный пейзаж без переноса значения."}
+        {
+          "text": "狐狸",
+          "entity_type": "animal",
+          "reasoning": "Описано реальное животное, пришедшее в деревню; переноса на человека нет."
+        },
+        {
+          "text": "月",
+          "entity_type": "celestial",
+          "reasoning": "Луна освещает мост — буквальный пейзаж без переноса значения."
+        }
       ]
     },
     {
@@ -43,6 +53,8 @@
           "contrast": "Птица и человек — разные области; качества героя понимаются через образ хищной птицы.",
           "entity": "қыран",
           "entity_type": "animal",
+          "tenor": "Ер жігіт",
+          "ground": "батылдық, биікке ұмтылу",
           "label": "metaphor",
           "source_domain": "animal",
           "target_domain": "person",
@@ -59,8 +71,16 @@
       "poem": "Далада бөрі ұлиды, түн суық.",
       "metaphors": [],
       "literal_candidates": [
-        {"text": "Далада", "entity_type": "landscape", "reasoning": "Степь — место действия, переноса нет."},
-        {"text": "бөрі", "entity_type": "animal", "reasoning": "Воет настоящий волк; признаков переноса на человека нет."}
+        {
+          "text": "Далада",
+          "entity_type": "landscape",
+          "reasoning": "Степь — место действия, переноса нет."
+        },
+        {
+          "text": "бөрі",
+          "entity_type": "animal",
+          "reasoning": "Воет настоящий волк; признаков переноса на человека нет."
+        }
       ]
     }
   ]

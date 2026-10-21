@@ -206,6 +206,12 @@ export default function AnalysisDetail() {
                 {m.context_sentence && m.context_sentence !== m.text && (
                   <p className="text-xs text-gray-500 mb-3">{tr('Context:', language)} {m.context_sentence}</p>
                 )}
+                {(m.tenor || m.ground) && (
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm mb-3">
+                    {m.tenor && (<><dt className="text-gray-500">{tr('Tenor:', language)}</dt><dd className="text-gray-900">{m.tenor}</dd></>)}
+                    {m.ground && (<><dt className="text-gray-500">{tr('Ground:', language)}</dt><dd className="text-gray-900">{m.ground}</dd></>)}
+                  </dl>
+                )}
                 {(m.entity || m.semantic_label || m.sentiment) && (
                   <div className="flex flex-wrap items-center gap-2 text-sm mb-3">
                     {m.entity && (

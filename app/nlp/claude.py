@@ -53,4 +53,6 @@ class ClaudeDetector(LLMDetector):
         text = next((block.text for block in response.content if block.type == "text"), None)
         if text is None:
             raise ValueError("Claude returned no JSON text")
+        usage = getattr(response, "usage", None)
+        self._record_usage(getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0))
         return text, applied

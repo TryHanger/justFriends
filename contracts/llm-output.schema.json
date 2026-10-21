@@ -80,6 +80,14 @@
           ],
           "type": "string"
         },
+        "tenor": {
+          "description": "Tenor: what the image describes, copied from the poem when present; empty string if implicit",
+          "type": "string"
+        },
+        "ground": {
+          "description": "Ground: short phrase naming the property shared by tenor and image, in the poem's language",
+          "type": "string"
+        },
         "label": {
           "enum": [
             "metaphor",
@@ -173,6 +181,8 @@
         "end",
         "entity",
         "entity_type",
+        "tenor",
+        "ground",
         "label",
         "source_domain",
         "target_domain",

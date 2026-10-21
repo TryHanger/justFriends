@@ -181,6 +181,16 @@ python -m app.nlp agreement runs/annotator-a.jsonl runs/annotator-b.jsonl runs/a
 ```
 
 `metaphor_detection` — Precision/Recall/F1 по точным границам метафор и олицетворений.
+
+Диагностические метрики (`app/nlp/quality.py`) объясняют, *почему* F1 такой:
+`overlap_detection` и `char_detection` — нашла ли модель метафору при неточных границах;
+`document_detection` с `false_positive_rate` — ложные тревоги на текстах без метафор
+(нужны размеченные отрицательные примеры); `text_fields` — chrF и точное совпадение
+темы, основания и семантической метки; `tenor_localization` — позиция темы в тексте;
+`calibration` — ECE, Brier и точность/покрытие по порогам уверенности, чтобы выбрать,
+что отправлять экспертам; `by_genre` — качество по жанрам (проза CMDAG и поэзия);
+`reliability` — сбои, пропущенные фрагменты и фактический расход токенов (`method.usage`).
+Домен `unknown` в gold не засчитывается как правильный ответ.
 `entity_extraction`, `usage_classification`, `semantic_labeling` — метрики ТЗ п. 6;
 блок `tz_targets` сравнивает их с целями. `--bootstrap 1000` добавляет 95% интервалы
 по произведениям. Метрики сущностей считаются на записях, где gold содержит `candidates`.

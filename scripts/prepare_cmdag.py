@@ -14,6 +14,7 @@ from pathlib import Path
 
 from app.nlp.contracts import ModelSpan
 from app.nlp.corpus import Poem, fingerprint, write_corpus
+from app.nlp.llm import locate_tenor
 
 CMDAG_REPOSITORY = "https://github.com/JasonShao55/Chinese_Metaphor_Explanation"
 SPLITS = {
@@ -44,6 +45,9 @@ def vehicle_spans(context: str, rows: list[dict]) -> tuple[list[ModelSpan], int,
             overlapping += 1
             continue
         ground = " ".join(row.get("ground", "").split())
+        tenor = " ".join(row.get("tenor", "").split()) or None
+        # Tenor offsets only for a literal occurrence; an implicit tenor keeps text only.
+        tenor_bounds = locate_tenor(context, tenor, start, end) if tenor else None
         rationale = "Внешняя экспертная разметка CMDAG."
         if ground:
             rationale += f" Основание сопоставления: {ground}."
@@ -57,6 +61,10 @@ def vehicle_spans(context: str, rows: list[dict]) -> tuple[list[ModelSpan], int,
                 target_domain="unknown",
                 confidence=1.0,
                 rationale=rationale,
+                tenor=tenor,
+                tenor_start=tenor_bounds[0] if tenor_bounds else None,
+                tenor_end=tenor_bounds[1] if tenor_bounds else None,
+                ground=ground or None,
             )
         )
     return sorted(spans, key=lambda item: (item.start, item.end)), missing, overlapping
@@ -111,7 +119,9 @@ def convert_split(rows: list[dict], excluded_fingerprints: set[str]) -> tuple[li
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=Path, required=True, help="CMDAG Data/Splited Data directory")
+    parser.add_argument(
+        "--input", type=Path, required=True, help="CMDAG Data/Splited Data directory"
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 

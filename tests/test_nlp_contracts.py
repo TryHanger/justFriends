@@ -137,6 +137,8 @@ def llm_item(text="心海", start=0, **updates):
         source_domain="water",
         target_domain="emotion",
         semantic_label="глубина чувств",
+        tenor="心",
+        ground="深沉无边",
         sentiment="neutral",
         confidence=0.5,
         rationale="Образ моря передаёт чувства.",

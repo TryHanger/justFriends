@@ -142,9 +142,9 @@ footer { color: var(--muted); font-size: .82rem; }
     <span class="eyebrow">justFriends · LLM, метафоры, китайская и казахская поэзия</span>
     <h1>Анализатор метафор: что сделано по ТЗ и как это устроено</h1>
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
-    <div class="meta"><span>6 октября 2026</span><span>Ветка <code>feat/tz-alignment</code>, коммит <code>aa8c5d0</code></span><span>Python: 67 тестов</span><span>Frontend: 32 теста</span></div>
+    <div class="meta"><span>Обновлено 19 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -158,8 +158,223 @@ footer { color: var(--muted); font-size: .82rem; }
     <p class="note">Подсчёт по 31 пункту ТЗ. «Сделано» — реализовано в коде, покрыто тестами и запускается. «Частично» — инструмент готов, но результат зависит от данных или прогонов, которых ещё нет. «Нет» — требует работы людей: сбора текстов, разметки, публикаций.</p>
     <div class="grid2">
       <div class="card"><h3>Готово</h3><p>Конвейер модулей A–E, все поля вывода из ТЗ, стратегии промптов (zero-shot, few-shot, CoT, RAG, словарь), адаптеры OpenAI, Claude, Ollama и локальных моделей, метрики раздела 6, инструменты под гипотезы H1–H3, веб-интерфейс и API.</p></div>
-      <div class="card"><h3>Не хватает данных</h3><p>Нет собранных корпусов и Golden Test Set от трёх экспертов. Поэтому значения F1 и гипотезы пока не проверены. Словари-ограничения и база RAG стартовые и требуют проверки филологами.</p></div>
+      <div class="card"><h3>Чего не хватает</h3><p>Поэтического gold нет: есть gold по современной китайской прозе (CMDAG, F1 XLM-R 0.671) и 29 экспертных образов Ван И для «Чу Цы». Казахский gold отсутствует, казахская модель на silver даёт F1 0.15. Текущие модели не видят аллегорию «Чу Цы» (3–7% образов Ван И).</p></div>
     </div>
+  </section>
+
+  <section id="news" aria-labelledby="news-h">
+    <span class="eyebrow">Этап от 19 октября</span>
+    <h2 id="news-h">Данные и модели команды: что пришло и как проверено</h2>
+    <p class="lede">Команда передала подготовленные корпуса и три обученных чекпойнта XLM-R. Код подтянут из <code>main</code> (4 коммита: каталог моделей, сборка пилотного корпуса, <code>Dockerfile.train</code>, Label Studio в compose), данные и модели распакованы в <code>data/</code> и <code>models/</code> (в git не попадают).</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Набор</th><th>Объём</th><th>Статус</th><th>Замечание</th></tr></thead>
+      <tbody>
+        <tr><td>CMDAG, китайский</td><td>18 705 / 2 130 / 2 504 фрагмента, ~27,7 тыс. метафор</td><td>gold (MIT)</td><td>Современная проза, не поэзия; нет текстов без метафор</td></tr>
+        <tr><td>Пилот zh: «Чу Цы», «Ши цзин», танская поэзия</td><td>150 стихов (по 50)</td><td>не размечен</td><td>Есть подсказки GPT для Label Studio</td></tr>
+        <tr><td>Пилот kk: Абай</td><td>150 стихов</td><td>не размечен</td><td>Лицензия транскрипций не подтверждена</td></tr>
+        <tr><td>kk silver (GPT, два прохода)</td><td>122 обучающих + 28 контрольных</td><td>silver</td><td>Не gold, для оценки не годится</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th>Проверка</th><th>Результат</th></tr></thead>
+      <tbody>
+        <tr><td><code>cmdag-xlmr-mps-full-v2</code></td><td>test CMDAG, 2 453 фрагмента, перепроверено на RTX 5050</td><td>F1 = 0.671 (P 0.656, R 0.687), совпало с отчётом команды</td></tr>
+        <tr><td><code>xlmr-kk-silver-pilot-v2</code></td><td>28 контрольных казахских текстов (silver)</td><td>F1 = 0.15: модель пока почти не работает</td></tr>
+        <tr><td><code>xlmr-zh-gold-kk-silver-mixed-v1</code></td><td>одна эпоха, нет файла эксперимента</td><td>не проверялась отдельно</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="tenor" aria-labelledby="tenor-h">
+    <h2 id="tenor-h">Тема и основание сравнения</h2>
+    <p class="lede">Метафора связывает образ (vehicle) с тем, что он описывает (тема, tenor), через общее свойство (основание, ground). В примере 你的微笑 就像 春天里花开的季节 образ — «весенняя пора цветения», тема — «твоя улыбка», основание — «сладость, радость».</p>
+    <div class="grid3">
+      <div class="card"><h3>Формат</h3><ul class="clean">
+        <li>Поля <code>tenor</code>, <code>tenor_start</code>, <code>tenor_end</code>, <code>ground</code> в результате, экспорте ТЗ, Label Studio и интерфейсе.</li>
+        <li>Позиция темы ставится, только если она дословно есть в тексте; иначе тема считается подразумеваемой.</li>
+      </ul></div>
+      <div class="card"><h3>LLM</h3><ul class="clean">
+        <li>Модель выдаёт тему и основание в схеме ответа, позицию темы находит код (ближайшее к образу вхождение).</li>
+        <li>Few-shot примеры дополнены: 君子如兰 → тема 君子, основание 品格高洁.</li>
+      </ul></div>
+      <div class="card"><h3>CMDAG</h3><ul class="clean">
+        <li>Исходник пересобран из репозитория CMDAG; идентификаторы и границы совпали один в один, обученные модели остаются валидными.</li>
+        <li>У всех 27 703 метафор есть основание, у ~84% — точная позиция темы в тексте.</li>
+      </ul></div>
+    </div>
+    <p class="note">XLM-R тему и основание пока не выдаёт. Следующий шаг — научить его отмечать тему (данные с позициями готовы), а основание оставить LLM или дообученной Qwen.</p>
+  </section>
+
+  <section id="metrics" aria-labelledby="metrics-h">
+    <h2 id="metrics-h">Новые метрики качества и зачем они нужны</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Метрика</th><th>Что показывает</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td>F1 по пересечению и посимвольно</td><td>Нашла ли модель метафору, даже если границы неточные</td><td>«马蹄» и «马蹄声» — одна находка; отделяет поиск от точности границ</td></tr>
+        <tr><td>Обнаружение на уровне текста + доля ложных тревог</td><td>Есть ли в тексте метафора; как часто модель видит её там, где её нет</td><td>В CMDAG нет текстов без метафор, F1 завышен; заработает с отрицательными примерами</td></tr>
+        <tr><td>chrF и точное совпадение для темы, основания, метки</td><td>Качество свободного текста на совпавших фрагментах</td><td>Точное совпадение почти всегда 0; chrF засчитывает частичное и работает для zh, kk, ru</td></tr>
+        <tr><td>Точность позиции темы</td><td>Нашла ли модель, что именно сравнивается</td><td>Проверка нового поля <code>tenor</code></td></tr>
+        <tr><td>Калибровка: ECE, Brier, точность по порогам</td><td>Можно ли верить уверенности модели</td><td>Определяет, что принимать автоматически, а что отдавать экспертам</td></tr>
+        <tr><td>Качество по жанрам и эпохам</td><td>F1 отдельно для прозы CMDAG, «Чу Цы», танской поэзии</td><td>Модель учили на прозе, цель — поэзия</td></tr>
+        <tr><td>Надёжность и стоимость</td><td>Сбои, пропущенные фрагменты, фактические токены на текст</td><td>Метод на 2% точнее, но в 5 раз дороже, может быть хуже для проекта</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Исправлено: домен <code>unknown</code> больше не засчитывается как правильный ответ (раньше «unknown = unknown» завышало этикетирование на CMDAG). Адаптеры OpenAI, Claude, Ollama и HF записывают реальный расход токенов в <code>method.usage</code>.</p>
+  </section>
+
+  <section id="experiments" aria-labelledby="exp-h">
+    <h2 id="exp-h">Эксперименты</h2>
+    <h3>20 предложений из test CMDAG</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Метрика</th><th>XLM-R (CMDAG)</th><th>gpt-4o-mini, few_shot+cot+lexicon</th></tr></thead>
+      <tbody>
+        <tr><td>F1, точные границы</td><td class="num">0.71</td><td class="num">0.06</td></tr>
+        <tr><td>F1, по пересечению</td><td class="num">0.95</td><td class="num">0.36</td></tr>
+        <tr><td>F1, посимвольно</td><td class="num">0.91</td><td class="num">0.31</td></tr>
+        <tr><td>Позиция темы, F1</td><td>не умеет</td><td class="num">0.41</td></tr>
+        <tr><td>Основание, chrF</td><td>не умеет</td><td class="num">0.11</td></tr>
+        <tr><td>Калибровка, ECE (меньше — лучше)</td><td class="num">0.09</td><td class="num">0.42</td></tr>
+        <tr><td>Сбои</td><td class="num">0 из 20</td><td class="num">2 из 20</td></tr>
+        <tr><td>Токены</td><td>—</td><td class="num">~51 тыс., около 1 цента</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid3">
+      <div class="card"><h3>XLM-R</h3><p>Находит почти все метафоры, теряет баллы на границах. Уверенность честная: при пороге 0.7 точность 100% при охвате 77%.</p></div>
+      <div class="card"><h3>gpt-4o-mini</h3><p>Разметка расходится с CMDAG: там отмечается только образ (马蹄), а модель берёт всю фразу. Часть метафор пропускает, тему находит неплохо, основание пересказывает своими словами.</p></div>
+      <div class="card"><h3>Найденный баг</h3><p>Оба сбоя давал перевод пояснений на русский: без кириллицы падал весь анализ. Исправлено, теперь остаётся исходный текст с предупреждением.</p></div>
+    </div>
+    <h3>Образы из комментария Ван И на пилоте «Чу Цы»</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th>Нашла образов Ван И из 29</th></tr></thead>
+      <tbody>
+        <tr><td>GPT, подсказки в Label Studio</td><td class="num">1 (3%)</td></tr>
+        <tr><td>XLM-R, обучен на CMDAG</td><td class="num">1 (3%)</td></tr>
+        <tr><td>gpt-4o-mini + RAG по комментариям к другим поэмам</td><td class="num">2 (7%), ~63 тыс. токенов, около 1 цента</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Аллегорическую систему «Чу Цы» (благоуханные травы → мудрецы, прекрасная дева → государь) не видит ни одна из текущих моделей. Это довод за более сильную модель или дообучение на комментариях (гипотеза H1). Чтобы модель не видела готовый ответ, в RAG исключались комментарии к анализируемой поэме.</p>
+  </section>
+
+  <section id="wangyi" aria-labelledby="wangyi-h">
+    <h2 id="wangyi-h">Экспертная разметка из комментария Ван И</h2>
+    <p class="lede">Ван И (II век) в «楚辭章句» прямо помечает образы словом 喻: «荃，香草，以喻君也» — благоуханная трава 荃 есть образ государя. Текст и комментарий — общественное достояние, транскрипция Wikisource под CC BY-SA 4.0.</p>
+    <div class="grid3">
+      <div class="card"><h3>Извлечение</h3><ul class="clean">
+        <li>Скачаны все 17 цзюаней: 37 поэм, ~2 000 строк.</li>
+        <li>Пометы: 以喻, 喻, 以比, 以譬, 譬; 興 — только в явной конструкции «X，…以興Y».</li>
+        <li>Образ засчитывается, только если он дословно есть в строке.</li>
+      </ul></div>
+      <div class="card"><h3>Результат</h3><ul class="clean">
+        <li>41 пара «образ → тема»: 騏驥 → мудрые, 眾芳 → сонм мудрецов, 飄風 → зло, 宓妃 → отшельник, 微霜 → клеветники.</li>
+        <li>25 высказываний без однозначной привязки отложены в отчёт.</li>
+        <li>На пилот перенесено 29 образов (32 поэмы), статус <code>draft</code>.</li>
+      </ul></div>
+      <div class="card"><h3>Ограничения</h3><ul class="clean">
+        <li>В транскрипции неполны «Девять песен» (5 из 11) и «Девять напевов» (2 из 9).</li>
+        <li>Строки без помет — не отрицательные примеры: Ван И комментирует не каждый образ.</li>
+        <li>6 образов не перенеслись из-за разночтений изданий (荃/荪, 晁/朝).</li>
+      </ul></div>
+    </div>
+    <p class="note">Файлы: <code>scripts/extract_wangyi.py</code>, <code>scripts/map_wangyi_to_pilot.py</code>, <code>data/processed/wangyi/</code>, база RAG <code>data/knowledge/wangyi_chuci.jsonl</code> (69 комментариев).</p>
+  </section>
+
+  <section id="zhuxi" aria-labelledby="zhuxi-h">
+    <h2 id="zhuxi-h">Экспертная разметка «Ши цзин» по Чжу Си</h2>
+    <p class="lede">Чжу Си (朱熹《詩經集傳》, 1177) пометил каждую строфу «Ши цзин» одним из трёх типов: 賦 — прямое описание, 比 — сравнение (вся строфа говорит о другом), 興 — образ-зачин, который ведёт к теме. Это классическая экспертная разметка образности в китайской поэзии, и людей для неё не нужно.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Что извлечено</th><th class="num">Количество</th></tr></thead>
+      <tbody>
+        <tr><td>Стихотворений (весь 國風, 小雅, часть 大雅)</td><td class="num">252</td></tr>
+        <tr><td>Строф с меткой</td><td class="num">968</td></tr>
+        <tr><td>賦, описание</td><td class="num">574</td></tr>
+        <tr><td>興, образ-зачин (включая 賦而興, 比而興)</td><td class="num">278</td></tr>
+        <tr><td>比, сравнение (включая 興而比, 賦而比)</td><td class="num">116</td></tr>
+        <tr><td>Строф без читаемой метки (в отчёте)</td><td class="num">4</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Как модели совпадают с Чжу Си</h3>
+    <p>Строфа считается образной по мнению модели, если модель отметила внутри неё хоть одну фигуру.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th class="num">Строф</th><th class="num">F1 образности</th><th class="num">κ с Чжу Си</th><th class="num">Отмечено 比</th><th class="num">Отмечено 興</th><th class="num">Ложно в 賦</th></tr></thead>
+      <tbody>
+        <tr><td>XLM-R (CMDAG), все стихи</td><td class="num">968</td><td class="num">0.14</td><td class="num">−0.03</td><td class="num">10%</td><td class="num">8%</td><td class="num">11%</td></tr>
+        <tr><td>XLM-R, выборка 60 стихов</td><td class="num">235</td><td class="num">0.07</td><td class="num">−0.06</td><td class="num">4%</td><td class="num">5%</td><td class="num">10%</td></tr>
+        <tr><td>gpt-4o-mini, та же выборка</td><td class="num">235</td><td class="num">0.26</td><td class="num">−0.03</td><td class="num">30%</td><td class="num">17%</td><td class="num">23%</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>Вывод</h3><ul class="clean">
+      <li>Обе модели отмечают фигуры в описательных строфах так же часто, как в образных: κ ≈ 0. Их понятие «метафоры» словесное, а 比 и 興 у Чжу Си — образность всей строфы (параллель между природой и человеком).</li>
+      <li>Для «Ши цзин» нужна отдельная задача: классификация строфы на 賦/比/興. 968 размеченных строф хватает, чтобы дообучить классификатор локально на RTX 5050 бесплатно.</li>
+      <li>Стоимость прогона gpt-4o-mini: 221k + 25k токенов, ≈ $0.05. XLM-R — бесплатно, локально.</li>
+      <li>Оговорка: «Ши цзин» и Чжу Си широко известны, модели могли видеть его метки при обучении. На этом наборе сильная LLM может выглядеть лучше, чем на незнакомой поэзии.</li>
+    </ul></div>
+    <h3>Классификатор строф 賦 / 比 / 興 (21 октября)</h3>
+    <p>Две модели дообучены классифицировать строфу целиком: XLM-R (инициализация от китайской модели CMDAG, текст в упрощённом письме) и SikuRoBERTa (BERT, предобученный на корпусе классических текстов 四庫全書, текст в традиционном письме, как у Чжу Си). Проверка — 5-кратная кросс-валидация с разбиением по стихотворениям: строфы одного стихотворения почти повторяют друг друга, и деление по строфам дало бы утечку. Базовые методы считаются на тех же разбиениях.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Метод</th><th class="num">Macro-F1</th><th class="num">κ с Чжу Си</th><th class="num">F1 образности</th><th class="num">F1 賦</th><th class="num">F1 比</th><th class="num">F1 興</th></tr></thead>
+      <tbody>
+        <tr><td>Всегда 賦 (большинство)</td><td class="num">0.25</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.74</td><td class="num">0.00</td><td class="num">0.00</td></tr>
+        <tr><td>Только «первая строфа или нет»</td><td class="num">0.34</td><td class="num">0.05</td><td class="num">0.38</td><td class="num">0.69</td><td class="num">0.11</td><td class="num">0.23</td></tr>
+        <tr><td>Символьные n-граммы + логрегрессия</td><td class="num">0.45</td><td class="num">0.26</td><td class="num">0.53</td><td class="num">0.75</td><td class="num">0.11</td><td class="num">0.49</td></tr>
+        <tr><td>XLM-R (многоязычная), классификатор строф</td><td class="num">0.46</td><td class="num">0.25</td><td class="num">0.62</td><td class="num">0.74</td><td class="num">0.24</td><td class="num">0.40</td></tr>
+        <tr><td><strong>SikuRoBERTa (классические тексты), классификатор строф</strong></td><td class="num"><strong>0.55</strong></td><td class="num"><strong>0.43</strong></td><td class="num"><strong>0.76</strong></td><td class="num">0.81</td><td class="num">0.24</td><td class="num">0.60</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>Что это значит</h3><ul class="clean">
+      <li>Лучший результат — SikuRoBERTa: κ с Чжу Си 0.43 (умеренное согласие), F1 образности 0.76. Модели поиска метафор на тех же строфах давали κ ≈ 0 и F1 0.14–0.26.</li>
+      <li>Предобучение на классических текстах решает: SikuRoBERTa обгоняет многоязычную XLM-R на всех метриках, кроме 比, и стабильнее по фолдам (macro-F1 0.51–0.58 против 0.36–0.55).</li>
+      <li>興 распознаётся хорошо (полнота 0.71), 比 — плохо у обеих моделей (F1 0.24): таких строф всего 116, и 比 часто отличается от 興 только тем, что тема в строфе не названа.</li>
+      <li>Модели: <code>models/zhuxi-stanza-sikuroberta-v1</code> (417 МБ) и <code>models/zhuxi-stanza-xlmr-v1</code> (1.1 ГБ), обе обучены на всех 968 строфах. Отчёты — <code>data/processed/zhuxi/stanza_classifier*.json</code>, код — <code>scripts/train_stanza_classifier.py</code>.</li>
+    </ul></div>
+    <p class="note">Код: <code>scripts/extract_zhuxi.py</code> (извлечение, тексты в упрощённом письме для моделей, оффсеты строф), <code>scripts/eval_zhuxi.py</code> (оценка любых предсказаний). Данные: <code>data/processed/zhuxi/</code>. Лицензия: текст и комментарий — общественное достояние, транскрипция Wikisource — CC BY-SA 4.0.</p>
+  </section>
+  <section id="labelstudio" aria-labelledby="ls-h">
+    <h2 id="ls-h">Разметка в Label Studio</h2>
+    <p class="lede">Label Studio запущен в Docker на <code>localhost:8081</code>. Конфиг <code>labeling_config.xml</code> двухколоночный: метки над текстом, поля выделенного фрагмента справа, длинные справочники — выпадающими списками.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Проект</th><th>Файл</th><th>Задач</th><th>Назначение</th></tr></thead>
+      <tbody>
+        <tr><td>KK Gold — аннотатор А / Б</td><td><code>01_kk_gold_blind_50.json</code></td><td class="num">50</td><td>Слепой этап казахского gold, без подсказок</td></tr>
+        <tr><td>ZH слепой — А / Б</td><td><code>02_zh_poetry_blind_30.json</code></td><td class="num">30</td><td>По 10 из «Чу Цы», «Ши цзин», танской поэзии; замер согласия</td></tr>
+        <tr><td>ZH с подсказками</td><td><code>03_zh_poetry_prefill_120.json</code></td><td class="num">120</td><td>Исправление подсказок GPT</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid2">
+      <div class="card"><h3>Проверено на живой выгрузке</h3><p>Экспорт JSON импортируется в формат проекта: границы совпадают с текстом, домены, тональность и метки читаются, записи получают статус <code>draft</code>. Тема, основание и entity проверены автотестами, на живой выгрузке ещё нет.</p></div>
+      <div class="card"><h3>Отчёт о проверке подсказок</h3><p>Импорт считает, сколько подсказок принято как есть, исправлено, удалено и добавлено, и медианное время на текст. Тестовая выгрузка дала предупреждение: все 7 подсказок приняты без изменений за 4,8 с на стихотворение. Так ловится разметка, где эксперт не читал текст.</p></div>
+    </div>
+  </section>
+
+  <section id="ensemble" aria-labelledby="ens-h">
+    <h2 id="ens-h">Казахский: ансамбль моделей вместо аннотаторов</h2>
+    <p class="lede">Готового размеченного корпуса метафор для казахского нет. Несколько моделей размечают каждый текст независимо, как аннотаторы; совпадения идут в silver-разметку, расхождения — в короткий список для человека.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Участник</th><th>Статус</th><th>Нашёл фигур</th><th>Стоимость</th></tr></thead>
+      <tbody>
+        <tr><td>gpt-4o-mini</td><td>разметил 50/50, ошибок нет</td><td class="num">105</td><td>179k + 37k токенов, ≈ $0.05</td></tr>
+        <tr><td>Claude в рабочей сессии</td><td>разметил 50/50 вслепую, не видя ответов GPT</td><td class="num">161</td><td>без затрат на API</td></tr>
+        <tr><td>KazLLM (ISSAI, Llama-3.1-8B) через Ollama</td><td>ждёт решения, куда скачать ~5 ГБ</td><td>—</td><td>бесплатно, локально на RTX 5050</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Согласие двух моделей (19 октября)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Метрика</th><th class="num">Значение</th><th>Что значит</th></tr></thead>
+      <tbody>
+        <tr><td>Совпавшие фигуры (пересечение по символам)</td><td class="num">33</td><td>Обе модели отметили одно и то же место</td></tr>
+        <tr><td>Dice по фигурам</td><td class="num">0.25</td><td>Совпадает примерно каждая четвёртая фигура</td></tr>
+        <tr><td>κ Коэна по символам (метафора/олицетворение)</td><td class="num">0.11</td><td>Цель ТЗ для аннотаторов — 0.75; модели до неё далеки</td></tr>
+        <tr><td>Точное совпадение границ, F1</td><td class="num">0.05</td><td>GPT часто берёт «тема — образ» целиком, Claude — только образ</td></tr>
+        <tr><td>Исходный домен на совпавших, κ</td><td class="num">0.57</td><td>Если место общее, домен образа определяют похоже</td></tr>
+        <tr><td>Целевой домен на совпавших, κ</td><td class="num">0.41</td><td>Тему понимают заметно по-разному</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>Вывод</h3><ul class="clean">
+      <li>Главное расхождение — полнота. GPT пропускает явные метафоры Абая («Өзі шошқа, өзгені ит», «нұрлы ақыл, жылы жүрек»); у Claude больше конвенциональных метафор («тарылды», «тозды»), которые эксперт может и не считать.</li>
+      <li>Консенсус двух моделей: 33 фигуры (20 метафор, 6 сравнений, 4 олицетворения, 2 идиомы, 1 метонимия) — silver, файл <code>data/processed/kk_ensemble/consensus.jsonl</code>.</li>
+      <li>Расхождения есть в 44 из 50 текстов (200 спорных мест). Они собраны в <code>data/processed/labelstudio/04_kk_ensemble_disagreements.json</code>: у каждой задачи две вкладки подсказок (Claude и GPT), самые спорные тексты идут первыми.</li>
+      <li>Третий участник (KazLLM) позволит голосовать большинством 2 из 3 и сократит список для человека.</li>
+    </ul></div>
+    <p class="note">Код: <code>scripts/kk_ensemble_predict.py</code> (прогон любой модели по очереди, сбои не обрывают прогон) и <code>scripts/kk_ensemble.py</code> (корпуса участников, согласие, консенсус, файл для Label Studio). Ручная разметка Claude лежит в <code>claude_annotations.tsv</code> и воспроизводимо превращается в корпус. Это silver, а не gold: в отчёте и статье разметку нужно называть модельной. Для научной пригодности нужна выборочная проверка носителем языка — 20–30 текстов, 1–2 часа.</p>
   </section>
 
   <section id="how" aria-labelledby="how-h">
@@ -315,6 +530,7 @@ footer { color: var(--muted); font-size: .82rem; }
         <tr><td>Извлечение сущностей</td><td><code>entity_extraction</code></td><td class="num">F1 ≥ 90%</td><td>Нет данных</td></tr>
         <tr><td>Literal vs Metaphor</td><td><code>usage_classification</code></td><td class="num">F1 ≥ 82–85%</td><td>Нет данных</td></tr>
         <tr><td>Семантическое этикетирование</td><td><code>semantic_labeling</code></td><td class="num">F1 ≥ 75–78%</td><td>Нет данных</td></tr>
+        <tr><td>Поиск метафор (не цель ТЗ, ориентир)</td><td><code>metaphor_detection</code></td><td class="num">—</td><td>0.671 на CMDAG (проза)</td></tr>
         <tr><td>Согласие аннотаторов</td><td><code>agreement → tz_target</code></td><td class="num">κ ≥ 0.75</td><td>Нет данных</td></tr>
       </tbody>
     </table></div>
@@ -447,40 +663,40 @@ npm --prefix frontend test</pre><button type="button" id="copy-5">Копиров
     <h2 id="road-h">Что осталось</h2>
     <p class="lede">Почти всё оставшееся — работа с данными и людьми. Код для каждого шага уже есть.</p>
     <div class="lanes">
-      <div class="lane"><span class="tag">P0 · данные</span><h3>Корпуса</h3><ol>
-        <li>«Чу Цы» и танская поэзия через <code>import-chinese-poetry</code>.</li>
-        <li>Казахские эпос, жырау, Абай, современные поэты через <code>import-texts</code>.</li>
-        <li>Проверить лицензии, выставить <code>license_verified</code>.</li>
-        <li><code>clean --verse-lines</code>.</li>
+      <div class="lane"><span class="tag">P0 · китайский</span><h3>Поэзия</h3><ol>
+        <li>Подсказки Ван И вместо GPT в проекте «ZH с подсказками».</li>
+        <li>Привязать 25 отложенных высказываний Ван И вручную.</li>
+        <li>Классификатор строф 賦/比/興: SikuRoBERTa, κ 0.43. Дальше — улучшить 比 (контекст соседних строф, данные Мао).</li>
+        <li>Найти полную транскрипцию «Девяти песен» и «Девяти напевов».</li>
       </ol></div>
-      <div class="lane"><span class="tag">P0 · люди</span><h3>Golden Set</h3><ol>
-        <li>Пилот разметки по инструкции 2.0.</li>
-        <li>300–500 фрагментов, 3 эксперта, слепой первый этап.</li>
-        <li><code>agreement a b c</code>, цель κ ≥ 0.75.</li>
-        <li>Расширить словари и базу RAG со ссылками на издания.</li>
+      <div class="lane"><span class="tag">P0 · казахский</span><h3>Ансамбль</h3><ol>
+        <li>Решить, куда скачать KazLLM (~5 ГБ).</li>
+        <li>Разметка 50 текстов: gpt-4o-mini и Claude готовы (κ 0.11), KazLLM — ждёт.</li>
+        <li>Fleiss κ между моделями, спорные места — в Label Studio.</li>
+        <li>Выборочная проверка носителем: 20–30 текстов.</li>
       </ol></div>
-      <div class="lane"><span class="tag">P1 · этап 2</span><h3>Пилотные прогоны</h3><ol>
-        <li>Заполнить <code>experiments/pilot.example.json</code>.</li>
-        <li><code>experiment</code> на test.</li>
-        <li>Найти идентификатор SozKZ.</li>
-        <li>Разобрать ошибки.</li>
+      <div class="lane"><span class="tag">P1 · модели</span><h3>Обучение</h3><ol>
+        <li>XLM-R: отметка темы по данным CMDAG.</li>
+        <li>QLoRA для Qwen на CMDAG и Ван И (образ → тема → основание), H1.</li>
+        <li>Найти идентификатор SozKZ, H2.</li>
+        <li>Пробинг слоёв, H3.</li>
       </ol></div>
-      <div class="lane"><span class="tag">P2 · этапы 3–4</span><h3>Гипотезы и публикация</h3><ol>
-        <li><code>build-ift</code> + <code>finetune</code> на GPU → H1.</li>
-        <li><code>fertility</code>, <code>train-tokenizer</code> → H2.</li>
-        <li><code>probe</code> по нескольким моделям → H3.</li>
-        <li>Межкультурный отчёт, датасет, веса, статьи.</li>
+      <div class="lane"><span class="tag">P2 · публикация</span><h3>Отчёт</h3><ol>
+        <li>Межкультурное сопоставление образов.</li>
+        <li>Лицензии корпусов, CC BY-SA для данных Ван И.</li>
+        <li>Датасет и веса на Hugging Face.</li>
+        <li>Статьи.</li>
       </ol></div>
     </div>
     <div class="card"><h3>Важно знать</h3><ul class="clean">
-      <li>Цитата Ван И в базе RAG и прочтения в словарях стартовые; до публикации их нужно сверить с изданиями.</li>
-      <li>Метрики сущностей считаются только по записям gold, где размечены <code>candidates</code>.</li>
-      <li>XLM-R оставлен опорной моделью, он не заменяет LLM.</li>
-      <li>Ветка <code>feat/tz-alignment</code> ещё не слита в <code>main</code>.</li>
+      <li>Разметка из комментария Ван И экспертная по источнику, но извлечена автоматически: статус <code>draft</code>.</li>
+      <li>Разметка ансамбля моделей — silver; в статье её нужно называть модельной.</li>
+      <li>Подсказки GPT для «Чу Цы» почти бесполезны: находят 1 образ Ван И из 29.</li>
+      <li>Всё сделанное 19 октября лежит незакоммиченным в ветке <code>feat/tenor-ground-metrics</code>.</li>
     </ul></div>
   </section>
 
-  <footer>Требования: tz_llm_metaphors_poetry.docx. Описание соответствует коду ветки <code>feat/tz-alignment</code>; качество моделей на реальной поэзии пока не измерялось.</footer>
+  <footer>Требования: tz_llm_metaphors_poetry.docx. Описание соответствует <code>main</code> и ветке <code>feat/tenor-ground-metrics</code> на 19 октября 2026. Цифры по поэзии получены на малых выборках (20 предложений CMDAG, 29 образов Ван И) и служат ориентиром.</footer>
 </div>
 
 <script>
@@ -522,7 +738,7 @@ const DATA = [
      "CoT-схема (базовое значение → контекстное → контраст), <code>literal_candidates</code>, <code>usage_type</code>.", "—"],
     ["D. Этикетирование и картирование", "Метки, тональность, source domains.", "done",
      "<code>semantic_label</code>, <code>sentiment</code>, домены, межъязыковое сравнение.", "—"],
-    ["E. Валидация экспертами", "Проверка кандидатов филологами.", "part",
+    ["E. Валидация экспертами", "Проверка кандидатов филологами (+ отчёт о проверке подсказок).", "part",
      "Label Studio с подсказками словаря на 2-м этапе, <code>needs_review</code>, согласие экспертов.",
      "Режим «принять / исправить» прямо в веб-интерфейсе."],
   ]},
@@ -541,8 +757,8 @@ const DATA = [
      "<code>probe</code>: линейные пробы с GroupKFold и MDL online code.", "Нужны gold-кандидаты."],
   ]},
   { g: "Оценка качества", ref: "п. 6", items: [
-    ["Golden Test Set", "300–500 фрагментов, 3 эксперта.", "miss",
-     "Есть только 12 синтетических примеров для тестов кода.", "Разметить и зафиксировать до экспериментов."],
+    ["Golden Test Set", "300–500 фрагментов, 3 эксперта.", "part",
+     "Gold CMDAG по прозе (2 504 test) и 29 экспертных образов Ван И для «Чу Цы» (draft). Проекты Label Studio готовы.", "Поэтический gold: Ван И, ансамбль для kk, выборочная проверка людьми."],
     ["Entity Extraction, F1 ≥ 90%", "Precision, Recall, F1.", "part",
      "Метрика <code>entity_extraction</code> и флаг цели в <code>tz_targets</code>.", "Значение не измерено."],
     ["Literal vs Metaphor, F1 ≥ 82–85%", "Precision, Recall, F1.", "part",

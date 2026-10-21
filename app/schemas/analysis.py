@@ -46,6 +46,13 @@ class MetaphorSpan(BaseModel):
         default=None, description="Short conventional meaning, e.g. 'благородный муж' for 兰"
     )
     sentiment: Sentiment | None = None
+    # Tenor ("тема"): what the image describes; vehicle is the span itself. Offsets are
+    # set only when the tenor occurs literally in the source text (it may be implicit).
+    tenor: str | None = Field(default=None, description="Tenor: what is described, e.g. 火")
+    tenor_start: int | None = Field(default=None, ge=0, strict=True)
+    tenor_end: int | None = Field(default=None, gt=0, strict=True)
+    # Ground ("основание сравнения"): the property shared by tenor and vehicle.
+    ground: str | None = Field(default=None, description="Ground: shared property, e.g. 折磨的感觉")
 
     @model_validator(mode="after")
     def ordered_bounds(self):
@@ -53,6 +60,13 @@ class MetaphorSpan(BaseModel):
             raise ValueError("end must be greater than start")
         if self.entity is not None and self.entity not in self.text:
             raise ValueError("entity must be a substring of the span text")
+        if (self.tenor_start is None) != (self.tenor_end is None):
+            raise ValueError("tenor_start and tenor_end must be set together")
+        if self.tenor_start is not None:
+            if self.tenor is None or self.tenor_end <= self.tenor_start:
+                raise ValueError("tenor offsets need tenor text and ordered bounds")
+            if self.tenor_end - self.tenor_start != len(self.tenor):
+                raise ValueError("tenor offsets must cover exactly the tenor text")
         return self
 
 

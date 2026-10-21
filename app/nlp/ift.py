@@ -35,6 +35,8 @@ def gold_answer(record: Poem) -> dict:
                 "label": span.label,
                 "source_domain": span.source_domain,
                 "target_domain": span.target_domain,
+                "tenor": span.tenor or "",
+                "ground": span.ground or "",
                 "semantic_label": span.semantic_label or "",
                 "sentiment": span.sentiment or "neutral",
                 "confidence": 1.0,

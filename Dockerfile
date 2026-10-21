@@ -8,7 +8,10 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 COPY tests ./tests
 COPY contracts ./contracts
-COPY data/examples ./data/examples
+# Lexicons, RAG knowledge base, few-shot examples and normalization tables are runtime data.
+COPY data ./data
+COPY experiments ./experiments
+COPY annotation ./annotation
 COPY docs ./docs
 COPY frontend/src ./frontend/src
 COPY ARCHITECTURE.md Dockerfile docker-compose.yml ./

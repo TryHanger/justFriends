@@ -22,6 +22,10 @@ export interface Metaphor {
   context_sentence?: string | null;
   semantic_label?: string | null;
   sentiment?: 'positive' | 'neutral' | 'negative' | null;
+  tenor?: string | null;
+  tenor_start?: number | null;
+  tenor_end?: number | null;
+  ground?: string | null;
 }
 
 export interface EntityCandidate {
