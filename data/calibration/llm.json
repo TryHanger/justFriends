@@ -46,6 +46,18 @@
         "ece_before": 0.4874177784857449,
         "ece_after": 0.014499499049125352
       }
+    },
+    "xlmr-zh-kk-expert-v1": {
+      "kk": {
+        "a": 0.14106632799431243,
+        "b": -1.023558497873265,
+        "source": "Kazakh explanatory dictionary «ауыс.» quotations (1264, out-of-fold)",
+        "spans": 334,
+        "precision": 0.3083832335329341,
+        "mean_self_reported": 0.7520964848271505,
+        "ece_before": 0.4437132512942164,
+        "ece_after": 0.05158021529511683
+      }
     }
   }
 }

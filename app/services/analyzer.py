@@ -58,16 +58,16 @@ def analyze_text(text: str, language: str, model_profile: str = "default") -> An
         if model_profile == "experimental_kk":
             return result.model_copy(
                 update={
-                    "model_version": "xlmr-kk-silver-pilot-v2",
+                    "model_version": "xlmr-kk-expert-v1",
                     "needs_review": True,
                     "warnings": [
                         *result.warnings,
-                        "Экспериментальная казахская модель: Silver-пилот, не Gold-оценка.",
+                        "Казахская XLM-R дообучена на словарных цитатах и silver-разметке; согласие со словарём κ 0.17 — используйте как подсказку.",
                     ],
                     "method": {
                         **result.method,
                         "model_profile": "experimental_kk",
-                        "supervision": "silver-pilot",
+                        "supervision": "expert-dictionary+silver",
                     },
                 }
             )

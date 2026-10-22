@@ -48,9 +48,9 @@ def find(text: str, span: str, occurrence: int) -> tuple[int, int]:
     return match.start(), match.end()
 
 
-def claude_corpus(queue: list[Poem]) -> list[Poem]:
+def claude_corpus(queue: list[Poem], tsv: str = "claude_annotations.tsv") -> list[Poem]:
     spans: dict[int, list[ModelSpan]] = {}
-    for line in (ROOT / "claude_annotations.tsv").read_text(encoding="utf-8").splitlines():
+    for line in (ROOT / tsv).read_text(encoding="utf-8").splitlines():
         if not line.strip() or line.startswith("#"):
             continue
         idx, span, label, source, target, tenor, ground, sentiment = line.split("|")

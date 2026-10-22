@@ -124,6 +124,8 @@ def fit(train_records, args, device, output: Path | None = None):
             scheduler.step()
             optimizer.zero_grad()
     path = output or Path(args.scratch)
+    # Own version id: inheriting the base model's would share its calibration.
+    model.config.nlp_model_version = path.name
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
     del model
@@ -131,11 +133,14 @@ def fit(train_records, args, device, output: Path | None = None):
     return path
 
 
-def headword_predictions(model_path, quotations, args) -> list[int]:
+def headword_predictions(model_path, quotations, args, store=None) -> list[int]:
     detector = XLMRDetector(str(model_path), args.max_length, args.stride)
     result = []
     for q in quotations:
-        spans = detector.analyze(q["text"], "kk").metaphors
+        analysis = detector.analyze(q["text"], "kk")
+        if store is not None:  # out-of-fold analyses, e.g. for honest calibration
+            store[q["id"]] = analysis.model_dump()
+        spans = analysis.metaphors
         result.append(int(any(s.start < q["end"] and s.end > q["start"] for s in spans)))
     return result
 
@@ -194,6 +199,18 @@ def main() -> None:
     parser.add_argument("--max-length", type=int, default=256)
     parser.add_argument("--stride", type=int, default=64)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--oof-output",
+        default="data/processed/kk_usage/pred-xlmr-expert-oof.json",
+        help="out-of-fold analyses of every quotation (for calibration)",
+    )
+    parser.add_argument("--cv-only", action="store_true", help="skip the base model and final fit")
+    parser.add_argument(
+        "--extra",
+        nargs="*",
+        default=[],
+        help="more fully labelled corpora (e.g. Claude-annotated poetry, silver)",
+    )
     args = parser.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -202,27 +219,29 @@ def main() -> None:
     groups = [q["headword"] for q in quotations]
     cmdag = read_corpus(CMDAG_TRAIN)
     random.Random(args.seed).shuffle(cmdag)
-    full = [("full", r) for r in read_corpus(KK_SILVER) + cmdag[: args.cmdag_sample]]
+    extra = [r for path in args.extra for r in read_corpus(path)]
+    full = [("full", r) for r in read_corpus(KK_SILVER) + cmdag[: args.cmdag_sample] + extra]
 
     report = {
         "task": "XLM-R BIO fine-tuning on expert-sourced Kazakh dictionary quotations "
         "(headword-only labels) + Kazakh silver + CMDAG gold sample",
         "hyperparameters": {k: v for k, v in vars(args).items() if k not in {"report"}},
-        "base_model": {
+    }
+    if not args.cv_only:
+        report["base_model"] = {
             "kk_dictionary_all": kk_scores(
                 gold, headword_predictions(args.base_model, quotations, args)
             ),
             "zh": zh_scores(args.base_model, args),
-        },
-    }
-    print("base:", json.dumps(report["base_model"]["kk_dictionary_all"]), flush=True)
+        }
+        print("base:", json.dumps(report["base_model"]["kk_dictionary_all"]), flush=True)
 
-    predicted = [0] * len(quotations)
+    predicted, oof = [0] * len(quotations), {}
     folds = StratifiedGroupKFold(n_splits=args.folds, shuffle=True, random_state=args.seed)
     for fold, (train, test) in enumerate(folds.split(quotations, gold, groups)):
         path = fit([("partial", quotations[i]) for i in train] + full, args, device)
         for i, value in zip(
-            test, headword_predictions(path, [quotations[i] for i in test], args), strict=True
+            test, headword_predictions(path, [quotations[i] for i in test], args, oof), strict=True
         ):
             predicted[i] = value
         print(
@@ -235,6 +254,10 @@ def main() -> None:
     report["fine_tuned_unseen_words"]["kk_dictionary_sample160"] = kk_scores(
         [gold[i] for i in index], [predicted[i] for i in index]
     )
+    Path(args.oof_output).write_text(json.dumps(oof, ensure_ascii=False) + "\n", encoding="utf-8")
+    if args.cv_only:
+        print(json.dumps(report["fine_tuned_unseen_words"], ensure_ascii=False, indent=1))
+        return
 
     output = fit([("partial", q) for q in quotations] + full, args, device, Path(args.output))
     report["final_model"] = {"path": str(output), "zh": zh_scores(output, args)}
