@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Download, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
 import { getAnalysis, getExportUrl } from '../api';
-import type { AnalysisResponse } from '../api';
+import type { AnalysisResponse, StanzaType } from '../api';
 import { tr, trWarning, useLanguage } from '../i18n';
+
+const STANZA_TYPES: Record<StanzaType, string> = { '賦': 'description', '比': 'comparison', '興': 'evocative image' };
+const percent = (value: number | undefined) => `${Math.round((value ?? 0) * 100)}%`;
 
 export default function AnalysisDetail() {
   const { language } = useLanguage();
@@ -63,6 +66,7 @@ export default function AnalysisDetail() {
   const warnings = analysis.result?.warnings ?? [];
   const candidates = analysis.result?.candidates || [];
   const method = analysis.result?.method || {};
+  const stanzas = analysis.result?.language === 'zh' ? analysis.result.stanzas ?? [] : [];
   const isLegacyBaseline = analysis.result?.model_version === 'lexical-demo-v1';
   const sentimentStyle: Record<string, string> = {
     positive: 'bg-green-50 text-green-700 ring-green-600/20',
@@ -162,6 +166,31 @@ export default function AnalysisDetail() {
                   {warnings.map((warning, index) => <li key={index}>{trWarning(warning, language)}</li>)}
                 </ul>
               )}
+            </div>
+          )}
+          {stanzas.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-1">{tr('Stanzas', language)} ({stanzas.length})</h3>
+              <p className="text-sm text-gray-500 mb-3">
+                {tr("Types follow Zhu Xi's classification (詩經集傳); labels are model suggestions, not expert annotation.", language)}
+              </p>
+              <ol className="divide-y divide-gray-100 text-sm">
+                {stanzas.map((s, idx) => (
+                  <li key={`${s.start}-${s.end}`} className="flex items-baseline gap-3 py-2">
+                    <span className="w-6 shrink-0 text-gray-400 font-mono">{idx + 1}</span>
+                    <span className="min-w-0 flex-1 truncate font-serif text-gray-800" title={s.text}>{s.text.split('\n')[0]}</span>
+                    <span
+                      className="shrink-0 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10"
+                      title={(Object.keys(STANZA_TYPES) as StanzaType[]).map(t => `${t} ${percent(s.probabilities[t])}`).join(' · ')}
+                    >
+                      {s.label} — «{tr(STANZA_TYPES[s.label], language)}»
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-500 font-mono">
+                      {tr('probability', language)} {percent(s.probabilities[s.label])}
+                    </span>
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
           <div className="flex justify-between items-center">

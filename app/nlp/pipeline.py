@@ -7,9 +7,9 @@ from app.nlp.contracts import NLPInputError, context_sentence, validate_result
 class MetaphorPipeline:
     """Modules A-D in order; module E (expert review) works on the stored result."""
 
-    def __init__(self, detector, classifier=None, extractor=None, calibrator=None):
+    def __init__(self, detector, classifier=None, extractor=None, calibrator=None, stanza=None):
         self.detector, self.classifier, self.extractor = detector, classifier, extractor
-        self.calibrator = calibrator
+        self.calibrator, self.stanza = calibrator, stanza
 
     def analyze(self, text: str, language: str = "auto"):
         if not text.strip() or len(text) > MAX_ANALYSIS_CHARS:
@@ -33,6 +33,14 @@ class MetaphorPipeline:
         result = result.model_copy(update=update)
         if self.calibrator:
             result = self.calibrator.apply(result)
+        if self.stanza and result.language == "zh":
+            # Whole-stanza figure type (Zhu Xi), independent of the span detector.
+            result = result.model_copy(
+                update={
+                    "stanzas": self.stanza.classify(text),
+                    "method": {**result.method, "stanza_model": self.stanza.version},
+                }
+            )
         return validate_result(text, language, result)
 
 
@@ -148,10 +156,12 @@ def build_pipeline(settings, strategy: str | None = None):
         classifier = AttributeClassifier(settings.attribute_model_path)
     from app.nlp.calibration import Calibrator
     from app.nlp.lexicon import CandidateExtractor
+    from app.nlp.stanza import load_stanza_classifier
 
     return MetaphorPipeline(
         detector,
         classifier,
         CandidateExtractor(settings.lexicon_dir),
         Calibrator.load(settings.nlp_review_threshold),
+        load_stanza_classifier(settings.stanza_model_path),
     )

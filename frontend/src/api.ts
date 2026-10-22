@@ -39,6 +39,16 @@ export interface EntityCandidate {
   reasoning?: string | null;
 }
 
+export type StanzaType = '賦' | '比' | '興';
+
+export interface StanzaLabel {
+  text: string;
+  start: number;
+  end: number;
+  label: StanzaType;
+  probabilities: Partial<Record<StanzaType, number>>;
+}
+
 export interface AnalysisResult {
   language: string;
   model_version: string;
@@ -47,6 +57,7 @@ export interface AnalysisResult {
   warnings?: string[];
   candidates?: EntityCandidate[];
   method?: Record<string, unknown>;
+  stanzas?: StanzaLabel[];
 }
 
 export interface AnalysisResponse {

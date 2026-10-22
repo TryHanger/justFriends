@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     experimental_kk_xlmr_model_path: str = "models/xlmr-kk-silver-pilot-v2"
     chinese_gold_xlmr_model_path: str = "models/cmdag-xlmr-mps-full-v2"
     attribute_model_path: str | None = None
+    # Shijing stanza classifier 賦/比/興 (Zhu Xi labels); skipped when absent. Empty disables.
+    stanza_model_path: str | None = "models/zhuxi-stanza-sikuroberta-v1"
     hybrid_llm_backend: Literal["openai", "anthropic", "ollama", "hf"] = "openai"
     # Two-stage analysis (docs/NLP.md): for these languages (comma-separated, empty = off)
     # every candidate of an LLM backend is judged again by a direct usage question.

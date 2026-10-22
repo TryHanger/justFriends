@@ -293,6 +293,59 @@
       ],
       "title": "MetaphorSpan",
       "type": "object"
+    },
+    "StanzaLabel": {
+      "additionalProperties": false,
+      "description": "Stanza type after Zhu Xi (詩經集傳): 賦 description, 比 comparison, 興 evocative image.\n\nA model suggestion with its probabilities, not an expert annotation.",
+      "properties": {
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "start": {
+          "minimum": 0,
+          "title": "Start",
+          "type": "integer"
+        },
+        "end": {
+          "exclusiveMinimum": 0,
+          "title": "End",
+          "type": "integer"
+        },
+        "label": {
+          "enum": [
+            "賦",
+            "比",
+            "興"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "probabilities": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "propertyNames": {
+            "enum": [
+              "賦",
+              "比",
+              "興"
+            ]
+          },
+          "title": "Probabilities",
+          "type": "object"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "label",
+        "probabilities"
+      ],
+      "title": "StanzaLabel",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -340,6 +393,14 @@
       "description": "Reproducibility record: prompt strategy, decoding parameters, lexicon version",
       "title": "Method",
       "type": "object"
+    },
+    "stanzas": {
+      "description": "Chinese only: stanza types 賦/比/興 suggested by a model",
+      "items": {
+        "$ref": "#/$defs/StanzaLabel"
+      },
+      "title": "Stanzas",
+      "type": "array"
     }
   },
   "required": [

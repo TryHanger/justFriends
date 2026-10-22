@@ -65,6 +65,9 @@ const ru: Record<string, string> = {
   metaphorical: 'переносное', literal: 'прямое', unclassified: 'не решено',
   natural_phenomenon: 'Явление природы', landscape: 'Ландшафт', celestial: 'Небесное тело', artifact: 'Предмет', abstract: 'Абстракция',
   Sentiment: 'Тональность', 'Entity types': 'Типы сущностей', 'Domain pairs': 'Пары «источник → мишень»', 'Semantic labels': 'Семантические метки',
+  Stanzas: 'Строфы', probability: 'вероятность',
+  description: 'описание', comparison: 'сравнение', 'evocative image': 'образ-зачин',
+  "Types follow Zhu Xi's classification (詩經集傳); labels are model suggestions, not expert annotation.": 'Типы строф даны по классификации Чжу Си (詩經集傳); метки — подсказки модели, а не экспертная разметка.',
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }

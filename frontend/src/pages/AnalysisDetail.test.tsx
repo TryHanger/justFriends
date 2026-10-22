@@ -83,3 +83,31 @@ describe('completed analysis warnings', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
+
+describe('stanza types', () => {
+  const stanzas = [
+    { text: '关关雎鸠，\n在河之洲。', start: 0, end: 11, label: '興' as const, probabilities: { '賦': 0.1, '比': 0.2, '興': 0.7 } },
+    { text: '参差荇菜，左右流之。', start: 13, end: 23, label: '賦' as const, probabilities: { '賦': 0.55, '比': 0.3, '興': 0.15 } },
+  ];
+
+  it('shows each stanza label in Russian with its probability as a model suggestion', async () => {
+    showResult({ language: 'zh', model_version: 'test', metaphors: [], stanzas }, 'ru');
+    expect(await screen.findByText('Строфы (2)')).toBeTruthy();
+    expect(screen.getByText(/подсказки модели, а не экспертная разметка/)).toBeTruthy();
+    expect(screen.getByText('興 — «образ-зачин»')).toBeTruthy();
+    expect(screen.getByText('вероятность 70%')).toBeTruthy();
+    expect(screen.getByText('賦 — «описание»')).toBeTruthy();
+    expect(screen.getByText('вероятность 55%')).toBeTruthy();
+    expect(screen.getByText('关关雎鸠，').getAttribute('title')).toBe('关关雎鸠，\n在河之洲。');
+  });
+
+  it('hides the block for Kazakh and for results without stanzas', async () => {
+    showResult({ language: 'kk', model_version: 'test', metaphors: [], stanzas }, 'ru');
+    expect(await screen.findByText('Найденные метафоры (0)')).toBeTruthy();
+    expect(screen.queryByText(/Строфы/)).toBeNull();
+    cleanup();
+    showResult({ language: 'zh', model_version: 'test', metaphors: [] }, 'ru');
+    expect(await screen.findByText('Найденные метафоры (0)')).toBeTruthy();
+    expect(screen.queryByText(/Строфы/)).toBeNull();
+  });
+});

@@ -27,6 +27,7 @@ nlp = [
   "sentence-transformers>=5,<6",
   "sentencepiece>=0.2,<1",
   "scikit-learn>=1.5,<2",
+  "opencc-python-reimplemented>=0.1.7,<1",
 ]
 finetune = [
   "peft>=0.13,<1",

@@ -93,6 +93,32 @@ class EntityCandidate(BaseModel):
         return self
 
 
+StanzaType = Literal["賦", "比", "興"]
+
+
+class StanzaLabel(BaseModel):
+    """Stanza type after Zhu Xi (詩經集傳): 賦 description, 比 comparison, 興 evocative image.
+
+    A model suggestion with its probabilities, not an expert annotation.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1)
+    start: int = Field(ge=0, strict=True)
+    end: int = Field(gt=0, strict=True)
+    label: StanzaType
+    probabilities: dict[StanzaType, float]
+
+    @model_validator(mode="after")
+    def ordered_bounds(self):
+        if self.end <= self.start:
+            raise ValueError("end must be greater than start")
+        if not all(0 <= p <= 1 for p in self.probabilities.values()):
+            raise ValueError("probabilities must lie in [0, 1]")
+        return self
+
+
 class AnalysisResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -106,6 +132,9 @@ class AnalysisResult(BaseModel):
     method: dict = Field(
         default_factory=dict,
         description="Reproducibility record: prompt strategy, decoding parameters, lexicon version",
+    )
+    stanzas: list[StanzaLabel] = Field(
+        default_factory=list, description="Chinese only: stanza types 賦/比/興 suggested by a model"
     )
 
 
