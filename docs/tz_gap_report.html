@@ -142,7 +142,7 @@ footer { color: var(--muted); font-size: .82rem; }
     <span class="eyebrow">justFriends · LLM, метафоры, китайская и казахская поэзия</span>
     <h1>Анализатор метафор: что сделано по ТЗ и как это устроено</h1>
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
-    <div class="meta"><span>Обновлено 19 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
+    <div class="meta"><span>Обновлено 22 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
       <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
@@ -326,6 +326,7 @@ footer { color: var(--muted); font-size: .82rem; }
       <li>興 распознаётся хорошо (полнота 0.71), 比 — плохо у обеих моделей (F1 0.24): таких строф всего 116, и 比 часто отличается от 興 только тем, что тема в строфе не названа.</li>
       <li>Модели: <code>models/zhuxi-stanza-sikuroberta-v1</code> (417 МБ) и <code>models/zhuxi-stanza-xlmr-v1</code> (1.1 ГБ), обе обучены на всех 968 строфах. Отчёты — <code>data/processed/zhuxi/stanza_classifier*.json</code>, код — <code>scripts/train_stanza_classifier.py</code>.</li>
     </ul></div>
+    <p class="note">22 октября классификатор подключён к сайту: для китайских текстов результат анализа содержит блок «Строфы» — метка 賦/比/興 у каждой строфы (строфы через пустую строку) с вероятностью и пометкой, что это подсказка модели. Модель: <code>models/zhuxi-stanza-sikuroberta-v1</code>, настройка <code>STANZA_MODEL_PATH</code>; без модели или PyTorch блок не показывается.</p>
     <p class="note">Код: <code>scripts/extract_zhuxi.py</code> (извлечение, тексты в упрощённом письме для моделей, оффсеты строф), <code>scripts/eval_zhuxi.py</code> (оценка любых предсказаний). Данные: <code>data/processed/zhuxi/</code>. Лицензия: текст и комментарий — общественное достояние, транскрипция Wikisource — CC BY-SA 4.0.</p>
   </section>
   <section id="kkdict" aria-labelledby="kkdict-h">
@@ -361,6 +362,17 @@ footer { color: var(--muted); font-size: .82rem; }
         <tr><td>XLM-R zh gold + kk silver</td><td class="num">0.62</td><td class="num">0.29</td><td class="num">0.39</td><td class="num">0.11</td><td class="num">17%</td></tr>
       </tbody>
     </table></div>
+    <h3>Двухшаговый анализ (22 октября)</h3>
+    <p>Кандидаты из словаря-ограничения и модели, затем прямой вопрос о каждом кандидате к gpt-4o (включён для казахского по умолчанию: <code>NLP_TWO_STAGE_LANGUAGES=kk</code>, <code>NLP_USAGE_MODEL=gpt-4o</code>).</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Режим (160 цитат)</th><th class="num">Точность</th><th class="num">Полнота</th><th class="num">F1</th><th class="num">κ со словарём</th><th class="num">Ложно в прямых</th></tr></thead>
+      <tbody>
+        <tr><td>Однопроходный (gpt-4o-mini)</td><td class="num">0.60</td><td class="num">0.35</td><td class="num">0.44</td><td class="num">0.11</td><td class="num">24%</td></tr>
+        <tr><td><strong>Двухшаговый (gpt-4o-mini + gpt-4o)</strong></td><td class="num">0.62</td><td class="num">0.61</td><td class="num">0.62</td><td class="num"><strong>0.24</strong></td><td class="num">38%</td></tr>
+        <tr><td>Прямой вопрос о заданном слове (gpt-4o), ориентир</td><td class="num">0.67</td><td class="num">0.88</td><td class="num">0.76</td><td class="num">0.45</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Ограничение — охват кандидатов: заглавное слово цитаты оказалось кандидатом только в 94 цитатах из 160. Ложные срабатывания: 16 добавил второй шаг, 14 остались с первого. Стоимость на 160 цитат: первый шаг 534k + 55k токенов gpt-4o-mini, второй 56k + 22k токенов gpt-4o (521 кандидат). Следующий шаг — расширить кандидатов на все знаменательные слова.</p>
     <div class="card"><h3>Вывод</h3><ul class="clean">
       <li>Узкое место — схема анализа, а не знание языка: на прямой вопрос gpt-4o-mini даёт κ 0.29, а в общем поиске фигур — 0.11. Модель знает переносные значения, но в поиске по всему тексту пропускает их или отмечает другие слова.</li>
       <li>Сильные модели заметно лучше: κ 0.45–0.57 против 0.29. Отсюда план: двухшаговый анализ для казахского — кандидаты (словарь + модель), затем прямой вопрос по каждому кандидату к сильной модели.</li>
