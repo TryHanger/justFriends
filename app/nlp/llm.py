@@ -205,6 +205,7 @@ class LLMDetector:
         extractor: CandidateExtractor | None = None,
         knowledge=None,
         rag_k: int = 4,
+        usage_judge=None,
     ):
         if not model:
             raise ValueError("Set a model name")
@@ -213,6 +214,8 @@ class LLMDetector:
         self.temperature, self.top_p = temperature, top_p
         self.extractor = extractor or CandidateExtractor()
         self.knowledge, self.rag_k = knowledge, rag_k
+        # Optional stage 2 (app/nlp/usage.py): direct usage question for every candidate.
+        self.usage_judge = usage_judge
         # Per-thread token counter: background jobs may share one detector instance.
         self._local = threading.local()
 
@@ -257,6 +260,16 @@ class LLMDetector:
             prompt.instructions, prompt.user, output_schema(cot), sampling
         )
         result = parse_output(raw, text, language, self.model_version, cot=cot)
+        result = result.model_copy(
+            update={
+                "candidates": merge_candidates(
+                    result.candidates, lexicon_candidates if "lexicon" in self.strategy else []
+                )
+            }
+        )
+        if self.usage_judge and self.usage_judge.applies(result.language):
+            # Before the Russian pass, so that stage-2 explanations are checked too.
+            result = self.usage_judge.apply(text, result)
         result = self._ensure_russian(result)
         method = {
             **prompt.record,
@@ -273,12 +286,9 @@ class LLMDetector:
             warnings.append("Provider rejected temperature/top_p; its default decoding was used.")
         if known:
             method["lexicon"] = self.extractor.version(result.language)
-        candidates = merge_candidates(
-            result.candidates, lexicon_candidates if "lexicon" in self.strategy else []
-        )
-        result = result.model_copy(
-            update={"candidates": candidates, "method": method, "warnings": warnings}
-        )
+        if "two_stage" in result.method:
+            method["two_stage"] = result.method["two_stage"]
+        result = result.model_copy(update={"method": method, "warnings": warnings})
         return validate_result(text, language, result)
 
     def _ensure_russian(self, result: AnalysisResult) -> AnalysisResult:

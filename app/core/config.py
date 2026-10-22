@@ -39,6 +39,11 @@ class Settings(BaseSettings):
     chinese_gold_xlmr_model_path: str = "models/cmdag-xlmr-mps-full-v2"
     attribute_model_path: str | None = None
     hybrid_llm_backend: Literal["openai", "anthropic", "ollama", "hf"] = "openai"
+    # Two-stage analysis (docs/NLP.md): for these languages (comma-separated, empty = off)
+    # every candidate of an LLM backend is judged again by a direct usage question.
+    nlp_two_stage_languages: str = "kk"
+    nlp_usage_backend: Literal["openai", "anthropic", "ollama"] = "openai"
+    nlp_usage_model: str = "gpt-4o"
     nlp_review_threshold: float = Field(default=0.8, ge=0, le=1)
     nlp_max_length: int = Field(default=256, ge=4, le=512)
     nlp_stride: int = Field(default=64, ge=0)

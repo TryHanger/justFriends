@@ -3,6 +3,7 @@
 Unlike the pipeline (find all figures, then check the headword), the model is told which
 word to judge, so the score shows whether it understands Kazakh figurative senses at all
 (module C), independent of how well it detects figures. Answers are cached per model.
+The prompt and schema are shared with stage 2 of the two-stage pipeline (app/nlp/usage.py).
 
     python -m scripts.eval_kk_usage_direct --models gpt-4o-mini gpt-4o
     python -m scripts.eval_kk_usage_direct --score data/processed/kk_usage/claude_direct.tsv
@@ -16,22 +17,9 @@ from pathlib import Path
 from app.core.config import Settings
 from app.nlp.corpus import read_corpus
 from app.nlp.evaluation import cohen_kappa
+from app.nlp.usage import INSTRUCTIONS, SCHEMA, direct_question
 
 ROOT = Path("data/processed/kk_usage")
-INSTRUCTIONS = (
-    "You judge Kazakh literary quotations. For the marked word, decide whether it is used "
-    "in its direct (literal) sense or in a figurative (metaphorical, transferred) sense in "
-    "this context. Conventional figurative senses count as figurative. Answer in JSON."
-)
-SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "properties": {
-        "usage": {"type": "string", "enum": ["literal", "metaphorical"]},
-        "reason": {"type": "string"},
-    },
-    "required": ["usage", "reason"],
-}
 
 
 def quotations() -> list[dict]:
@@ -44,12 +32,12 @@ def quotations() -> list[dict]:
 
 
 def ask(client, model: str, record: dict) -> str:
-    text = record["text"]
-    marked = f"{text[: record['start']]}[[{text[record['start'] : record['end']]}]]{text[record['end'] :]}"
+    # The same question as stage 2 of the pipeline (app/nlp/usage.py) for one candidate.
+    question = direct_question(record["text"], record["start"], record["end"], record["target"])
     request = dict(
         model=model,
         instructions=INSTRUCTIONS,
-        input=f"Word: {record['target']}\nQuotation (word marked with [[ ]]):\n{marked}",
+        input=question,
         text={"format": {"type": "json_schema", "name": "usage", "strict": True, "schema": SCHEMA}},
         max_output_tokens=2000,
     )

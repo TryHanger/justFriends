@@ -20,17 +20,27 @@ from sklearn.model_selection import StratifiedKFold
 
 from app.nlp.calibration import _logit
 from app.nlp.corpus import read_corpus
+from app.nlp.usage import added_figures
 
 OUTPUT = Path("data/calibration/llm.json")
 MIN_SPANS = 30
 
 
-def raw(result: dict) -> list[float]:
-    """Self-reported confidences: runs made with calibration on store them separately."""
+def raw(result: dict) -> list[float | None]:
+    """Self-reported confidences: runs made with calibration on store them separately.
+
+    None for figures added by the two-stage judge: their confidence is a placeholder."""
     calibration = result.get("method", {}).get("calibration")
-    if calibration:
-        return calibration["raw_confidence"]
-    return [m["confidence"] for m in result["metaphors"]]
+    values = (
+        calibration["raw_confidence"]
+        if calibration
+        else [m["confidence"] for m in result["metaphors"]]
+    )
+    added = added_figures(result.get("method", {}))
+    return [
+        None if (m["start"], m["end"]) in added else value
+        for m, value in zip(result["metaphors"], values, strict=True)
+    ]
 
 
 def zh_pairs(predictions: str, gold: str) -> list[tuple[float, int]]:
@@ -41,6 +51,8 @@ def zh_pairs(predictions: str, gold: str) -> list[tuple[float, int]]:
             continue
         spans = records[poem_id].spans
         for m, confidence in zip(result["metaphors"], raw(result), strict=True):
+            if confidence is None:
+                continue
             hit = any(m["start"] < g.end and m["end"] > g.start for g in spans)
             pairs.append((confidence, int(hit)))
     return pairs
@@ -57,7 +69,7 @@ def kk_pairs(predictions: str, dictionary: str) -> list[tuple[float, int]]:
             continue
         record = records[quote_id]
         for m, confidence in zip(result["metaphors"], raw(result), strict=True):
-            if m["start"] < record["end"] and m["end"] > record["start"]:
+            if confidence is not None and m["start"] < record["end"] and m["end"] > record["start"]:
                 pairs.append((confidence, int(record["usage_type"] == "metaphorical")))
     return pairs
 

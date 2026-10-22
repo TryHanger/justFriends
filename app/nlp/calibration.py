@@ -12,6 +12,7 @@ import json
 import math
 from pathlib import Path
 
+from app.nlp.usage import added_figures
 from app.schemas.analysis import AnalysisResult
 
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "data" / "calibration" / "llm.json"
@@ -42,8 +43,12 @@ class Calibrator:
         fit = self.table.get(result.model_version, {}).get(result.language)
         if fit is None:
             return result
+        # Figures added by the two-stage judge have no self-reported confidence to rescale.
+        added = added_figures(result.method)
         spans = [
-            span.model_copy(
+            span
+            if (span.start, span.end) in added
+            else span.model_copy(
                 update={"confidence": round(platt(span.confidence, fit["a"], fit["b"]), 3)}
             )
             for span in result.metaphors
@@ -76,7 +81,10 @@ class Calibrator:
                 "metaphors": spans,
                 "warnings": warnings,
                 # Calibration covers precision only: an empty result may still miss figures.
-                "needs_review": low > 0 or not spans,
+                # A figure whose head word stage 2 judged literal also needs a reviewer.
+                "needs_review": low > 0
+                or not spans
+                or bool(result.method.get("two_stage", {}).get("disputed")),
                 "method": method,
             }
         )

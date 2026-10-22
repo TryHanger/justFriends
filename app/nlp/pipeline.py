@@ -39,9 +39,17 @@ class MetaphorPipeline:
 LLM_BACKENDS = {"openai", "anthropic", "ollama", "hf"}
 
 
+def two_stage_languages(settings) -> frozenset[str]:
+    languages = frozenset(
+        part.strip() for part in settings.nlp_two_stage_languages.split(",") if part.strip()
+    )
+    if languages - {"zh", "kk"}:
+        raise ValueError("NLP_TWO_STAGE_LANGUAGES must list zh and/or kk")
+    return languages
+
+
 def build_llm(settings, provider: str, strategy: str | None = None):
     from app.nlp.lexicon import CandidateExtractor
-    from app.nlp.llm import OllamaDetector, OpenAIDetector
 
     common = dict(
         strategy=strategy or settings.llm_prompt_strategy,
@@ -54,15 +62,41 @@ def build_llm(settings, provider: str, strategy: str | None = None):
         from app.nlp.rag import default_knowledge
 
         common["knowledge"] = default_knowledge(settings.knowledge_dir)
+    languages = two_stage_languages(settings)
+    if languages:
+        from app.nlp.usage import UsageJudge
+
+        # Only the provider call of this detector is used; temperature 0 is set per request.
+        judge = _llm(
+            settings,
+            settings.nlp_usage_backend,
+            dict(strategy="zero_shot", temperature=0.0, top_p=None),
+            settings.nlp_usage_model,
+        )
+        common["usage_judge"] = UsageJudge(judge, languages)
+    return _llm(settings, provider, common)
+
+
+def _llm(settings, provider: str, common: dict, model: str | None = None):
+    from app.nlp.llm import OllamaDetector, OpenAIDetector
+
     if provider == "openai":
         if not settings.openai_api_key:
-            raise ValueError("OPENAI_API_KEY is required for the OpenAI backend")
-        return OpenAIDetector(settings.openai_model, settings.openai_api_key, **common)
+            raise ValueError(
+                "OPENAI_API_KEY is required for the OpenAI backend"
+                + (
+                    " of the two-stage usage judge; set NLP_USAGE_BACKEND or disable it "
+                    "with an empty NLP_TWO_STAGE_LANGUAGES"
+                    if model
+                    else ""
+                )
+            )
+        return OpenAIDetector(model or settings.openai_model, settings.openai_api_key, **common)
     if provider == "anthropic":
         from app.nlp.claude import ClaudeDetector
 
         return ClaudeDetector(
-            settings.anthropic_model,
+            model or settings.anthropic_model,
             settings.anthropic_api_key,
             effort=settings.anthropic_effort,
             **common,
@@ -75,7 +109,7 @@ def build_llm(settings, provider: str, strategy: str | None = None):
         return TransformersDetector(settings.hf_model, settings.hf_adapter, **common)
     if provider == "ollama":
         return OllamaDetector(
-            settings.ollama_model,
+            model or settings.ollama_model,
             settings.ollama_base_url,
             context_window=settings.ollama_context_window,
             **common,

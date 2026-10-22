@@ -178,4 +178,9 @@ def reliability(predictions: dict) -> dict:
         report["total_tokens"] = sum(
             u.get("input_tokens", 0) + u.get("output_tokens", 0) for u in usage
         )
+    # Two-stage mode (app/nlp/usage.py): the direct questions run on another model.
+    stage = [p.method["two_stage"].get("usage") or {} for p in values if p.method.get("two_stage")]
+    if stage:
+        for key in ("input_tokens", "output_tokens"):
+            report[f"two_stage_mean_{key}"] = sum(u.get(key, 0) for u in stage) / len(stage)
     return report
