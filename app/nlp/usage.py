@@ -14,6 +14,7 @@ of one text share one request.
 
 import json
 import logging
+import re
 
 from app.nlp.contracts import context_sentence
 from app.schemas.analysis import AnalysisResult, EntityCandidate, MetaphorSpan
@@ -93,14 +94,55 @@ def _overlaps(start: int, end: int, spans) -> bool:
     return any(start < span.end and end > span.start for span in spans)
 
 
+# Kazakh function words: pronouns, particles, postpositions, auxiliaries and conjunctions
+# never carry a figurative image themselves, so they are not worth a question.
+KAZAKH_FUNCTION_WORDS = frozenset(
+    """
+    және мен бен пен да де та те ғой қой ма ме ба бе па пе бұл сол осы ол ана мына сен сіз
+    біз олар мені сені оны оған маған саған бізге оның менің сенің біздің сіздің олардың
+    өз өзі өзім өзің өзіміз не кім қай қалай неге неше қашан қайда емес еді екен бар
+    жоқ деп деген үшін бірақ енді тағы әр бір барлық бәрі бәрін бәріне ешкім ешбір сияқты
+    секілді сайын соң кейін дейін шейін бойы арқылы туралы жайлы қарай гөрі тек ғана әлі
+    ендеше себебі өйткені егер онда мұнда сонда осында қазір кейде әрі әлде яки немесе
+    """.split()
+)
+_KAZAKH_WORD = re.compile(r"[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+(?:-[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]+)*")
+
+
+def word_candidates(text: str, taken) -> list[EntityCandidate]:
+    """Every content word of a Kazakh text not yet covered by a candidate or a figure.
+
+    The soft lexicon and the model name only some words; on the dictionary set the head
+    word was a candidate in 94 of 160 quotations, so stage 2 never saw the others."""
+    found = []
+    for match in _KAZAKH_WORD.finditer(text):
+        word = match.group()
+        if len(word) < 3 or word.lower() in KAZAKH_FUNCTION_WORDS:
+            continue
+        if _overlaps(match.start(), match.end(), taken):
+            continue
+        found.append(
+            EntityCandidate(
+                text=word,
+                start=match.start(),
+                end=match.end(),
+                entity_type="other",
+                origin="word",
+            )
+        )
+    return found
+
+
 class UsageJudge:
     """Asks `detector` (any LLMDetector, used only for its provider call) about candidates."""
 
-    def __init__(self, detector, languages=("kk",), batch_size: int = 8):
+    def __init__(self, detector, languages=("kk",), batch_size: int = 8, all_words: bool = False):
         if batch_size < 1:
             raise ValueError("batch_size must be positive")
         self.detector, self.languages = detector, frozenset(languages)
         self.batch_size = batch_size
+        # Also question every Kazakh content word that no stage-1 candidate covers.
+        self.all_words = all_words
 
     def applies(self, language: str) -> bool:
         return language in self.languages
@@ -159,6 +201,8 @@ class UsageJudge:
 
     def apply(self, text: str, result: AnalysisResult) -> AnalysisResult:
         candidates = list(result.candidates)
+        if self.all_words and result.language == "kk":
+            candidates += word_candidates(text, candidates + list(result.metaphors))
         judgements, record = self.judge(text, result.language, candidates)
         figures = list(result.metaphors)
         heads = {}
@@ -198,6 +242,9 @@ class UsageJudge:
                     )
                 )
         record["metaphorical"] = sum(c.usage_type == "metaphorical" for c in updated)
+        record["word_candidates"] = sum(c.origin == "word" for c in candidates)
+        # Content words were only questioned; keep the table to those judged figurative.
+        updated = [c for c in updated if c.origin != "word" or c.usage_type == "metaphorical"]
         record["added"] = [[span.start, span.end] for span in added]
         record["disputed"] = [[span.start, span.end] for span in disputed]
         model = record["model"]

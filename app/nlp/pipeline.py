@@ -81,7 +81,7 @@ def build_llm(settings, provider: str, strategy: str | None = None):
             dict(strategy="zero_shot", temperature=0.0, top_p=None),
             settings.nlp_usage_model,
         )
-        common["usage_judge"] = UsageJudge(judge, languages)
+        common["usage_judge"] = UsageJudge(judge, languages, all_words=settings.nlp_usage_all_words)
     return _llm(settings, provider, common)
 
 

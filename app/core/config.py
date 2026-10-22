@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-5.6-terra"
     max_upload_mb: int = 20
-    nlp_backend: Literal[
-        "openai", "anthropic", "ollama", "hf", "baseline", "xlmr", "hybrid"
-    ] = "openai"
+    nlp_backend: Literal["openai", "anthropic", "ollama", "hf", "baseline", "xlmr", "hybrid"] = (
+        "openai"
+    )
     # Prompt strategy (ТЗ п. 2.2.2): '+'-joined few_shot, cot, rag, lexicon; or zero_shot.
     llm_prompt_strategy: str = "few_shot+cot+rag+lexicon"
     # Decoding parameters from ТЗ п. 4.1; empty value in .env means provider default.
@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     nlp_two_stage_languages: str = "kk"
     nlp_usage_backend: Literal["openai", "anthropic", "ollama"] = "openai"
     nlp_usage_model: str = "gpt-4o"
+    # Stage 2 also questions every Kazakh content word no stage-1 candidate covers.
+    nlp_usage_all_words: bool = True
     nlp_review_threshold: float = Field(default=0.8, ge=0, le=1)
     nlp_max_length: int = Field(default=256, ge=4, le=512)
     nlp_stride: int = Field(default=64, ge=0)

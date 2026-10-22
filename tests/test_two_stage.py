@@ -1,4 +1,5 @@
 import json
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -244,3 +245,39 @@ def test_dictionary_score_reports_stage_two_decisions():
     assert stage["model"] == "openai:gpt-4o" and stage["headword_is_candidate"] == 1.0
     assert stage["stage_2_decides"]["accuracy"] == 1.0
     assert stage["headword_candidates_only"]["quotations"] == 2
+
+
+def test_all_words_mode_questions_uncovered_content_words():
+    from app.nlp.usage import word_candidates
+
+    words = [c.text for c in word_candidates(TEXT, [])]
+    assert words == ["Тау", "басында", "бөрі", "ұлыды", "жүрегі", "тас", "болды"]
+    assert "бөрі" not in [
+        c.text for c in word_candidates(TEXT, [SimpleNamespace(start=12, end=16)])
+    ]
+
+    def judge(kwargs):
+        if "usage" in kwargs["text"]["format"]["schema"]["properties"]:
+            return {"usage": "literal", "reason": "Прямое значение."}
+        asked = re.findall(r"^(\d+)\. Word: (\S+)", kwargs["input"], re.M)
+        return {
+            "judgements": [
+                {
+                    "id": int(number),
+                    "usage": "metaphorical" if word == "ұлыды" else "literal",
+                    "reason": "Переносное значение." if word == "ұлыды" else "Прямое значение.",
+                }
+                for number, word in asked
+            ]
+        }
+
+    calls = []
+    client = fake_client(llm_payload(FIGURE, literal=[WOLF], language="kk"), judge, calls)
+    detector = detectors(client)
+    detector.usage_judge.all_words = True
+    result = detector.analyze(TEXT, "kk")
+    assert [m.text for m in result.metaphors] == ["ұлыды", "жүрегі тас"]
+    record = result.method["two_stage"]
+    assert record["word_candidates"] == 4  # Тау, басында, ұлыды, болды; бөрі and тас are covered
+    # Content words judged literal are questioned but not listed as candidates.
+    assert {c.text for c in result.candidates if c.origin == "word"} == {"ұлыды"}
