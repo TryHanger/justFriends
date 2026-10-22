@@ -276,6 +276,19 @@ footer { color: var(--muted); font-size: .82rem; }
       </ul></div>
     </div>
     <p class="note">Файлы: <code>scripts/extract_wangyi.py</code>, <code>scripts/map_wangyi_to_pilot.py</code>, <code>data/processed/wangyi/</code>, база RAG <code>data/knowledge/wangyi_chuci.jsonl</code> (69 комментариев).</p>
+    <h3>LLM и аллегория «Чу Цы» (22 октября)</h3>
+    <p>Проверка на 29 образах Ван И в 32 пилотных стихах «Чу Цы». Комментарий к проверяемому стихотворению из базы убирается (leave-one-poem-out). Прямой вопрос: «какие образы обозначают другое в традиции Ван И — правителя, достойных, клеветников, самого поэта?».</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Вариант</th><th class="num">Найдено образов Ван И</th><th class="num">Названо образов всего</th></tr></thead>
+      <tbody>
+        <tr><td>Обычный анализ, gpt-4o-mini + база (19 октября)</td><td class="num">2 / 29</td><td class="num">—</td></tr>
+        <tr><td><strong>Прямой вопрос, gpt-4o-mini + база</strong></td><td class="num"><strong>15 / 29 (52%)</strong></td><td class="num">433</td></tr>
+        <tr><td>Прямой вопрос, gpt-4o + база</td><td class="num">11 / 29 (38%)</td><td class="num">283</td></tr>
+        <tr><td>Прямой вопрос, gpt-4o без базы</td><td class="num">11 / 29 (38%)</td><td class="num">288</td></tr>
+        <tr><td>XLM-R после дообучения (для сравнения)</td><td class="num">1 / 41</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Постановка вопроса важнее модели: прямой вопрос в традиции комментария находит в 5–7 раз больше образов, чем общий поиск фигур. База Ван И для gpt-4o ничего не добавляет — модель знает традицию сама. Точность не оценивается: Ван И комментирует не каждый образ, а извлечены только его явные пояснения. Стоимость: ≈ $0.35 за три варианта. Код: <code>scripts/eval_wangyi_llm.py</code>.</p>
   </section>
 
   <section id="zhuxi" aria-labelledby="zhuxi-h">
