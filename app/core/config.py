@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     nlp_usage_model: str = "gpt-4o"
     # Stage 2 also questions every Kazakh content word no stage-1 candidate covers.
     nlp_usage_all_words: bool = True
+    # Classical Chinese poetry mode (app/nlp/allegory.py): images read in the commentary
+    # tradition for zh texts that look like classical verse. False disables it.
+    nlp_classical_zh: bool = True
+    nlp_allegory_model: str = "gpt-4o-mini"
     nlp_review_threshold: float = Field(default=0.8, ge=0, le=1)
     nlp_max_length: int = Field(default=256, ge=4, le=512)
     nlp_stride: int = Field(default=64, ge=0)

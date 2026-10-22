@@ -135,3 +135,11 @@ def test_short_fragments_are_not_stanzas():
     assert not is_stanza("床前明月光")  # one verse
     assert is_stanza("盧令令、其人美且仁。")  # the shortest stanza type in training
     assert is_stanza("关关雎鸠，在河之洲。窈窕淑女，君子好逑。")
+
+
+def test_only_shijing_like_texts_get_stanza_labels():
+    from app.nlp.stanza import shijing_like
+
+    assert shijing_like("关关雎鸠，在河之洲。窈窕淑女，君子好逑。")
+    assert not shijing_like("余既滋兰之九畹兮，又树蕙之百亩。畦留夷与揭车兮，杂杜衡与芳芷。")
+    assert not shijing_like("床前明月光，疑是地上霜。举头望明月，低头思故乡。")

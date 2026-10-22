@@ -206,6 +206,7 @@ class LLMDetector:
         knowledge=None,
         rag_k: int = 4,
         usage_judge=None,
+        allegory_judge=None,
     ):
         if not model:
             raise ValueError("Set a model name")
@@ -216,6 +217,8 @@ class LLMDetector:
         self.knowledge, self.rag_k = knowledge, rag_k
         # Optional stage 2 (app/nlp/usage.py): direct usage question for every candidate.
         self.usage_judge = usage_judge
+        # Optional classical Chinese poetry mode (app/nlp/allegory.py).
+        self.allegory_judge = allegory_judge
         # Per-thread token counter: background jobs may share one detector instance.
         self._local = threading.local()
 
@@ -270,6 +273,8 @@ class LLMDetector:
         if self.usage_judge and self.usage_judge.applies(result.language):
             # Before the Russian pass, so that stage-2 explanations are checked too.
             result = self.usage_judge.apply(text, result)
+        if self.allegory_judge and self.allegory_judge.applies(result.language, text):
+            result = self.allegory_judge.apply(text, result)
         result = self._ensure_russian(result)
         method = {
             **prompt.record,
@@ -286,8 +291,9 @@ class LLMDetector:
             warnings.append("Provider rejected temperature/top_p; its default decoding was used.")
         if known:
             method["lexicon"] = self.extractor.version(result.language)
-        if "two_stage" in result.method:
-            method["two_stage"] = result.method["two_stage"]
+        for key in ("two_stage", "classical"):
+            if key in result.method:
+                method[key] = result.method[key]
         result = result.model_copy(update={"method": method, "warnings": warnings})
         return validate_result(text, language, result)
 

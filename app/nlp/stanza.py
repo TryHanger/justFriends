@@ -43,6 +43,14 @@ def is_stanza(segment: str) -> bool:
     return len(_HAN.findall(segment)) >= MIN_HAN and len(verses) >= MIN_VERSES
 
 
+def shijing_like(text: str) -> bool:
+    """The classifier knows only the Shijing: mostly four-character verses. Chu Ci lines
+    with 兮 or five- and seven-character Tang verses would get meaningless labels."""
+    verses = [len(_HAN.findall(v)) for v in _VERSE_BREAK.split(text)]
+    verses = [n for n in verses if n >= 2]
+    return bool(verses) and sum(n == 4 for n in verses) / len(verses) >= 0.6
+
+
 @lru_cache(maxsize=1)
 def _converters():
     from opencc import OpenCC
@@ -85,6 +93,8 @@ class StanzaClassifier:
         return result
 
     def classify(self, text: str) -> list[StanzaLabel]:
+        if not shijing_like(text):
+            return []
         spans = [(s, e) for s, e in split_stanzas(text) if is_stanza(text[s:e])]
         if not spans:
             return []

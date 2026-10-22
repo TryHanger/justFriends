@@ -275,5 +275,9 @@ class UsageJudge:
 
 
 def added_figures(method: dict) -> set[tuple[int, int]]:
-    """Bounds of the figures stage 2 added: they carry no stage-1 confidence."""
-    return {tuple(bounds) for bounds in method.get("two_stage", {}).get("added", [])}
+    """Bounds of figures added by stage 2 or the classical mode: no stage-1 confidence."""
+    return {
+        tuple(bounds)
+        for stage in ("two_stage", "classical")
+        for bounds in method.get(stage, {}).get("added", [])
+    }

@@ -82,6 +82,18 @@ def build_llm(settings, provider: str, strategy: str | None = None):
             settings.nlp_usage_model,
         )
         common["usage_judge"] = UsageJudge(judge, languages, all_words=settings.nlp_usage_all_words)
+    if settings.nlp_classical_zh and settings.openai_api_key:
+        from app.nlp.allegory import AllegoryJudge
+        from app.nlp.rag import default_knowledge
+
+        # Wang Yi's commentary is in the default knowledge base (data/knowledge).
+        reader = _llm(
+            settings,
+            "openai",
+            dict(strategy="zero_shot", temperature=0.0, top_p=None),
+            settings.nlp_allegory_model,
+        )
+        common["allegory_judge"] = AllegoryJudge(reader, default_knowledge(settings.knowledge_dir))
     return _llm(settings, provider, common)
 
 
