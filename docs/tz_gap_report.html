@@ -142,9 +142,9 @@ footer { color: var(--muted); font-size: .82rem; }
     <span class="eyebrow">justFriends · LLM, метафоры, китайская и казахская поэзия</span>
     <h1>Анализатор метафор: что сделано по ТЗ и как это устроено</h1>
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
-    <div class="meta"><span>Обновлено 22 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
+    <div class="meta"><span>Обновлено 23 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#hypotheses">Гипотезы H1–H3</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -397,6 +397,34 @@ footer { color: var(--muted); font-size: .82rem; }
       <li>Стоимость: прямой вопрос — около 26k входных токенов на модель; полный конвейер gpt-4o-mini — 541k + 58k токенов (≈ $0.12).</li>
     </ul></div>
     <p class="note">Код: <code>scripts/build_kk_usage_set.py</code> (выкачка с кэшем, разбор трёх вариантов вёрстки, отбрасывание цитат с остатками пометок), <code>scripts/eval_kk_usage.py</code> (обычный анализ), <code>scripts/eval_kk_usage_direct.py</code> (прямой вопрос), <code>scripts/train_kk_usage_classifier.py</code>. Данные: <code>data/processed/kk_usage/</code>. Словарь защищён авторским правом: набор только для исследовательской оценки, в git и публичный доступ не выкладывается.</p>
+  </section>
+  <section id="hypotheses" aria-labelledby="hyp-h">
+    <h2 id="hyp-h">Проверка гипотез H1–H3 (23 октября)</h2>
+    <h3>H1: дообучение (IFT) против промптинга</h3>
+    <p>Одна открытая модель — Qwen2.5-1.5B-Instruct, — одни и те же отложенные примеры, три режима: zero-shot, few-shot (6 примеров из обучающей части), LoRA-дообучение на обучающей части. Ответ выбирается по правдоподобию каждой метки, одинаково во всех режимах.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Задача (экспертные метки)</th><th>Тест</th><th class="num">Zero-shot</th><th class="num">Few-shot</th><th class="num">IFT (LoRA)</th></tr></thead>
+      <tbody>
+        <tr><td>Китайский: тип строфы 賦/比/興 по Чжу Си, κ</td><td>242 строфы, отложенные стихи</td><td class="num">0.03</td><td class="num">0.01</td><td class="num"><strong>0.50</strong> (точность 74%)</td></tr>
+        <tr><td>Казахский: прямое/переносное по словарю, κ</td><td>294 цитаты, отложенные слова</td><td class="num">0.01</td><td class="num">0.03</td><td class="num"><strong>0.11</strong> (с балансировкой классов)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><strong>Вывод: H1 подтверждается</strong>, сильно для китайского и слабо для казахского. Без дообучения модель на обеих задачах работает на уровне случайности. Казахский ограничен самой моделью: 1.5B-параметровый Qwen плохо знает казахский, а в тесте всего 44 переносные цитаты. Первый казахский прогон без балансировки выучил ответ «всегда прямое» (κ 0), поэтому в итоге использована балансировка. Одно разбиение, а не кросс-валидация, — цифры ориентировочные. Код: <code>scripts/h1_ift_vs_prompting.py</code>.</p>
+    <h3>H3: где в слоях информация о метафоре</h3>
+    <p>Пробинг: логистическая регрессия по скрытым состояниям каждого слоя предсказывает «прямое/переносное» для слова; F1 с группировкой (казахский — по заглавному слову, то есть на невиданных словах) и MDL (онлайн-кодирование). Казахский — 1 264 словарных слова; китайский — 2 721 слово из лексикона в 1 500 предложениях CMDAG, одно и то же слово встречается в обеих ролях.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель, язык</th><th class="num">Слоёв</th><th>Пик F1</th><th class="num">F1: слой 0 → пик</th><th>Лучший слой по MDL</th></tr></thead>
+      <tbody>
+        <tr><td>XLM-R base, китайский</td><td class="num">12</td><td>7–9</td><td class="num">0.54 → 0.78</td><td>0*</td></tr>
+        <tr><td>SikuRoBERTa, китайский</td><td class="num">12</td><td>4–5</td><td class="num">0.51 → 0.72</td><td>0*</td></tr>
+        <tr><td>Qwen2.5-0.5B, китайский</td><td class="num">24</td><td>плато с 10–11</td><td class="num">0.54 → 0.81</td><td>13 (середина)</td></tr>
+        <tr><td>Qwen2.5-0.5B, казахский</td><td class="num">24</td><td>11</td><td class="num">0.50 → 0.57</td><td>12 (середина)</td></tr>
+        <tr><td>XLM-R base, казахский</td><td class="num">12</td><td>12 (слабый сигнал)</td><td class="num">0.51 → 0.57</td><td>7 (середина)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><strong>Вывод: H3 в основном подтверждается.</strong> Где сигнал есть, информация о метафоре появляется и достигает максимума в средних слоях; у энкодеров к последним слоям она слегка убывает, у декодера держится на плато. *Для китайского MDL указывает на слой 0, потому что одни и те же слова есть и в обучении, и в проверке пробника, и онлайн-код частично измеряет, предсказывает ли метку само слово; для китайского показателен F1. Казахский сигнал слаб (F1 ≤ 0.57) — казахский плохо представлен в этих многоязычных моделях. Код: <code>app/nlp/probing.py</code>, наборы — <code>data/processed/probing/</code>.</p>
+    <h3>H2: казахский токенизатор SozKZ против многоязычных моделей</h3>
+    <p class="note">Не проверена. Модели SozKZ (<code>stukenov/sozkz-core-llama-*-kk-base-v1</code>, 30M–1B) найдены на Hugging Face, но их файлы закрыты: скачивание требует входа в аккаунт Hugging Face. Сравнение готово к запуску (фертильность токенизаторов; классификатор «прямое/переносное» на словарных цитатах против XLM-R и Qwen).</p>
   </section>
   <section id="crosscultural" aria-labelledby="cc-h">
     <h2 id="cc-h">Межкультурное сравнение образов (первый срез, 22 октября)</h2>

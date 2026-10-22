@@ -47,6 +47,8 @@ def seed_everything(seed: int) -> None:
 def fit(texts, labels, args, device):
     seed_everything(args.seed)
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
+    if tokenizer.pad_token is None:  # decoder models (SozKZ, Qwen) have no padding token
+        tokenizer.pad_token = tokenizer.eos_token
     model = AutoModelForSequenceClassification.from_pretrained(
         args.base_model,
         num_labels=2,
@@ -54,6 +56,7 @@ def fit(texts, labels, args, device):
         label2id={label: i for i, label in enumerate(LABELS)},
         ignore_mismatched_sizes=True,  # the base checkpoint carries a token-level head
     ).to(device)
+    model.config.pad_token_id = tokenizer.pad_token_id
     positives = sum(labels)
     weights = torch.tensor(
         [len(labels) / (2 * (len(labels) - positives)), len(labels) / (2 * positives)],
@@ -166,6 +169,11 @@ def main() -> None:
     parser.add_argument("--max-length", type=int, default=160)
     parser.add_argument("--window", type=int, default=150, help="characters on each side")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--unseen-only",
+        action="store_true",
+        help="only the unseen-word cross-validation, no final model (model comparisons)",
+    )
     args = parser.parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -185,6 +193,13 @@ def main() -> None:
     report["unseen_words"] = cross_validate(
         records, texts, labels, unseen.split(texts, labels, groups), args, device
     )
+    if args.unseen_only:
+        Path(args.report).write_text(
+            json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+        for name, r in report["unseen_words"].items():
+            print(f"  {name:18} F1 {r['f1']:.2f} κ {r['cohen_kappa_vs_dictionary']:.2f}")
+        return
     print("seen words (stratified by quotation):", flush=True)
     seen = StratifiedKFold(n_splits=args.folds, shuffle=True, random_state=args.seed)
     report["seen_words"] = cross_validate(
