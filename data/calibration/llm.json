@@ -22,6 +22,30 @@
         "ece_before": 0.25851063829787235,
         "ece_after": 0.13680571481894205
       }
+    },
+    "xlmr-v1-c715c0669a32": {
+      "zh": {
+        "a": 1.1011897523927225,
+        "b": 0.5830762532029733,
+        "source": "CMDAG test sample (gold, 1000 sentences)",
+        "spans": 1194,
+        "precision": 0.9045226130653267,
+        "mean_self_reported": 0.837310926389383,
+        "ece_before": 0.06721168667594364,
+        "ece_after": 0.029519474207135188
+      }
+    },
+    "xlmr-v1-2e83ebd1fe4b": {
+      "kk": {
+        "a": 0.5924178646361771,
+        "b": -1.9249826800253034,
+        "source": "Kazakh explanatory dictionary «ауыс.» quotations (1264)",
+        "spans": 512,
+        "precision": 0.1953125,
+        "mean_self_reported": 0.682730278485745,
+        "ece_before": 0.4874177784857449,
+        "ece_after": 0.014499499049125352
+      }
     }
   }
 }

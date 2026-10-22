@@ -30,6 +30,19 @@ def split_stanzas(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+_HAN = re.compile(r"[一-鿿]")
+_VERSE_BREAK = re.compile(r"[，。；！？、,.;!?\n]")
+# The shortest stanzas the classifier was trained on: 8 characters in 2 verses
+# ("盧令令、其人美且仁。"). A shorter fragment (an idiom, a single line) is not a stanza
+# and its 賦/比/興 label would be meaningless.
+MIN_HAN, MIN_VERSES = 8, 2
+
+
+def is_stanza(segment: str) -> bool:
+    verses = [v for v in _VERSE_BREAK.split(segment) if len(_HAN.findall(v)) >= 2]
+    return len(_HAN.findall(segment)) >= MIN_HAN and len(verses) >= MIN_VERSES
+
+
 @lru_cache(maxsize=1)
 def _converters():
     from opencc import OpenCC
@@ -72,7 +85,7 @@ class StanzaClassifier:
         return result
 
     def classify(self, text: str) -> list[StanzaLabel]:
-        spans = split_stanzas(text)
+        spans = [(s, e) for s, e in split_stanzas(text) if is_stanza(text[s:e])]
         if not spans:
             return []
         inputs = [to_traditional(text[start:end]) for start, end in spans]

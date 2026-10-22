@@ -293,3 +293,26 @@ def test_wrong_number_of_translations_keeps_the_analysis():
     assert len(calls) == 3  # analysis, translation, retry
     assert result.metaphors[0].rationale == "English rationale"
     assert any("could not be translated" in w for w in result.warnings)
+
+
+def test_calibrator_rewrites_the_xlmr_warning():
+    from app.nlp.calibration import XLMR_DOMAINS, XLMR_UNCALIBRATED, Calibrator
+    from app.schemas.analysis import AnalysisResult
+
+    figure = {
+        "text": "海",
+        "start": 1,
+        "end": 2,
+        "label": "metaphor",
+        "source_domain": "unknown",
+        "target_domain": "unknown",
+        "confidence": 0.9,
+        "rationale": "XLM-R BIO span.",
+    }
+    result = AnalysisResult(
+        language="zh", model_version="xlmr-v1-x", warnings=[XLMR_UNCALIBRATED], metaphors=[figure]
+    )
+    fit = {"a": 1.0, "b": 0.5, "source": "CMDAG", "spans": 1000}
+    calibrated = Calibrator({"xlmr-v1-x": {"zh": fit}}, threshold=0.8).apply(result)
+    assert XLMR_UNCALIBRATED not in calibrated.warnings and XLMR_DOMAINS in calibrated.warnings
+    assert calibrated.metaphors[0].confidence > 0.9  # an underconfident model is pulled up

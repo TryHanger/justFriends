@@ -126,3 +126,12 @@ def test_real_stanza_model():
     labels = StanzaClassifier(path).classify("关关雎鸠，在河之洲。\n窈窕淑女，君子好逑。")
     assert len(labels) == 1 and labels[0].label in {"賦", "比", "興"}
     assert sum(labels[0].probabilities.values()) == pytest.approx(1, abs=1e-3)
+
+
+def test_short_fragments_are_not_stanzas():
+    from app.nlp.stanza import is_stanza
+
+    assert not is_stanza("雪中送炭")  # an idiom, not a stanza
+    assert not is_stanza("床前明月光")  # one verse
+    assert is_stanza("盧令令、其人美且仁。")  # the shortest stanza type in training
+    assert is_stanza("关关雎鸠，在河之洲。窈窕淑女，君子好逑。")

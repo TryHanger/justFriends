@@ -116,17 +116,20 @@ def main() -> None:
     parser.add_argument(
         "--kk-dictionary", default="data/processed/kk_usage/kk_usage_dictionary.jsonl"
     )
+    parser.add_argument("--zh-source", default="CMDAG test sample (gold, 200 sentences)")
+    parser.add_argument(
+        "--kk-source", default="Kazakh explanatory dictionary «ауыс.» quotations (160)"
+    )
     args = parser.parse_args()
     table = json.loads(OUTPUT.read_text(encoding="utf-8")) if OUTPUT.exists() else {}
     table.setdefault("version", 1)
     fits = table.setdefault("models", {}).setdefault(args.model, {})
-    sources = {
-        "zh": (zh_pairs(args.zh, args.zh_gold), "CMDAG test sample (gold, 200 sentences)"),
-        "kk": (
-            kk_pairs(args.kk, args.kk_dictionary),
-            "Kazakh explanatory dictionary «ауыс.» quotations (160)",
-        ),
-    }
+    # An empty path skips that language: a model may cover only one of them.
+    sources = {}
+    if args.zh:
+        sources["zh"] = (zh_pairs(args.zh, args.zh_gold), args.zh_source)
+    if args.kk:
+        sources["kk"] = (kk_pairs(args.kk, args.kk_dictionary), args.kk_source)
     for language, (pairs, source) in sources.items():
         if len(pairs) < MIN_SPANS or len({k for _, k in pairs}) < 2:
             print(f"{language}: {len(pairs)} judged figures, too few to calibrate; skipped")

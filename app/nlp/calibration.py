@@ -17,6 +17,9 @@ from app.schemas.analysis import AnalysisResult
 
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "data" / "calibration" / "llm.json"
 UNCALIBRATED = "LLM preliminary annotation; confidence is self-reported and uncalibrated."
+XLMR_UNCALIBRATED = "Token probabilities are uncalibrated; domains unknown."
+# What remains true of an XLM-R result once its probabilities are calibrated.
+XLMR_DOMAINS = "XLM-R does not determine source and target domains."
 
 
 def _logit(p: float) -> float:
@@ -54,7 +57,11 @@ class Calibrator:
             for span in result.metaphors
         ]
         low = sum(span.confidence < self.threshold for span in spans)
-        warnings = [w for w in result.warnings if w != UNCALIBRATED]
+        warnings = [
+            XLMR_DOMAINS if w == XLMR_UNCALIBRATED else w
+            for w in result.warnings
+            if w != UNCALIBRATED
+        ]
         warnings.append(
             f"Confidence calibrated on {fit['source']} ({fit['spans']} figures): "
             "the probability that a figure is correct."

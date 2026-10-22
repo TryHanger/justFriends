@@ -369,7 +369,8 @@ footer { color: var(--muted); font-size: .82rem; }
       <tbody>
         <tr><td>Однопроходный (gpt-4o-mini)</td><td class="num">0.60</td><td class="num">0.35</td><td class="num">0.44</td><td class="num">0.11</td><td class="num">24%</td></tr>
         <tr><td>Двухшаговый, кандидаты из словаря и модели</td><td class="num">0.62</td><td class="num">0.61</td><td class="num">0.62</td><td class="num">0.24</td><td class="num">38%</td></tr>
-        <tr><td><strong>Двухшаговый, все знаменательные слова (по умолчанию)</strong></td><td class="num">0.63</td><td class="num">0.90</td><td class="num">0.74</td><td class="num"><strong>0.38</strong></td><td class="num">53%</td></tr>
+        <tr><td><strong>Двухшаговый, все знаменательные слова, gpt-4o (по умолчанию)</strong></td><td class="num">0.63</td><td class="num">0.90</td><td class="num">0.74</td><td class="num"><strong>0.38</strong></td><td class="num">53%</td></tr>
+        <tr><td>Двухшаговый, все знаменательные слова, gpt-5.6-terra</td><td class="num">0.66</td><td class="num">0.85</td><td class="num">0.74</td><td class="num">0.41</td><td class="num">44%</td></tr>
         <tr><td>Прямой вопрос о заданном слове (gpt-4o), ориентир</td><td class="num">0.67</td><td class="num">0.88</td><td class="num">0.76</td><td class="num">0.45</td><td class="num">—</td></tr>
       </tbody>
     </table></div>
@@ -388,10 +389,12 @@ footer { color: var(--muted); font-size: .82rem; }
     <h2 id="calib-h">Калиброванная уверенность</h2>
     <p class="lede">Уверенность, которую называет LLM, — самооценка, а не вероятность. Теперь она пересчитывается по экспертным данным (масштабирование Платта, отдельно для китайского и казахского), и сайт показывает вероятность того, что фигура найдена верно. Предупреждение «требуется проверка всего анализа» заменено на «проверьте в первую очередь N из M фигур с уверенностью ниже 80%».</p>
     <div class="tbl"><table>
-      <thead><tr><th>Язык</th><th>Данные</th><th class="num">Фигур</th><th class="num">Реальная точность</th><th class="num">Средняя самооценка</th><th class="num">ECE до</th><th class="num">ECE после</th></tr></thead>
+      <thead><tr><th>Модель, язык</th><th>Данные</th><th class="num">Фигур</th><th class="num">Реальная точность</th><th class="num">Средняя самооценка</th><th class="num">ECE до</th><th class="num">ECE после</th></tr></thead>
       <tbody>
-        <tr><td>Китайский</td><td>CMDAG, 200 предложений</td><td class="num">194</td><td class="num">77%</td><td class="num">87%</td><td class="num">0.10</td><td class="num">0.02</td></tr>
-        <tr><td>Казахский</td><td>словарь, 160 цитат (исправленный набор)</td><td class="num">47</td><td class="num">60%</td><td class="num">85%</td><td class="num">0.26</td><td class="num">0.14</td></tr>
+        <tr><td>gpt-4o-mini, китайский</td><td>CMDAG, 200 предложений</td><td class="num">194</td><td class="num">77%</td><td class="num">87%</td><td class="num">0.10</td><td class="num">0.02</td></tr>
+        <tr><td>gpt-4o-mini, казахский</td><td>словарь, 160 цитат (исправленный набор)</td><td class="num">47</td><td class="num">60%</td><td class="num">85%</td><td class="num">0.26</td><td class="num">0.14</td></tr>
+        <tr><td>XLM-R zh (CMDAG), китайский</td><td>CMDAG, 1000 предложений</td><td class="num">1 194</td><td class="num">90%</td><td class="num">84%</td><td class="num">0.07</td><td class="num">0.03</td></tr>
+        <tr><td>XLM-R kk silver, казахский</td><td>словарь, 1 264 цитаты</td><td class="num">512</td><td class="num">20%</td><td class="num">68%</td><td class="num">0.49</td><td class="num">0.01</td></tr>
       </tbody>
     </table></div>
     <div class="tbl"><table>
@@ -401,7 +404,7 @@ footer { color: var(--muted); font-size: .82rem; }
         <tr><td>На самом деле, казахский</td><td class="num">39%</td><td class="num">51%</td><td class="num">58%</td><td class="num">68%</td><td class="num">80%</td></tr>
       </tbody>
     </table></div>
-    <p class="note">ECE после калибровки оценён кросс-валидацией, а не на данных подгонки. Казахская калибровка построена на 47 фигурах — ориентир, а не точная оценка. Калибровка касается только точности найденного: пропущенные фигуры она не учитывает, поэтому пустой результат по-прежнему помечается для проверки. Параметры: <code>data/calibration/llm.json</code>, подбор — <code>scripts/calibrate_llm.py</code>, применение — <code>app/nlp/calibration.py</code>. Стоимость прогона на CMDAG: 738k + 72k токенов, ≈ $0.15.</p>
+    <p class="note">XLM-R калибруется так же (22 октября): китайская модель на эталоне CMDAG занижает уверенность (говорит 0.8 — на деле 0.89), казахская сильно завышает (говорит 0.8 — на деле 0.25), поэтому почти все её находки уходят в «проверьте в первую очередь». Оговорки: CMDAG — та же проза, на которой модель обучалась, на поэзии точность ниже; у казахской доля верных зависит от доли переносных цитат в наборе (19%). ECE после калибровки оценён кросс-валидацией, а не на данных подгонки. Казахская калибровка построена на 47 фигурах — ориентир, а не точная оценка. Калибровка касается только точности найденного: пропущенные фигуры она не учитывает, поэтому пустой результат по-прежнему помечается для проверки. Параметры: <code>data/calibration/llm.json</code>, подбор — <code>scripts/calibrate_llm.py</code>, применение — <code>app/nlp/calibration.py</code>. Стоимость прогона на CMDAG: 738k + 72k токенов, ≈ $0.15.</p>
   </section>
   <section id="labelstudio" aria-labelledby="ls-h">
     <h2 id="ls-h">Разметка в Label Studio</h2>

@@ -96,6 +96,8 @@ const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
     () => 'Провайдер не принял temperature и top-p, использованы его параметры по умолчанию.'],
   [/^Lexical baseline has limited coverage; confidence is not calibrated\.$/,
     () => 'Словарный baseline покрывает мало случаев; уверенность не откалибрована.'],
+  [/^XLM-R does not determine source and target domains\.$/,
+    () => 'XLM-R не определяет исходную и целевую области образа.'],
   [/^Token probabilities are uncalibrated; domains unknown\.$/,
     () => 'Вероятности XLM-R не откалиброваны; области не определены.'],
   [/^Detection and attribute scores are uncalibrated\.$/,
