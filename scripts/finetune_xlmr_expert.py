@@ -219,7 +219,15 @@ def main() -> None:
     groups = [q["headword"] for q in quotations]
     cmdag = read_corpus(CMDAG_TRAIN)
     random.Random(args.seed).shuffle(cmdag)
-    extra = [r for path in args.extra for r in read_corpus(path)]
+    # Every figure of the extra corpora is a positive: the BIO detector finds figurative
+    # expressions, and leaving similes or idioms as O would teach the opposite.
+    extra = [
+        r.model_copy(
+            update={"spans": [s.model_copy(update={"label": "metaphor"}) for s in r.spans]}
+        )
+        for path in args.extra
+        for r in read_corpus(path)
+    ]
     full = [("full", r) for r in read_corpus(KK_SILVER) + cmdag[: args.cmdag_sample] + extra]
 
     report = {

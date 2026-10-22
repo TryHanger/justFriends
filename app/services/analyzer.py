@@ -58,11 +58,11 @@ def analyze_text(text: str, language: str, model_profile: str = "default") -> An
         if model_profile == "experimental_kk":
             return result.model_copy(
                 update={
-                    "model_version": "xlmr-kk-expert-v1",
+                    "model_version": "xlmr-kk-expert-v2",
                     "needs_review": True,
                     "warnings": [
                         *result.warnings,
-                        "Казахская XLM-R дообучена на словарных цитатах и silver-разметке; согласие со словарём κ 0.17 — используйте как подсказку.",
+                        "Казахская XLM-R дообучена на словарных цитатах и silver-разметке; согласие со словарём κ 0.20 — используйте как подсказку.",
                     ],
                     "method": {
                         **result.method,

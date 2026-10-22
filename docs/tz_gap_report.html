@@ -144,7 +144,7 @@ footer { color: var(--muted); font-size: .82rem; }
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
     <div class="meta"><span>Обновлено 22 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -384,6 +384,25 @@ footer { color: var(--muted); font-size: .82rem; }
       <li>Стоимость: прямой вопрос — около 26k входных токенов на модель; полный конвейер gpt-4o-mini — 541k + 58k токенов (≈ $0.12).</li>
     </ul></div>
     <p class="note">Код: <code>scripts/build_kk_usage_set.py</code> (выкачка с кэшем, разбор трёх вариантов вёрстки, отбрасывание цитат с остатками пометок), <code>scripts/eval_kk_usage.py</code> (обычный анализ), <code>scripts/eval_kk_usage_direct.py</code> (прямой вопрос), <code>scripts/train_kk_usage_classifier.py</code>. Данные: <code>data/processed/kk_usage/</code>. Словарь защищён авторским правом: набор только для исследовательской оценки, в git и публичный доступ не выкладывается.</p>
+  </section>
+  <section id="finetune" aria-labelledby="ft-h">
+    <h2 id="ft-h">Дообучение XLM-R на экспертных данных (22 октября)</h2>
+    <p class="lede">Одна модель XLM-R для обоих языков дообучена из смешанной модели (китайский gold + казахский silver). Словарные цитаты дают частичную разметку: ошибка считается только на заглавном слове (переносное → образ, прямое → не образ), остальные слова цитаты не наказываются. Этап 1 — словарь, казахский silver и 3000 предложений CMDAG; этап 2 — плюс 100 казахских стихов (295 фигур, разметка Claude в сессии) и 100 стихов «Ши цзин» и танской поэзии (172 фигуры, разметка Claude в облачной сессии). «Чу Цы» в обучение не входит: образы Ван И — тест на поэзии.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th class="num">κ kk, 1264 цитаты (новые слова)</th><th class="num">κ kk, 160 цитат</th><th class="num">CMDAG, F1</th><th class="num">Образы Ван И</th></tr></thead>
+      <tbody>
+        <tr><td>Смешанная модель до дообучения</td><td class="num">0.10</td><td class="num">—</td><td class="num">0.657</td><td class="num">2 / 41</td></tr>
+        <tr><td>Этап 1 (словарь)</td><td class="num">0.17</td><td class="num">0.26</td><td class="num">0.650</td><td class="num">0 / 41</td></tr>
+        <tr><td><strong>Этап 2 (+ 200 стихов с разметкой Claude)</strong></td><td class="num"><strong>0.20</strong></td><td class="num">0.19</td><td class="num"><strong>0.669</strong></td><td class="num">1 / 41</td></tr>
+        <tr><td>Ориентир: gpt-4o, двухшаговый анализ</td><td class="num">—</td><td class="num">0.38</td><td class="num">—</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>Вывод</h3><ul class="clean">
+      <li>Дообучение помогает казахскому вдвое (κ 0.10 → 0.20) и не портит китайскую прозу, но XLM-R остаётся заметно слабее двухшагового анализа с gpt-4o. На 160 цитатах разница между этапами (0.26 / 0.19) в пределах шума: там всего 80 переносных примеров.</li>
+      <li>Аллегорию «Чу Цы» модель по-прежнему не видит (1 из 41 образа Ван И): 100 стихов «Ши цзин» и танской поэзии не учат образной системе «Чу Цы», где «благоуханные травы» означают достойных людей. Здесь нужна модель со знанием комментариев (LLM + база знаний Ван И), а не пословная разметка.</li>
+      <li>Модель этапа 2 (<code>models/xlmr-zh-kk-expert-v2</code>) подключена к сайту как «XLM-R Kazakh expert v2». Её уверенность откалибрована на вневыборочных предсказаниях: права примерно в 32% случаев, сама говорит 68%.</li>
+    </ul></div>
+    <p class="note">Код: <code>scripts/finetune_xlmr_expert.py</code> (частичная разметка, 5 фолдов по заглавным словам, вневыборочные предсказания для калибровки), <code>scripts/kk_ensemble.py</code> (разметка Claude → корпус), <code>scripts/check_zh_labels.py</code>. Китайская разметка: <code>annotation/zh_poetry_claude_labels.jsonl</code>. Стоимость: $0 API — разметка Claude в рабочей и облачной сессиях.</p>
   </section>
   <section id="calibration" aria-labelledby="calib-h">
     <h2 id="calib-h">Калиброванная уверенность</h2>
