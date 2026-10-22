@@ -332,46 +332,44 @@ footer { color: var(--muted); font-size: .82rem; }
     <h2 id="kkdict-h">Казахский: экспертная разметка из толкового словаря</h2>
     <p class="lede">«Қазақ әдеби тілінің сөздігі» (15 томов, Институт языкознания им. А. Байтурсынулы, 2011; опубликован на sozdikqor.kz) помечает переносные значения «ауыс.» и иллюстрирует каждое значение цитатами из литературы. Цитата под значением «ауыс.» — решение лексикографов, что слово употреблено переносно; под прямым значением — буквально. Это проверочный набор для модуля C (прямое/переносное употребление) без своих аннотаторов.</p>
     <div class="tbl"><table>
-      <thead><tr><th>Набор</th><th class="num">Количество</th></tr></thead>
+      <thead><tr><th>Набор (после исправления разбора 22 октября)</th><th class="num">Количество</th></tr></thead>
       <tbody>
-        <tr><td>Слов-образов запрошено (лексикон проекта, образы ансамбля, частые образы поэзии)</td><td class="num">187</td></tr>
-        <tr><td>Слов со статьёй и цитатами</td><td class="num">135</td></tr>
-        <tr><td>Цитат всего</td><td class="num">1 434</td></tr>
-        <tr><td>Переносное употребление («ауыс.»), слов</td><td class="num">216 цитат, 51 слово</td></tr>
-        <tr><td>Прямое употребление</td><td class="num">1 218</td></tr>
+        <tr><td>Слов-образов запрошено</td><td class="num">187</td></tr>
+        <tr><td>Цитат всего</td><td class="num">1 264</td></tr>
+        <tr><td>Переносное употребление («ауыс.»)</td><td class="num">242 цитаты, 60 слов</td></tr>
+        <tr><td>Прямое употребление</td><td class="num">1 022</td></tr>
       </tbody>
     </table></div>
-    <h3>Как модели отличают переносное от прямого</h3>
-    <p>Слово считается переносным по мнению модели, если найденная фигура перекрывает его. Сбалансированная выборка: 80 переносных и 80 прямых цитат.</p>
+    <p class="note">22 октября найдена и исправлена ошибка разбора: заголовки вида «2.‹ ауыс.» и подзначения «//» не распознавались, из-за чего 226 цитат из прежних 1 434 получили неверную метку, а в части текста оставалась сама пометка словаря. Все цифры ниже посчитаны заново на исправленном наборе; цитаты, где пометка осталась в тексте, отброшены.</p>
+    <h3>Прямой вопрос: «слово X здесь в прямом или переносном значении?»</h3>
+    <p>Модели называют, какое слово оценивать — так видно, понимают ли они казахские переносные значения, независимо от того, насколько хорошо ищут фигуры. Сбалансированная выборка: 80 переносных и 80 прямых цитат.</p>
     <div class="tbl"><table>
-      <thead><tr><th>Модель</th><th class="num">Цитат</th><th class="num">Точность</th><th class="num">Полнота</th><th class="num">F1</th><th class="num">κ со словарём</th><th class="num">Ложно в прямых</th></tr></thead>
+      <thead><tr><th>Кто отвечал</th><th class="num">Точность</th><th class="num">Полнота</th><th class="num">F1</th><th class="num">κ со словарём</th></tr></thead>
       <tbody>
-        <tr><td>gpt-4o-mini</td><td class="num">160</td><td class="num">0.57</td><td class="num">0.29</td><td class="num">0.38</td><td class="num">0.07</td><td class="num">21%</td></tr>
-        <tr><td>XLM-R kk silver pilot v2</td><td class="num">160</td><td class="num">0.55</td><td class="num">0.45</td><td class="num">0.49</td><td class="num">0.07</td><td class="num">38%</td></tr>
-        <tr><td>XLM-R zh gold + kk silver</td><td class="num">160</td><td class="num">0.62</td><td class="num">0.31</td><td class="num">0.42</td><td class="num">0.12</td><td class="num">19%</td></tr>
-        <tr><td>XLM-R kk silver pilot v2, все цитаты</td><td class="num">1 434</td><td class="num">0.18</td><td class="num">0.43</td><td class="num">0.25</td><td class="num">0.05</td><td class="num">36%</td></tr>
-        <tr><td>XLM-R zh gold + kk silver, все цитаты</td><td class="num">1 434</td><td class="num">0.24</td><td class="num">0.28</td><td class="num">0.26</td><td class="num">0.12</td><td class="num">15%</td></tr>
+        <tr><td>gpt-4o-mini</td><td class="num">0.60</td><td class="num">0.88</td><td class="num">0.71</td><td class="num">0.29</td></tr>
+        <tr><td>gpt-4o</td><td class="num">0.67</td><td class="num">0.88</td><td class="num">0.76</td><td class="num">0.45</td></tr>
+        <tr><td>gpt-5.6-terra</td><td class="num">0.70</td><td class="num">0.91</td><td class="num">0.79</td><td class="num">0.51</td></tr>
+        <tr><td>Claude (Opus 5.5, вслепую, в рабочей сессии)</td><td class="num">0.74</td><td class="num">0.88</td><td class="num">0.80</td><td class="num">0.57</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Обычный анализ: модель сама ищет фигуры во всей цитате</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th class="num">Точность</th><th class="num">Полнота</th><th class="num">F1</th><th class="num">κ со словарём</th><th class="num">Ложно в прямых</th></tr></thead>
+      <tbody>
+        <tr><td>gpt-4o-mini (весь конвейер)</td><td class="num">0.60</td><td class="num">0.35</td><td class="num">0.44</td><td class="num">0.11</td><td class="num">24%</td></tr>
+        <tr><td>XLM-R kk silver pilot v2</td><td class="num">0.48</td><td class="num">0.36</td><td class="num">0.41</td><td class="num">−0.04</td><td class="num">40%</td></tr>
+        <tr><td>XLM-R zh gold + kk silver</td><td class="num">0.62</td><td class="num">0.29</td><td class="num">0.39</td><td class="num">0.11</td><td class="num">17%</td></tr>
       </tbody>
     </table></div>
     <div class="card"><h3>Вывод</h3><ul class="clean">
-      <li>Ни одна модель не отличает переносное употребление от прямого: κ со словарём 0.05–0.12. gpt-4o-mini находит меньше трети переносных употреблений.</li>
-      <li>Это объясняет слабое согласие ансамбля (κ 0.11): участники не просто расходятся во вкусах, они плохо различают переносное значение в казахском.</li>
-      <li>Оговорка: «ауыс.» в словаре — устоявшиеся переносные значения (например, ақыл «выход из положения»), часть из них модели могут честно считать обычным словом. И наоборот, слово в прямом значении может попасть внутрь более длинной фигуры и засчитаться как ложное срабатывание.</li>
-      <li>Стоимость прогона gpt-4o-mini: 519k + 50k токенов, ≈ $0.11. XLM-R — локально, бесплатно.</li>
-      <li>Следующий шаг — дообучить классификатор употребления на этих цитатах, как классификатор строф для «Ши цзин», с проверкой на словах, которых модель не видела.</li>
+      <li>Узкое место — схема анализа, а не знание языка: на прямой вопрос gpt-4o-mini даёт κ 0.29, а в общем поиске фигур — 0.11. Модель знает переносные значения, но в поиске по всему тексту пропускает их или отмечает другие слова.</li>
+      <li>Сильные модели заметно лучше: κ 0.45–0.57 против 0.29. Отсюда план: двухшаговый анализ для казахского — кандидаты (словарь + модель), затем прямой вопрос по каждому кандидату к сильной модели.</li>
+      <li>Все модели перебарщивают с переносным (полнота 0.88–0.91 при точности 0.60–0.74); потолок около κ 0.55–0.6 отчасти задают решения словаря (например, «ақыл» в значении «выход, идея» — переносное).</li>
+      <li>KazLLM на этом этапе не нужна: проблема решается схемой анализа.</li>
+      <li>Классификатор «прямое/переносное» (21 октября, F1 0.26 на новых словах) обучался на наборе с ошибочными метками; его нужно переобучить на исправленном наборе.</li>
+      <li>Стоимость: прямой вопрос — около 26k входных токенов на модель; полный конвейер gpt-4o-mini — 541k + 58k токенов (≈ $0.12).</li>
     </ul></div>
-    <h3>Классификатор «прямое или переносное» (21 октября)</h3>
-    <p>XLM-R (от казахской silver-модели) дообучен на 1 434 словарных цитатах: на входе окно вокруг слова, слово выделено. Две проверки по 5 фолдов: на словах, которых модель не видела, и на знакомых словах в новых цитатах.</p>
-    <div class="tbl"><table>
-      <thead><tr><th>Метод</th><th class="num">F1, новые слова</th><th class="num">κ, новые слова</th><th class="num">F1, знакомые слова</th><th class="num">κ, знакомые слова</th></tr></thead>
-      <tbody>
-        <tr><td>Доля «ауыс.» у слова в обучении</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.18</td><td class="num">0.13</td></tr>
-        <tr><td>Символьные n-граммы + логрегрессия</td><td class="num">0.17</td><td class="num">0.09</td><td class="num">0.31</td><td class="num">0.22</td></tr>
-        <tr><td>XLM-R, классификатор употребления</td><td class="num">0.26</td><td class="num">0.12</td><td class="num">0.35</td><td class="num">0.20</td></tr>
-      </tbody>
-    </table></div>
-    <p class="note">Результат слабый и нестабильный: в части фолдов модель скатывается к «всегда прямое» (F1 0). 216 переносных примеров на 51 слово мало, а «ауыс.» в словаре часто означает устоявшееся значение, а не поэтическую метафору. Модель сохранена (<code>models/kk-usage-xlmr-v1</code>), но в анализ не подключается.</p>
-    <p class="note">Код: <code>scripts/build_kk_usage_set.py</code> (выкачка с кэшем, 1 запрос в секунду, три варианта вёрстки статей), <code>scripts/eval_kk_usage.py</code>. Данные: <code>data/processed/kk_usage/</code>. Словарь защищён авторским правом: набор только для исследовательской оценки, в git и публичный доступ не выкладывается.</p>
+    <p class="note">Код: <code>scripts/build_kk_usage_set.py</code> (выкачка с кэшем, разбор трёх вариантов вёрстки, отбрасывание цитат с остатками пометок), <code>scripts/eval_kk_usage.py</code> (обычный анализ), <code>scripts/eval_kk_usage_direct.py</code> (прямой вопрос), <code>scripts/train_kk_usage_classifier.py</code>. Данные: <code>data/processed/kk_usage/</code>. Словарь защищён авторским правом: набор только для исследовательской оценки, в git и публичный доступ не выкладывается.</p>
   </section>
   <section id="calibration" aria-labelledby="calib-h">
     <h2 id="calib-h">Калиброванная уверенность</h2>
@@ -380,17 +378,17 @@ footer { color: var(--muted); font-size: .82rem; }
       <thead><tr><th>Язык</th><th>Данные</th><th class="num">Фигур</th><th class="num">Реальная точность</th><th class="num">Средняя самооценка</th><th class="num">ECE до</th><th class="num">ECE после</th></tr></thead>
       <tbody>
         <tr><td>Китайский</td><td>CMDAG, 200 предложений</td><td class="num">194</td><td class="num">77%</td><td class="num">87%</td><td class="num">0.10</td><td class="num">0.02</td></tr>
-        <tr><td>Казахский</td><td>словарь, 160 цитат</td><td class="num">40</td><td class="num">58%</td><td class="num">86%</td><td class="num">0.28</td><td class="num">0.11</td></tr>
+        <tr><td>Казахский</td><td>словарь, 160 цитат (исправленный набор)</td><td class="num">47</td><td class="num">60%</td><td class="num">85%</td><td class="num">0.26</td><td class="num">0.14</td></tr>
       </tbody>
     </table></div>
     <div class="tbl"><table>
       <thead><tr><th>Модель говорит</th><th class="num">70%</th><th class="num">80%</th><th class="num">85%</th><th class="num">90%</th><th class="num">95%</th></tr></thead>
       <tbody>
         <tr><td>На самом деле, китайский</td><td class="num">25%</td><td class="num">53%</td><td class="num">71%</td><td class="num">87%</td><td class="num">97%</td></tr>
-        <tr><td>На самом деле, казахский</td><td class="num">22%</td><td class="num">40%</td><td class="num">53%</td><td class="num">70%</td><td class="num">89%</td></tr>
+        <tr><td>На самом деле, казахский</td><td class="num">39%</td><td class="num">51%</td><td class="num">58%</td><td class="num">68%</td><td class="num">80%</td></tr>
       </tbody>
     </table></div>
-    <p class="note">ECE после калибровки оценён кросс-валидацией, а не на данных подгонки. Казахская калибровка построена на 40 фигурах — ориентир, а не точная оценка. Калибровка касается только точности найденного: пропущенные фигуры она не учитывает, поэтому пустой результат по-прежнему помечается для проверки. Параметры: <code>data/calibration/llm.json</code>, подбор — <code>scripts/calibrate_llm.py</code>, применение — <code>app/nlp/calibration.py</code>. Стоимость прогона на CMDAG: 738k + 72k токенов, ≈ $0.15.</p>
+    <p class="note">ECE после калибровки оценён кросс-валидацией, а не на данных подгонки. Казахская калибровка построена на 47 фигурах — ориентир, а не точная оценка. Калибровка касается только точности найденного: пропущенные фигуры она не учитывает, поэтому пустой результат по-прежнему помечается для проверки. Параметры: <code>data/calibration/llm.json</code>, подбор — <code>scripts/calibrate_llm.py</code>, применение — <code>app/nlp/calibration.py</code>. Стоимость прогона на CMDAG: 738k + 72k токенов, ≈ $0.15.</p>
   </section>
   <section id="labelstudio" aria-labelledby="ls-h">
     <h2 id="ls-h">Разметка в Label Studio</h2>

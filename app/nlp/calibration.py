@@ -68,6 +68,8 @@ class Calibrator:
             "spans": fit["spans"],
             "ece_before": fit.get("ece_before"),
             "ece_after": fit.get("ece_after"),
+            # Self-reported values in figure order: refitting needs them, not calibrated ones.
+            "raw_confidence": [span.confidence for span in result.metaphors],
         }
         return result.model_copy(
             update={

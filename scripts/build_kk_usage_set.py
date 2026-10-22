@@ -92,8 +92,12 @@ def entry_text(page: str) -> str:
 KK_UPPER = "А-ЯЁӘҒҚҢӨҰҮҺІA-Z"
 KK_LOWER = "а-яёәғқңөұүһі"
 CITATION = re.compile(rf"\(\s*(?:\d+\s*,\s*[\d ]+|[{KK_UPPER}][^()]{{0,80}})\)\s*\.?")
-SENSE = re.compile(rf"(?:^|(?<=[\s.)‹]))(\d{{1,2}})\s?\.\s+(?=[‹<{KK_UPPER}{KK_LOWER}])")
-LABELS = re.compile(rf"^\s*(?:(?:‹[^›]*›|ауыспалы мағына|[{KK_LOWER}]{{2,12}})\s?\.\s*)*")
+# "2.‹ ауыс." has no space after the number; "//" opens a derived sub-sense.
+SENSE = re.compile(rf"(?:^|(?<=[\s.)‹]))(\d{{1,2}})\s?\.\s*(?=[‹<{KK_UPPER}{KK_LOWER}])")
+SUBSENSE = re.compile(r"‹?\s*//")
+LABELS = re.compile(rf"^\s*(?:(?:‹[^›]*›\.?|(?:ауыспалы мағына|[{KK_LOWER}]{{2,12}})\s?\.)\s*)*")
+# Any label left inside a quotation means a sense boundary was missed: drop it.
+LEAK = re.compile(r"ауыс|[‹›]|//")
 FIGURATIVE = re.compile(r"‹\s*ауыс|(?:^|\s)ауыс\s?\.|ауыспалы мағына")
 BOLD = re.compile(r"⟦([^⟧]+)⟧")
 
@@ -129,6 +133,7 @@ def records_for(word: str, url: str, body: str) -> list[dict]:
     senses = (
         [("1", parts[0])] if len(parts) == 1 else list(zip(parts[1::2], parts[2::2], strict=True))
     )
+    senses = [(number, part) for number, sense in senses for part in SUBSENSE.split(sense)]
     records = []
     for number, sense in senses:
         head = LABELS.match(sense)
@@ -137,8 +142,9 @@ def records_for(word: str, url: str, body: str) -> list[dict]:
         for quote, citation in quotes:
             text = re.sub(r"\s*\n\s*", "\n", quote).strip()
             target = re.search(r"⟦\s*([^⟧]+?)\s*⟧", text)
-            if not target or " " in target.group(1):
-                continue  # a multiword bold phrase is an idiom, not the headword alone
+            if not target or " " in target.group(1) or LEAK.search(text):
+                # A multiword bold phrase is an idiom; a leaked label means a missed sense.
+                continue
             clean = re.sub(r"⟦\s*([^⟧]+?)\s*⟧", r"\1", text)
             word_start = len(re.sub(r"⟦\s*([^⟧]+?)\s*⟧", r"\1", text[: target.start()]))
             # Punctuation is sometimes set in bold with the word: "⟦шам,⟧".

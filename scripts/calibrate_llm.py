@@ -25,6 +25,14 @@ OUTPUT = Path("data/calibration/llm.json")
 MIN_SPANS = 30
 
 
+def raw(result: dict) -> list[float]:
+    """Self-reported confidences: runs made with calibration on store them separately."""
+    calibration = result.get("method", {}).get("calibration")
+    if calibration:
+        return calibration["raw_confidence"]
+    return [m["confidence"] for m in result["metaphors"]]
+
+
 def zh_pairs(predictions: str, gold: str) -> list[tuple[float, int]]:
     records = {r.id: r for r in read_corpus(gold)}
     pairs = []
@@ -32,9 +40,9 @@ def zh_pairs(predictions: str, gold: str) -> list[tuple[float, int]]:
         if "error" in result:
             continue
         spans = records[poem_id].spans
-        for m in result["metaphors"]:
+        for m, confidence in zip(result["metaphors"], raw(result), strict=True):
             hit = any(m["start"] < g.end and m["end"] > g.start for g in spans)
-            pairs.append((m["confidence"], int(hit)))
+            pairs.append((confidence, int(hit)))
     return pairs
 
 
@@ -48,9 +56,9 @@ def kk_pairs(predictions: str, dictionary: str) -> list[tuple[float, int]]:
         if "error" in result:
             continue
         record = records[quote_id]
-        for m in result["metaphors"]:
+        for m, confidence in zip(result["metaphors"], raw(result), strict=True):
             if m["start"] < record["end"] and m["end"] > record["start"]:
-                pairs.append((m["confidence"], int(record["usage_type"] == "metaphorical")))
+                pairs.append((confidence, int(record["usage_type"] == "metaphorical")))
     return pairs
 
 

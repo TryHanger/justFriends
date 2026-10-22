@@ -349,7 +349,10 @@ class LLMDetector:
         )
         translations = json.loads(raw)["translations"]
         if len(translations) != len(items):
-            raise ValueError("LLM returned a wrong number of Russian translations")
+            # Cannot tell which translation belongs to which item: keep the originals, so
+            # they are retried and, failing that, flagged instead of failing the analysis.
+            logger.warning("Translation returned %d items for %d", len(translations), len(items))
+            return [item["value"] for item in items]
         return translations
 
 

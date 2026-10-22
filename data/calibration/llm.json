@@ -13,14 +13,14 @@
         "ece_after": 0.019143686844201594
       },
       "kk": {
-        "a": 1.5990471808673121,
-        "b": -2.6428380622991363,
+        "a": 0.8685247654487801,
+        "b": -1.1761574419063903,
         "source": "Kazakh explanatory dictionary «ауыс.» quotations (160)",
-        "spans": 40,
-        "precision": 0.575,
-        "mean_self_reported": 0.85875,
-        "ece_before": 0.2837499999999999,
-        "ece_after": 0.11469183668819483
+        "spans": 47,
+        "precision": 0.5957446808510638,
+        "mean_self_reported": 0.8542553191489362,
+        "ece_before": 0.25851063829787235,
+        "ece_after": 0.13680571481894205
       }
     }
   }

@@ -274,3 +274,22 @@ def test_candidate_reasoning_is_translated_too():
     literal = next(c for c in result.candidates if c.usage_type == "literal")
     assert literal.reasoning == "Перевод на русский."
     assert result.metaphors[0].rationale == "Образ моря передаёт чувства."  # already Russian
+
+
+def test_wrong_number_of_translations_keeps_the_analysis():
+    calls = []
+
+    def create(**kwargs):
+        calls.append(kwargs)
+        if "translations" in json.dumps(kwargs["text"]["format"]["schema"]):
+            return SimpleNamespace(
+                status="completed", output_text=json.dumps({"translations": ["Один.", "Два."]})
+            )
+        item = llm_item(rationale="English rationale")
+        return SimpleNamespace(status="completed", output_text=json.dumps(llm_payload(item)))
+
+    client = SimpleNamespace(responses=SimpleNamespace(create=create))
+    result = OpenAIDetector("m", "k", client, strategy="zero_shot").analyze("心海", "zh")
+    assert len(calls) == 3  # analysis, translation, retry
+    assert result.metaphors[0].rationale == "English rationale"
+    assert any("could not be translated" in w for w in result.warnings)
