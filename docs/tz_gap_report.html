@@ -144,7 +144,7 @@ footer { color: var(--muted); font-size: .82rem; }
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
     <div class="meta"><span>Обновлено 22 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -397,6 +397,49 @@ footer { color: var(--muted); font-size: .82rem; }
       <li>Стоимость: прямой вопрос — около 26k входных токенов на модель; полный конвейер gpt-4o-mini — 541k + 58k токенов (≈ $0.12).</li>
     </ul></div>
     <p class="note">Код: <code>scripts/build_kk_usage_set.py</code> (выкачка с кэшем, разбор трёх вариантов вёрстки, отбрасывание цитат с остатками пометок), <code>scripts/eval_kk_usage.py</code> (обычный анализ), <code>scripts/eval_kk_usage_direct.py</code> (прямой вопрос), <code>scripts/train_kk_usage_classifier.py</code>. Данные: <code>data/processed/kk_usage/</code>. Словарь защищён авторским правом: набор только для исследовательской оценки, в git и публичный доступ не выкладывается.</p>
+  </section>
+  <section id="crosscultural" aria-labelledby="cc-h">
+    <h2 id="cc-h">Межкультурное сравнение образов (первый срез, 22 октября)</h2>
+    <p class="lede">Сравниваются фигуры, размеченные одним разметчиком (Claude) по одной схеме: 100 китайских стихов («Ши цзин» и танская поэзия, 172 фигуры) и 100 казахских стихов Абая (295 фигур); дополнительно — образы Ван И в «Чу Цы» и переносные значения казахского толкового словаря. Плотность образности близка: 12 и 14 фигур на 100 строк.</p>
+    <h3>На что направлен образ (целевая область)</h3>
+    <p>χ² = 165, p ≈ 2e-28. ▲/▼ — область значимо чаще/реже в этом языке (скорректированный остаток |r| &gt; 1.96).</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Целевая область</th><th class="num">Китайский</th><th class="num">Казахский (Абай)</th></tr></thead>
+      <tbody>
+        <tr><td>чувства (emotion)</td><td class="num">7% ▼</td><td class="num">26% ▲</td></tr>
+        <tr><td>ум, знание (mind)</td><td class="num">5% ▼</td><td class="num">20% ▲</td></tr>
+        <tr><td>человек (person)</td><td class="num">13% ▼</td><td class="num">22% ▲</td></tr>
+        <tr><td>жизнь (life)</td><td class="num">3% ▼</td><td class="num">8% ▲</td></tr>
+        <tr><td>общество, власть (society)</td><td class="num">22% ▲</td><td class="num">8% ▼</td></tr>
+        <tr><td>природа (nature)</td><td class="num">19% ▲</td><td class="num">3% ▼</td></tr>
+        <tr><td>растения (plant)</td><td class="num">8% ▲</td><td class="num">1% ▼</td></tr>
+        <tr><td>вода (water)</td><td class="num">8% ▲</td><td class="num">0% ▼</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Откуда берётся образ (исходная область)</h3>
+    <p>χ² = 56, p ≈ 6e-07.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Исходная область</th><th class="num">Китайский</th><th class="num">Казахский (Абай)</th></tr></thead>
+      <tbody>
+        <tr><td>предметы (object)</td><td class="num">43% ▲</td><td class="num">23% ▼</td></tr>
+        <tr><td>природа (nature)</td><td class="num">12% ▲</td><td class="num">3% ▼</td></tr>
+        <tr><td>огонь (fire)</td><td class="num">2% ▼</td><td class="num">9% ▲</td></tr>
+        <tr><td>тело (body)</td><td class="num">6% ▼</td><td class="num">14% ▲</td></tr>
+        <tr><td>путь (journey)</td><td class="num">1% ▼</td><td class="num">4% ▲</td></tr>
+        <tr><td>животные (animal)</td><td class="num">10%</td><td class="num">14%</td></tr>
+        <tr><td>растения (plant)</td><td class="num">6%</td><td class="num">5%</td></tr>
+        <tr><td>вода (water)</td><td class="num">5%</td><td class="num">5%</td></tr>
+      </tbody>
+    </table></div>
+    <div class="card"><h3>Что видно</h3><ul class="clean">
+      <li><strong>Казахский образ направлен внутрь человека, китайский — вовне.</strong> У Абая почти половина образов описывает чувства и ум (26% и 20% против 7% и 5%): огонь и тело становятся чувствами — «жалын», «ыстық жүрек», «Жүректің отын», «Сүйегім жасып». В китайских стихах образ чаще описывает природу, воду, растения и власть (19%, 8%, 8%, 22%).</li>
+      <li><strong>Огонь — казахский источник</strong> (9% против 2%): огонь, пламя, угли как страсть, тоска, гнев.</li>
+      <li><strong>Китайская поэзия описывает природу через драгоценные предметы:</strong> «鏡池» (пруд-зеркало), «錦岫» (парчовые горы), «綺嶺», «波澄鏡», «長流縈似帶» — характерная для танской придворной поэзии эстетика; отсюда перевес предметов как источника (43% против 23%).</li>
+      <li><strong>«Животное → человек» есть в обеих традициях, но звери разные.</strong> У Абая — степной бестиарий с оценкой: собака, осёл, свинья — порок (ит, кер есек, шошқа), скакун и беркут — достоинство (тұлпар, қыран); 32 таких фигуры, самое частое отображение. В «Ши цзин» — благопожелательные и ритуальные образы: кузнечики 螽斯 (многочисленное потомство), единорог 麟 (благородный род).</li>
+      <li><strong>«Растение → человек» тоже общее, символы разные.</strong> У Ван И благоуханные травы — достойные люди (蕙茝 → 賢, 眾芳 → 群賢, 荃 → 君), а ветер и тучи — клеветники (飄風 → 邪惡, 雲霓 → 佞人); у Абая — ранний тюльпан как незрелая молодость (жауқазын), тополь-бәйтерек как опора рода, увядший лист как угасшая надежда.</li>
+      <li><strong>Словарь подтверждает казахские конвенциональные образы:</strong> жол → способ, жүрек → душа, тұлпар → выдающийся человек, соқыр → невежда, тамыр → друг, сүйек → род, жарық → этот мир.</li>
+    </ul></div>
+    <p class="note">Ограничения первого среза: казахская сторона — один автор (Абай, дидактико-философская лирика XIX в.), китайская — «Ши цзин» и танская поэзия, так что различия смешивают культуру, эпоху и жанр; разметка — модельная (silver), отнесение к областям субъективно, особенно широкая область «предметы». Следующий шаг — больше казахских авторов и китайских эпох, выборочная проверка носителем. Код: <code>scripts/compare_images.py</code>, данные: <code>data/processed/comparison/images_zh_kk.json</code>.</p>
   </section>
   <section id="finetune" aria-labelledby="ft-h">
     <h2 id="ft-h">Дообучение XLM-R на экспертных данных (22 октября)</h2>
