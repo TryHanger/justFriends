@@ -144,7 +144,7 @@ footer { color: var(--muted); font-size: .82rem; }
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
     <div class="meta"><span>Обновлено 23 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#hypotheses">Гипотезы H1–H3</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#unified">Единая модель</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#hypotheses">Гипотезы H1–H3</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -478,15 +478,22 @@ footer { color: var(--muted); font-size: .82rem; }
         <tr><td>Смешанная модель до дообучения</td><td class="num">0.10</td><td class="num">—</td><td class="num">0.657</td><td class="num">2 / 41</td></tr>
         <tr><td>Этап 1 (словарь)</td><td class="num">0.17</td><td class="num">0.26</td><td class="num">0.650</td><td class="num">0 / 41</td></tr>
         <tr><td><strong>Этап 2 (+ 200 стихов с разметкой Claude)</strong></td><td class="num"><strong>0.20</strong></td><td class="num">0.19</td><td class="num"><strong>0.669</strong></td><td class="num">1 / 41</td></tr>
+        <tr><td><strong>Этап 3, v3 (+ 470 стихов: «Триста танских стихотворений» и сунские цы, разметка облачных сессий)</strong></td><td class="num"><strong>0.20</strong></td><td class="num">0.23</td><td class="num">0.658</td><td class="num"><strong>7 / 41</strong></td></tr>
         <tr><td>Ориентир: gpt-4o, двухшаговый анализ</td><td class="num">—</td><td class="num">0.38</td><td class="num">—</td><td class="num">—</td></tr>
       </tbody>
     </table></div>
     <div class="card"><h3>Вывод</h3><ul class="clean">
       <li>Дообучение помогает казахскому вдвое (κ 0.10 → 0.20) и не портит китайскую прозу, но XLM-R остаётся заметно слабее двухшагового анализа с gpt-4o. На 160 цитатах разница между этапами (0.26 / 0.19) в пределах шума: там всего 80 переносных примеров.</li>
       <li>Аллегорию «Чу Цы» модель по-прежнему не видит (1 из 41 образа Ван И): 100 стихов «Ши цзин» и танской поэзии не учат образной системе «Чу Цы», где «благоуханные травы» означают достойных людей. Здесь нужна модель со знанием комментариев (LLM + база знаний Ван И), а не пословная разметка.</li>
-      <li>Модель этапа 2 (<code>models/xlmr-zh-kk-expert-v2</code>) подключена к сайту как «XLM-R Kazakh expert v2». Её уверенность откалибрована на вневыборочных предсказаниях: права примерно в 32% случаев, сама говорит 68%.</li>
+      <li>Этап 3 (23 октября): ещё 470 китайских стихов с разметкой Claude (505 фигур в 320 танских стихах и 331 — в 150 сунских цы) дали скачок на поэзии: модель находит 7 образов Ван И из 41 вместо 1, при той же казахской точности (κ 0.20) и прозе (F1 0.658).</li>
+      <li>Модель v3 (<code>models/xlmr-zh-kk-expert-v3</code>) — одна для обоих языков — подключена к обоим XLM-R-профилям сайта и к «Единой модели»; калибровка: китайский — CMDAG, 1 000 предложений (точность 87%), казахский — вневыборочные предсказания по словарю (33%). Казахские фрагменты XLM-R расширяются до целых слов (раньше бывали обрывки вроде «рек» из «Жүрек»).</li>
     </ul></div>
     <p class="note">Код: <code>scripts/finetune_xlmr_expert.py</code> (частичная разметка, 5 фолдов по заглавным словам, вневыборочные предсказания для калибровки), <code>scripts/kk_ensemble.py</code> (разметка Claude → корпус), <code>scripts/check_zh_labels.py</code>. Китайская разметка: <code>annotation/zh_poetry_claude_labels.jsonl</code>. Стоимость: $0 API — разметка Claude в рабочей и облачной сессиях.</p>
+  </section>
+  <section id="unified" aria-labelledby="uni-h">
+    <h2 id="uni-h">«Единая модель» на сайте (23 октября)</h2>
+    <p class="lede">Профиль «Единая модель» запускает основной GPT-анализ (со всеми режимами: двухшаговый для казахского, классический для китайской поэзии, классификатор строф, калибровка) и XLM-R v3 нужного языка, объединяет фигуры по пересечению и показывает у каждой, кто её нашёл: «GPT и XLM-R», «только GPT», «только XLM-R». Фигура, найденная обеими моделями, получает большую из двух откалиброванных уверенностей.</p>
+    <p class="note">Пример: «君子如兰，心似明月…» — 兰 и 心似明月 найдены обеими моделями (уверенность 94% и 97%), ещё четыре фигуры — только GPT. Код: <code>app/nlp/unified.py</code>; написан в облачной сессии, проверен локально с настоящими моделями. Заодно база данных в Docker получила автоматический перезапуск: раньше после перезапуска Docker Desktop она оставалась выключенной, и сайт отвечал ошибкой.</p>
   </section>
   <section id="calibration" aria-labelledby="calib-h">
     <h2 id="calib-h">Калиброванная уверенность</h2>

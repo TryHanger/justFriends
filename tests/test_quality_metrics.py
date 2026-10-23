@@ -316,3 +316,25 @@ def test_calibrator_rewrites_the_xlmr_warning():
     calibrated = Calibrator({"xlmr-v1-x": {"zh": fit}}, threshold=0.8).apply(result)
     assert XLMR_UNCALIBRATED not in calibrated.warnings and XLMR_DOMAINS in calibrated.warnings
     assert calibrated.metaphors[0].confidence > 0.9  # an underconfident model is pulled up
+
+
+def test_kazakh_xlmr_spans_snap_to_whole_words():
+    from app.nlp.xlmr import snap_to_words
+    from app.schemas.analysis import MetaphorSpan
+
+    text = "Жүрек — теңіз, қызықтың бәрі — асыл тас"
+
+    def span(start, end, confidence):
+        return MetaphorSpan(
+            text=text[start:end],
+            start=start,
+            end=end,
+            label="metaphor",
+            source_domain="unknown",
+            target_domain="unknown",
+            confidence=confidence,
+            rationale="XLM-R",
+        )
+
+    snapped = snap_to_words(text, [span(2, 5, 0.3), span(8, 11, 0.5), span(11, 13, 0.7)])
+    assert [(s.text, s.confidence) for s in snapped] == [("Жүрек", 0.3), ("теңіз", 0.7)]

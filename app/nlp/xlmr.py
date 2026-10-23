@@ -113,6 +113,39 @@ def decode_bio(text, offsets, tags, confidences):
     return spans
 
 
+def snap_to_words(text: str, spans: list[MetaphorSpan]) -> list[MetaphorSpan]:
+    """Kazakh is written with spaces, but subword tags can cover part of a word ("рек" of
+    "Жүрек"); extend every span to whole words and merge spans that then overlap."""
+
+    def inside(i: int) -> bool:
+        return 0 <= i < len(text) and (text[i].isalpha() or text[i] == "-")
+
+    snapped: list[MetaphorSpan] = []
+    for span in sorted(spans, key=lambda s: s.start):
+        start, end = span.start, span.end
+        while inside(start - 1):
+            start -= 1
+        while inside(end):
+            end += 1
+        if snapped and start < snapped[-1].end:
+            last = snapped[-1]
+            start, end = last.start, max(end, last.end)
+            confidence = max(last.confidence, span.confidence)
+            snapped[-1] = last.model_copy(
+                update={
+                    "start": start,
+                    "end": end,
+                    "text": text[start:end],
+                    "confidence": confidence,
+                }
+            )
+            continue
+        snapped.append(
+            span.model_copy(update={"start": start, "end": end, "text": text[start:end]})
+        )
+    return snapped
+
+
 def checkpoint_ready(path: str) -> bool:
     """A fine-tuned checkpoint is usable only with its weights and PyTorch installed."""
     return Path(path).is_dir() and importlib.util.find_spec("torch") is not None
@@ -177,6 +210,8 @@ class XLMRDetector:
             spans = decode_bio(
                 text, offsets, [BIO_LABELS[i] for i in labels.tolist()], scores.tolist()
             )
+            if language == "kk":
+                spans = snap_to_words(text, spans)
         else:
             spans = []
         result = AnalysisResult(

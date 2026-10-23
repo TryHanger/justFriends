@@ -235,7 +235,8 @@ def analyzer(monkeypatch, tmp_path):
 def test_unified_profile_uses_the_profiled_xlmr_pipeline(analyzer, monkeypatch):
     monkeypatch.setattr(analyzer, "checkpoint_ready", lambda path: path.endswith("zh"))
     result = analyzer.analyze_text(POEM, "zh", "unified")
-    assert result.model_version == "unified(openai:gpt-4o-mini,xlmr-zh-gold-v2)"
+    # The analyzer labels the profiled XLM-R run with the deployed checkpoint (v3).
+    assert result.model_version == "unified(openai:gpt-4o-mini,xlmr-zh-kk-expert-v3)"
     assert result.method["xlmr"]["model_profile"] == "xlmr_zh_gold_v2"
     assert [m.text for m in result.metaphors] == ["春风又绿", "明月", "照我"]
     # The default and XLM-R pipelines are shared with their own profiles, built once.

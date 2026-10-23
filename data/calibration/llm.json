@@ -70,6 +70,28 @@
         "ece_before": 0.36140425667646764,
         "ece_after": 0.015561909448711142
       }
+    },
+    "xlmr-zh-kk-expert-v3": {
+      "zh": {
+        "a": 0.6815472213810837,
+        "b": -0.02449784976262253,
+        "source": "CMDAG test sample (gold, 1000 sentences)",
+        "spans": 1292,
+        "precision": 0.8676470588235294,
+        "mean_self_reported": 0.9099894302673041,
+        "ece_before": 0.04969116513312563,
+        "ece_after": 0.028567548422303076
+      },
+      "kk": {
+        "a": 0.35972004469791163,
+        "b": -1.050518603389685,
+        "source": "Kazakh explanatory dictionary «ауыс.» quotations (1264, out-of-fold)",
+        "spans": 340,
+        "precision": 0.3264705882352941,
+        "mean_self_reported": 0.6833008137350879,
+        "ece_before": 0.35821462349035715,
+        "ece_after": 0.049005592873452276
+      }
     }
   }
 }
