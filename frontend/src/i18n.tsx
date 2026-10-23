@@ -68,6 +68,9 @@ const ru: Record<string, string> = {
   Stanzas: 'Строфы', probability: 'вероятность',
   description: 'описание', comparison: 'сравнение', 'evocative image': 'образ-зачин',
   "Types follow Zhu Xi's classification (詩經集傳); labels are model suggestions, not expert annotation.": 'Типы строф даны по классификации Чжу Си (詩經集傳); метки — подсказки модели, а не экспертная разметка.',
+  'GPT and XLM-R': 'GPT и XLM-R', 'GPT only': 'только GPT', 'XLM-R only': 'только XLM-R',
+  'Classical poetry mode': 'классический режим', 'Added by the direct usage question': 'добавлено прямым вопросом',
+  'Stage 2 judged the head word literal': 'второй этап: прямое значение',
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }
@@ -116,6 +119,10 @@ const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
     (m) => `Не удалось перевести на русский пояснений: ${m[1]}; показан исходный текст.`],
   [/^Candidate confidence is below review threshold ([\d.]+)\.$/,
     (m) => `Уверенность ниже порога проверки ${m[1]}.`],
+  [/^Unified model: XLM-R for (zh|kk) is not installed \(weights or PyTorch missing\); only LLM figures are shown\.$/,
+    (m) => `Единая модель: XLM-R для ${m[1] === 'zh' ? 'китайского' : 'казахского'} не установлена (нет весов или PyTorch); показаны только фигуры GPT.`],
+  [/^Unified model: XLM-R for (zh|kk) failed \((\w+)\); only LLM figures are shown\.$/,
+    (m) => `Единая модель: XLM-R для ${m[1] === 'zh' ? 'китайского' : 'казахского'} не сработала (${m[2]}); показаны только фигуры GPT.`],
   [/^Provider or parsing failure; empty prediction counted in metrics\.$/,
     () => 'Ошибка провайдера или разбора ответа; в метриках учтён пустой результат.'],
 ];

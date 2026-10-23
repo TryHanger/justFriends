@@ -7,6 +7,37 @@ import { tr, trWarning, useLanguage } from '../i18n';
 
 const STANZA_TYPES: Record<StanzaType, string> = { '賦': 'description', '比': 'comparison', '興': 'evocative image' };
 const percent = (value: number | undefined) => `${Math.round((value ?? 0) * 100)}%`;
+const figureKey = (start: number, end: number) => `${start}-${end}`;
+// Detectors that found a figure in a unified result, as recorded in method.unified.sources.
+const SOURCE_BADGES: Record<string, { label: string; style: string }> = {
+  'llm,xlmr': { label: 'GPT and XLM-R', style: 'bg-green-50 text-green-700 ring-green-600/20' },
+  llm: { label: 'GPT only', style: 'bg-sky-50 text-sky-700 ring-sky-600/20' },
+  xlmr: { label: 'XLM-R only', style: 'bg-orange-50 text-orange-700 ring-orange-600/20' },
+};
+// Figures added or disputed by the LLM's own stages, as [start, end] lists in the method record.
+const STAGE_HINTS: [string, string, string][] = [
+  ['classical', 'added', 'Classical poetry mode'],
+  ['two_stage', 'added', 'Added by the direct usage question'],
+  ['two_stage', 'disputed', 'Stage 2 judged the head word literal'],
+];
+
+function boundsOf(method: Record<string, unknown>, stage: string, field: string): Set<string> {
+  const list = (method[stage] as Record<string, unknown> | undefined)?.[field];
+  if (!Array.isArray(list)) return new Set();
+  return new Set(list.filter((b): b is number[] => Array.isArray(b) && b.length === 2).map(([s, e]) => figureKey(s, e)));
+}
+
+function figureBadges(method: Record<string, unknown>) {
+  const unified = method.unified as { sources?: Record<string, string[]>; xlmr_model?: string | null } | undefined;
+  // Without an XLM-R run every figure is "GPT only", which says nothing; the warning explains it.
+  const sources = unified?.xlmr_model ? unified.sources ?? {} : {};
+  const hints = STAGE_HINTS.map(([stage, field, label]) => [boundsOf(method, stage, field), label] as const);
+  return (start: number, end: number) => {
+    const key = figureKey(start, end);
+    const source = SOURCE_BADGES[(sources[key] ?? []).join(',')];
+    return { source, hints: hints.filter(([bounds]) => bounds.has(key)).map(([, label]) => label) };
+  };
+}
 
 export default function AnalysisDetail() {
   const { language } = useLanguage();
@@ -67,6 +98,7 @@ export default function AnalysisDetail() {
   const candidates = analysis.result?.candidates || [];
   const method = analysis.result?.method || {};
   const stanzas = analysis.result?.language === 'zh' ? analysis.result.stanzas ?? [] : [];
+  const badgesOf = figureBadges(method);
   const isLegacyBaseline = analysis.result?.model_version === 'lexical-demo-v1';
   const sentimentStyle: Record<string, string> = {
     positive: 'bg-green-50 text-green-700 ring-green-600/20',
@@ -219,12 +251,26 @@ export default function AnalysisDetail() {
           </div>
           
           <div className="grid gap-4 md:grid-cols-2">
-            {metaphors.map((m, idx) => (
+            {metaphors.map((m, idx) => {
+              const badges = badgesOf(m.start, m.end);
+              return (
               <div key={idx} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex justify-between items-start mb-2">
-                  <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
-                    {tr(m.label, language)}
-                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                      {tr(m.label, language)}
+                    </span>
+                    {badges.source && (
+                      <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${badges.source.style}`}>
+                        {tr(badges.source.label, language)}
+                      </span>
+                    )}
+                    {badges.hints.map(hint => (
+                      <span key={hint} className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20">
+                        {tr(hint, language)}
+                      </span>
+                    ))}
+                  </div>
                   <span className="text-xs text-gray-500 font-mono">
                     {tr('Conf:', language)} {(m.confidence * 100).toFixed(0)}%
                   </span>
@@ -269,7 +315,8 @@ export default function AnalysisDetail() {
                   {m.rationale}
                 </p>
               </div>
-            ))}
+              );
+            })}
             {metaphors.length === 0 && (
               <div className="col-span-2 text-center p-8 bg-gray-50 rounded-lg text-gray-500">
                 {tr('No metaphors detected in this document.', language)}

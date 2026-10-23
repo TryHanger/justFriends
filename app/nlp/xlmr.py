@@ -1,5 +1,6 @@
 """XLM-R BIO detection with complete-text sliding windows and original character offsets."""
 
+import importlib.util
 from pathlib import Path
 
 from app.nlp.contracts import resolve_language, validate_result
@@ -110,6 +111,11 @@ def decode_bio(text, offsets, tags, confidences):
             current[2].append(confidence)
     finish()
     return spans
+
+
+def checkpoint_ready(path: str) -> bool:
+    """A fine-tuned checkpoint is usable only with its weights and PyTorch installed."""
+    return Path(path).is_dir() and importlib.util.find_spec("torch") is not None
 
 
 class XLMRDetector:

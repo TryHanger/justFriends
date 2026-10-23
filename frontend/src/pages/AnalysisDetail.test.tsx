@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { api } from '../api';
@@ -109,5 +109,44 @@ describe('stanza types', () => {
     showResult({ language: 'zh', model_version: 'test', metaphors: [] }, 'ru');
     expect(await screen.findByText('Найденные метафоры (0)')).toBeTruthy();
     expect(screen.queryByText(/Строфы/)).toBeNull();
+  });
+});
+
+describe('detector badges', () => {
+  const figure = (text: string, start: number, end: number) => ({ ...metaphor, text, start, end });
+  const metaphors = [figure('春风又绿', 0, 4), figure('明月', 8, 10), figure('照我', 12, 14)];
+  const sources = { '0-4': ['llm', 'xlmr'], '8-10': ['llm'], '12-14': ['xlmr'] };
+
+  it('shows which detector found each figure of a unified result', async () => {
+    showResult({
+      language: 'zh', model_version: 'unified(openai:gpt-4o-mini,xlmr-zh-gold-v2)', metaphors,
+      method: { unified: { xlmr_model: 'xlmr-zh-gold-v2', sources, both: 1, llm_only: 1, xlmr_only: 1 } },
+    }, 'ru');
+    expect(await screen.findByText('GPT и XLM-R')).toBeTruthy();
+    expect(screen.getByText('только GPT')).toBeTruthy();
+    expect(screen.getByText('только XLM-R')).toBeTruthy();
+    const card = screen.getByText('"照我"').parentElement as HTMLElement;
+    expect(within(card).getByText('только XLM-R')).toBeTruthy();
+  });
+
+  it('hides source badges when XLM-R did not run and translates the warning', async () => {
+    showResult({
+      language: 'kk', model_version: 'unified(openai:gpt-4o-mini)', metaphors: [metaphor],
+      warnings: ['Unified model: XLM-R for kk is not installed (weights or PyTorch missing); only LLM figures are shown.'],
+      method: { unified: { xlmr_model: null, sources: { '0-18': ['llm'] }, both: 0, llm_only: 1, xlmr_only: 0 } },
+    }, 'ru');
+    expect(await screen.findByText('Единая модель: XLM-R для казахского не установлена (нет весов или PyTorch); показаны только фигуры GPT.')).toBeTruthy();
+    expect(screen.queryByText('только GPT')).toBeNull();
+  });
+
+  it('marks figures added by the classical mode or the direct usage question', async () => {
+    showResult({
+      language: 'zh', model_version: 'openai:gpt-4o-mini', metaphors,
+      method: { classical: { added: [[8, 10]] }, two_stage: { added: [[12, 14]], disputed: [[0, 4]] } },
+    }, 'ru');
+    expect(await screen.findByText('классический режим')).toBeTruthy();
+    expect(screen.getByText('добавлено прямым вопросом')).toBeTruthy();
+    expect(screen.getByText('второй этап: прямое значение')).toBeTruthy();
+    expect(screen.queryByText(/только/)).toBeNull();
   });
 });

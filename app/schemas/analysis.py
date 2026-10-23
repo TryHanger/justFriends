@@ -6,7 +6,7 @@ from app.core.limits import MAX_ANALYSIS_CHARS
 from app.schemas.taxonomy import EntityType, MetaphorLabel, Sentiment, UsageType
 
 Language = Literal["auto", "zh", "kk"]
-ModelProfile = Literal["default", "experimental_kk", "xlmr_zh_gold_v2", "baseline"]
+ModelProfile = Literal["default", "experimental_kk", "xlmr_zh_gold_v2", "unified", "baseline"]
 
 
 class AnalyzeRequest(BaseModel):

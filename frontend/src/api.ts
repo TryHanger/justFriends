@@ -121,7 +121,7 @@ export interface SubmitResponse {
   status_url: string;
 }
 
-export type ModelProfile = 'default' | 'experimental_kk' | 'xlmr_zh_gold_v2' | 'baseline';
+export type ModelProfile = 'default' | 'experimental_kk' | 'xlmr_zh_gold_v2' | 'unified' | 'baseline';
 
 export interface ModelInfo {
   id: ModelProfile;
