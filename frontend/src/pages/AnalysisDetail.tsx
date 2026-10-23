@@ -312,7 +312,7 @@ export default function AnalysisDetail() {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  {m.rationale}
+                  {tr(m.rationale, language)}
                 </p>
               </div>
               );

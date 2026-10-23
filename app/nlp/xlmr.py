@@ -8,6 +8,11 @@ from app.schemas.analysis import AnalysisResult, MetaphorSpan
 from app.schemas.taxonomy import BIO_LABELS, METAPHOR_LABELS
 
 LABEL2ID = {label: i for i, label in enumerate(BIO_LABELS)}
+# Explanations are shown to users in Russian only.
+XLMR_RATIONALE = (
+    "XLM-R отметила фрагмент как образное выражение; тип фигуры (метафора, сравнение "
+    "и т. п.) и области образа эта модель не определяет."
+)
 
 
 def align_labels(text, offsets, spans):
@@ -86,7 +91,7 @@ def decode_bio(text, offsets, tags, confidences):
                         source_domain="unknown",
                         target_domain="unknown",
                         confidence=sum(scores) / len(scores),
-                        rationale="XLM-R detected a metaphor; type and domains need classification.",
+                        rationale=XLMR_RATIONALE,
                     )
                 )
 

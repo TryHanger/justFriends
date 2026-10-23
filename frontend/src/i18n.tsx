@@ -71,6 +71,8 @@ const ru: Record<string, string> = {
   'GPT and XLM-R': 'GPT и XLM-R', 'GPT only': 'только GPT', 'XLM-R only': 'только XLM-R',
   'Classical poetry mode': 'классический режим', 'Added by the direct usage question': 'добавлено прямым вопросом',
   'Stage 2 judged the head word literal': 'второй этап: прямое значение',
+  // Rationale stored by XLM-R analyses made before it was written in Russian.
+  'XLM-R detected a metaphor; type and domains need classification.': 'XLM-R отметила фрагмент как образное выражение; тип фигуры (метафора, сравнение и т. п.) и области образа эта модель не определяет.',
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }
