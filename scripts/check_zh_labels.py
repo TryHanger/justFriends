@@ -6,6 +6,8 @@ punctuation or whitespace and do not overlap, that labels and domains belong to 
 taxonomy, and that a non-empty tenor is quoted from the poem. Prints counts on success.
 
     python -m scripts.check_zh_labels
+    python -m scripts.check_zh_labels --poems annotation/zh_poetry_tang300_to_label.jsonl \
+        --labels annotation/zh_poetry_tang300_claude_labels.jsonl
 """
 
 import argparse
