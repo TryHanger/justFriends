@@ -142,9 +142,9 @@ footer { color: var(--muted); font-size: .82rem; }
     <span class="eyebrow">justFriends · LLM, метафоры, китайская и казахская поэзия</span>
     <h1>Анализатор метафор: что сделано по ТЗ и как это устроено</h1>
     <p class="lede">Программный комплекс выявляет метафоры в китайских и казахских стихах, классифицирует их, подписывает смысл и тональность и сопоставляет образы двух традиций. Этот документ описывает, что реализовано, на чём построено, как работает и что осталось сделать по техническому заданию.</p>
-    <div class="meta"><span>Обновлено 23 октября 2026</span><span>База <code>main</code> (<code>a72ea78</code>) + ветка <code>feat/tenor-ground-metrics</code>, не закоммичено</span><span>Python: 74 теста</span><span>Frontend: 32 теста</span></div>
+    <div class="meta"><span>Обновлено 27 октября 2026</span><span>База <code>main</code> (<code>9c42005</code>)</span><span>Python: 156 тестов</span><span>Frontend: 47 тестов</span></div>
     <nav class="toc" aria-label="Разделы">
-      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#unified">Единая модель</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#hypotheses">Гипотезы H1–H3</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
+      <a href="#summary">Итог</a><a href="#news">Данные и модели</a><a href="#tenor">Тема и основание</a><a href="#metrics">Метрики</a><a href="#experiments">Эксперименты</a><a href="#wangyi">Ван И</a><a href="#zhuxi">Чжу Си</a><a href="#labelstudio">Label Studio</a><a href="#ensemble">Ансамбль kk</a><a href="#kkdict">Словарь kk</a><a href="#unified">Единая модель</a><a href="#attributes">Атрибуты XLM-R</a><a href="#calibration">Калибровка</a><a href="#finetune">Дообучение</a><a href="#crosscultural">Сравнение культур</a><a href="#hypotheses">Гипотезы H1–H3</a><a href="#how">Как работает</a><a href="#done">Что сделано</a><a href="#stack">Стек</a>
       <a href="#modules">Модули кода</a><a href="#methods">Методы и модели</a><a href="#data">Данные</a><a href="#eval">Оценка и гипотезы</a>
       <a href="#api">API и интерфейс</a><a href="#cli">CLI</a><a href="#config">Настройки</a><a href="#run">Запуск</a>
       <a href="#cost">Стоимость</a><a href="#ledger">Сверка с ТЗ</a><a href="#next">Что осталось</a>
@@ -423,8 +423,18 @@ footer { color: var(--muted); font-size: .82rem; }
       </tbody>
     </table></div>
     <p class="note"><strong>Вывод: H3 в основном подтверждается.</strong> Где сигнал есть, информация о метафоре появляется и достигает максимума в средних слоях; у энкодеров к последним слоям она слегка убывает, у декодера держится на плато. *Для китайского MDL указывает на слой 0, потому что одни и те же слова есть и в обучении, и в проверке пробника, и онлайн-код частично измеряет, предсказывает ли метку само слово; для китайского показателен F1. Казахский сигнал слаб (F1 ≤ 0.57) — казахский плохо представлен в этих многоязычных моделях. Код: <code>app/nlp/probing.py</code>, наборы — <code>data/processed/probing/</code>.</p>
-    <h3>H2: казахский токенизатор SozKZ против многоязычных моделей</h3>
-    <p class="note">Не проверена. Модели SozKZ (<code>stukenov/sozkz-core-llama-*-kk-base-v1</code>, 30M–1B) найдены на Hugging Face, но их файлы закрыты: скачивание требует входа в аккаунт Hugging Face. Сравнение готово к запуску (фертильность токенизаторов; классификатор «прямое/переносное» на словарных цитатах против XLM-R и Qwen).</p>
+    <h3>H2: казахский токенизатор против многоязычных моделей (27 октября)</h3>
+    <p>SozKZ закрыта (доступ одобряет автор вручную), поэтому казахский токенизатор представлен открытой <code>kz-transformers/kaz-roberta-conversational</code>: RoBERTa, 6 слоёв, казахский BPE на 52K, 83.5M параметров, Apache-2.0. Многоязычные — XLM-R base (278M) и Qwen2.5-0.5B (494M). Фертильность — токенов на казахское слово в сплошном тексте; классификатор «прямое/переносное» — на 1 264 словарных цитатах, слова проверки не встречались в обучении, 5 фолдов и три запуска (seed 42/7/13). Qwen целиком не помещается в 8 ГБ видеопамяти для полного дообучения, поэтому все три модели дополнительно обучены LoRA (rank 16, замороженная основа в bf16).</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Модель</th><th class="num">Токенов на слово: Абай / словарь</th><th class="num">κ, полное дообучение</th><th class="num">κ, LoRA</th><th class="num">Ложные срабатывания (полное / LoRA)</th></tr></thead>
+      <tbody>
+        <tr><td>kaz-roberta, 83.5M (казахская)</td><td class="num"><strong>2.18 / 1.84</strong></td><td class="num"><strong>0.19</strong> (0.18–0.22)</td><td class="num"><strong>0.22</strong> (0.21–0.26)</td><td class="num"><strong>12%</strong> / 20%</td></tr>
+        <tr><td>XLM-R base, 278M</td><td class="num">2.46 / 2.33</td><td class="num">0.17 (0.17–0.18)</td><td class="num"><strong>0.22</strong> (0.22–0.22)</td><td class="num">23% / 27%</td></tr>
+        <tr><td>Qwen2.5-0.5B, 494M</td><td class="num">4.45 / 4.54</td><td class="num">не помещается</td><td class="num">0.12 (0.11–0.13)</td><td class="num">— / 14%</td></tr>
+        <tr><td>Символьные n-граммы (базовый)</td><td class="num">—</td><td class="num" colspan="2">0.17 (0.15–0.18)</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><strong>Вывод: H2 подтверждается частично.</strong> Казахский токенизатор кодирует текст экономнее (на 11–21% меньше токенов, чем XLM-R, и вдвое меньше, чем Qwen). Казахская модель не уступает втрое большей XLM-R: при полном дообучении её худший запуск лучше лучшего у XLM-R, ложных срабатываний вдвое меньше; с LoRA обе дают κ 0.22. Самая большая модель, Qwen, хуже обеих и даже символьных n-грамм — при 4.5 токена на слово казахские морфемы дробятся сильнее всего. Значимого превосходства над XLM-R нет, поэтому «превосходит» из ТЗ не подтверждается; все энкодеры далеко позади прямого вопроса к LLM (κ 0.45–0.57). Повторить на SozKZ, если автор одобрит доступ. Код: <code>scripts/train_kk_usage_classifier.py</code> (<code>--unseen-only</code>, <code>--lora</code>), результаты — <code>data/processed/h2/</code>.</p>
   </section>
   <section id="crosscultural" aria-labelledby="cc-h">
     <h2 id="cc-h">Межкультурное сравнение образов (первый срез, 22 октября)</h2>
@@ -479,6 +489,8 @@ footer { color: var(--muted); font-size: .82rem; }
         <tr><td>Этап 1 (словарь)</td><td class="num">0.17</td><td class="num">0.26</td><td class="num">0.650</td><td class="num">0 / 41</td></tr>
         <tr><td><strong>Этап 2 (+ 200 стихов с разметкой Claude)</strong></td><td class="num"><strong>0.20</strong></td><td class="num">0.19</td><td class="num"><strong>0.669</strong></td><td class="num">1 / 41</td></tr>
         <tr><td><strong>Этап 3, v3 (+ 470 стихов: «Триста танских стихотворений» и сунские цы, разметка облачных сессий)</strong></td><td class="num"><strong>0.20</strong></td><td class="num">0.23</td><td class="num">0.658</td><td class="num"><strong>7 / 41</strong></td></tr>
+        <tr><td>v4: + ещё 50 стихов Абая (473 фигуры), вес переносного 3</td><td class="num">0.16</td><td class="num">0.16</td><td class="num">0.650</td><td class="num">7 / 41</td></tr>
+        <tr><td>v4b: то же, вес 2</td><td class="num">0.19</td><td class="num">0.19</td><td class="num">0.657</td><td class="num">5 / 41</td></tr>
         <tr><td>Ориентир: gpt-4o, двухшаговый анализ</td><td class="num">—</td><td class="num">0.38</td><td class="num">—</td><td class="num">—</td></tr>
       </tbody>
     </table></div>
@@ -487,6 +499,7 @@ footer { color: var(--muted); font-size: .82rem; }
       <li>Аллегорию «Чу Цы» модель по-прежнему не видит (1 из 41 образа Ван И): 100 стихов «Ши цзин» и танской поэзии не учат образной системе «Чу Цы», где «благоуханные травы» означают достойных людей. Здесь нужна модель со знанием комментариев (LLM + база знаний Ван И), а не пословная разметка.</li>
       <li>Этап 3 (23 октября): ещё 470 китайских стихов с разметкой Claude (505 фигур в 320 танских стихах и 331 — в 150 сунских цы) дали скачок на поэзии: модель находит 7 образов Ван И из 41 вместо 1, при той же казахской точности (κ 0.20) и прозе (F1 0.658).</li>
       <li>Модель v3 (<code>models/xlmr-zh-kk-expert-v3</code>) — одна для обоих языков — подключена к обоим XLM-R-профилям сайта и к «Единой модели»; калибровка: китайский — CMDAG, 1 000 предложений (точность 87%), казахский — вневыборочные предсказания по словарю (33%). Казахские фрагменты XLM-R расширяются до целых слов (раньше бывали обрывки вроде «рек» из «Жүрек»).</li>
+      <li>Отрицательный результат (v4, v4b, 23 октября): ещё 50 самых длинных стихов Абая с более плотной разметкой (9.5 фигуры на стих против 3) подняли ложные срабатывания, κ упал до 0.16–0.19. На сайте остаётся v3: больше silver-разметки XLM-R по казахскому уже не помогает.</li>
     </ul></div>
     <p class="note">Код: <code>scripts/finetune_xlmr_expert.py</code> (частичная разметка, 5 фолдов по заглавным словам, вневыборочные предсказания для калибровки), <code>scripts/kk_ensemble.py</code> (разметка Claude → корпус), <code>scripts/check_zh_labels.py</code>. Китайская разметка: <code>annotation/zh_poetry_claude_labels.jsonl</code>. Стоимость: $0 API — разметка Claude в рабочей и облачной сессиях.</p>
   </section>
@@ -494,6 +507,20 @@ footer { color: var(--muted); font-size: .82rem; }
     <h2 id="uni-h">«Единая модель» на сайте (23 октября)</h2>
     <p class="lede">Профиль «Единая модель» запускает основной GPT-анализ (со всеми режимами: двухшаговый для казахского, классический для китайской поэзии, классификатор строф, калибровка) и XLM-R v3 нужного языка, объединяет фигуры по пересечению и показывает у каждой, кто её нашёл: «GPT и XLM-R», «только GPT», «только XLM-R». Фигура, найденная обеими моделями, получает большую из двух откалиброванных уверенностей.</p>
     <p class="note">Пример: «君子如兰，心似明月…» — 兰 и 心似明月 найдены обеими моделями (уверенность 94% и 97%), ещё четыре фигуры — только GPT. Код: <code>app/nlp/unified.py</code>; написан в облачной сессии, проверен локально с настоящими моделями. Заодно база данных в Docker получила автоматический перезапуск: раньше после перезапуска Docker Desktop она оставалась выключенной, и сайт отвечал ошибкой.</p>
+  </section>
+  <section id="attributes" aria-labelledby="attr-h">
+    <h2 id="attr-h">Тип фигуры и области образа у XLM-R (27 октября)</h2>
+    <p class="lede">XLM-R размечает только границы фигуры, поэтому раньше её профиль показывал «Метафора», «не определено» и английскую заглушку вместо объяснения. Теперь тип и обе области дают линейные головы над скрытыми состояниями той же модели (слои 6, 9, 12 и контекст ±80 символов), обученные на 1 776 фигурах с разметкой Claude (китайские стихи и Абай); маркер сравнения (如同, 似, 若, -дай/-дей, сияқты…) делает фигуру сравнением. Объяснение собирается на русском.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Что предсказывается</th><th class="num">Верно (кросс-валидация по стихам)</th><th class="num">Если всегда частый класс</th></tr></thead>
+      <tbody>
+        <tr><td>Тип фигуры</td><td class="num">78%</td><td class="num">66%</td></tr>
+        <tr><td>Исходная область</td><td class="num">46%</td><td class="num">23%</td></tr>
+        <tr><td>Целевая область</td><td class="num">35%</td><td class="num">17%</td></tr>
+        <tr><td>Маркер сравнения → «сравнение»</td><td class="num">точность 0.92, полнота 0.86</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Область с вероятностью ниже 0.4 угадана примерно в четверти случаев, поэтому показывается как «не определено»; от 0.4 до 0.5 объяснение называет её предположительной. Заодно убраны лишние предупреждения: строка «0 из N ниже порога» больше не появляется, сведения о калибровке показаны серой пометкой, а не жёлтым блоком. Пример: «…就如同镜中之花，水中之月» — обе фигуры теперь «сравнение», для 镜中之花 указан маркер 如同. Код: <code>app/nlp/figure_attributes.py</code>, обучение — <code>scripts/train_figure_attributes.py</code>.</p>
   </section>
   <section id="calibration" aria-labelledby="calib-h">
     <h2 id="calib-h">Калиброванная уверенность</h2>
@@ -866,7 +893,7 @@ npm --prefix frontend test</pre><button type="button" id="copy-5">Копиров
       <div class="lane"><span class="tag">P1 · модели</span><h3>Обучение</h3><ol>
         <li>XLM-R: отметка темы по данным CMDAG.</li>
         <li>QLoRA для Qwen на CMDAG и Ван И (образ → тема → основание), H1.</li>
-        <li>Найти идентификатор SozKZ, H2.</li>
+        <li>H2 на SozKZ, если автор одобрит доступ (на kaz-roberta проверена).</li>
         <li>Пробинг слоёв, H3.</li>
       </ol></div>
       <div class="lane"><span class="tag">P2 · публикация</span><h3>Отчёт</h3><ol>
@@ -940,7 +967,7 @@ const DATA = [
     ["H1. Fine-tuning лучше промптинга", "IFT против zero/few-shot.", "part",
      "<code>build-ift</code>, <code>finetune</code> (LoRA), backend <code>hf</code>, <code>experiment</code>.", "Нужны gold и GPU-прогоны."],
     ["H2. Локальный токенизатор", "SozKZ против мультиязычных моделей.", "part",
-     "<code>fertility</code>, <code>train-tokenizer</code>, прогоны только на <code>kk</code>.", "Нужны корпус и SozKZ."],
+     "Проверена на открытой kaz-roberta против XLM-R и Qwen: токенизатор экономнее, модель не уступает втрое большей XLM-R, Qwen хуже; подтверждается частично.", "SozKZ (доступ по одобрению автора)."],
     ["H3. Средние слои", "Пробинг и MDL по слоям.", "part",
      "<code>probe</code>: линейные пробы с GroupKFold и MDL online code.", "Нужны gold-кандидаты."],
   ]},
