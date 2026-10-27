@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ArrowRight, Download, Play, ShieldCheck } from 'lucide-react';
+import { Download, Play, ShieldCheck } from 'lucide-react';
 import { reviewSecurity } from '../api';
 import type { SecurityReview } from '../api';
 import { getApiErrorMessage } from '../apiErrors';
@@ -9,19 +9,16 @@ const examples = [
     title: 'SQL-запрос', requirement: 'Ввод пользователя передаётся в БД отдельно от текста запроса.',
     before: `def find_user(db, name):\n    return db.execute(\n        "SELECT * FROM users WHERE name = '" + name + "'"\n    ).fetchall()`,
     after: `def find_user(db, name):\n    return db.execute(\n        "SELECT * FROM users WHERE name = ?", (name,)\n    ).fetchall()`,
-    proof: 'В локальной тестовой БД передайте имя с кавычкой и строку SQL-инъекции. Проверьте, что возвращается только точное совпадение и данные не меняются.',
   },
   {
     title: 'Обработка данных', requirement: 'Строка с данными не должна становиться исполняемым кодом.',
     before: `def read_options(user_text):\n    return eval(user_text)`,
     after: `import json\n\ndef read_options(user_text):\n    return json.loads(user_text)`,
-    proof: 'Проверьте корректный JSON и некорректную строку. Ожидайте данные в первом случае и обработанную ошибку во втором; Python-выражение не должно выполняться.',
   },
   {
     title: 'Системная команда', requirement: 'Команда запускается без оболочки, аргументы ограничены допустимыми значениями.',
     before: `import subprocess\n\ndef list_files(user_path):\n    return subprocess.run("ls " + user_path, shell=True)`,
     after: `import subprocess\n\ndef list_files(user_path):\n    if user_path not in {"data", "models"}:\n        raise ValueError("Недопустимый каталог")\n    return subprocess.run(\n        ["ls", "--", user_path], shell=False, check=True\n    )`,
-    proof: 'В тесте подмените subprocess.run. Проверьте список аргументов и shell=False; ввод вне списка должен отклоняться до вызова команды. Пример ls предназначен для Linux-контейнера.',
   },
 ];
 
@@ -122,14 +119,5 @@ export default function SecurityLab() {
       </div>}
     </section>
 
-    <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
-      <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-700" /><h3 className="font-bold">3. Что показать на защите · 2 минуты</h3></div>
-      <ol className="mt-3 grid gap-3 text-sm md:grid-cols-3">{[
-        ['Покажите требование', 'Выберите SQL-запрос. Объясните, почему ввод должен передаваться отдельно от команды.'],
-        ['Покажите изменение', 'Нажмите «Проверить обе версии». Найдите A05:2025 и покажите замену склейки строк параметром ?.'],
-        ['Покажите свидетельство', 'Скачайте CSV. Объясните, каким тестом подтвердите исправление и что ещё нужно проверить.'],
-      ].map(([title, text]) => <li key={title}><p className="flex items-center gap-2 font-semibold text-emerald-900"><ArrowRight className="h-3 w-3 shrink-0" />{title}</p><p className="mt-1 text-xs leading-5 text-slate-600">{text}</p></li>)}</ol>
-      <details className="mt-4 border-t border-emerald-200 pt-3"><summary className="cursor-pointer text-sm font-semibold text-emerald-900">Как подтвердить исправление текущего примера</summary><p className="mt-2 text-sm leading-6 text-slate-700">{selected.proof}</p><p className="mt-2 text-xs text-slate-500">Поведенческие тесты примера здесь не запускаются. В проекте связь со стандартом показана цепочкой «требование → контроль → результат → повторная проверка».</p></details>
-    </section>
   </div>;
 }
