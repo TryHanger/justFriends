@@ -75,6 +75,15 @@ describe('completed analysis warnings', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('shows the calibration statement as a note, not as a warning', async () => {
+    showResult({
+      language: 'zh', model_version: 'test', metaphors: [metaphor], needs_review: false,
+      warnings: ['Confidence calibrated on CMDAG (1292 figures): the probability that a figure is correct.'],
+    }, 'ru');
+    expect(await screen.findByText(/Уверенность откалибрована на экспертных данных \(эталон CMDAG, 1292 фигур\)/)).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('renders false and empty warnings without a warning banner', async () => {
     showResult({
       language: 'zh', model_version: 'test', metaphors: [], needs_review: false, warnings: [],

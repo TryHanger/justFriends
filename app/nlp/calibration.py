@@ -20,6 +20,9 @@ UNCALIBRATED = "LLM preliminary annotation; confidence is self-reported and unca
 XLMR_UNCALIBRATED = "Token probabilities are uncalibrated; domains unknown."
 # What remains true of an XLM-R result once its probabilities are calibrated.
 XLMR_DOMAINS = "XLM-R does not determine source and target domains."
+# An XLM-R result whose type and domains come from the attribute heads: nothing remains
+# to say once its probabilities are calibrated.
+XLMR_PROBABILITIES = "Token probabilities are uncalibrated."
 
 
 def _logit(p: float) -> float:
@@ -60,18 +63,18 @@ class Calibrator:
         warnings = [
             XLMR_DOMAINS if w == XLMR_UNCALIBRATED else w
             for w in result.warnings
-            if w != UNCALIBRATED
+            if w not in (UNCALIBRATED, XLMR_PROBABILITIES)
         ]
         warnings.append(
             f"Confidence calibrated on {fit['source']} ({fit['spans']} figures): "
             "the probability that a figure is correct."
         )
-        if spans:
+        if low:
             warnings.append(
                 f"{low} of {len(spans)} figure(s) below the review threshold "
                 f"{self.threshold:.0%}: check them first."
             )
-        else:
+        elif not spans:
             warnings.append("No figures found; models miss many figures, so review the text.")
         method = dict(result.method)
         method["calibration"] = {

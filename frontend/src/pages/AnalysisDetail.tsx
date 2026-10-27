@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Download, Loader2, AlertCircle, ChevronLeft } from 'lucide-react';
 import { getAnalysis, getExportUrl } from '../api';
 import type { AnalysisResponse, StanzaType } from '../api';
-import { tr, trWarning, useLanguage } from '../i18n';
+import { isNote, tr, trWarning, useLanguage } from '../i18n';
 
 const STANZA_TYPES: Record<StanzaType, string> = { '賦': 'description', '比': 'comparison', '興': 'evocative image' };
 const percent = (value: number | undefined) => `${Math.round((value ?? 0) * 100)}%`;
@@ -94,7 +94,9 @@ export default function AnalysisDetail() {
   const isFailed = analysis.status === 'failed';
   const metaphors = analysis.result?.metaphors || [];
   const needsReview = analysis.result?.needs_review === true;
-  const warnings = analysis.result?.warnings ?? [];
+  const allWarnings = analysis.result?.warnings ?? [];
+  const warnings = allWarnings.filter(warning => !isNote(warning));
+  const notes = allWarnings.filter(isNote);
   const candidates = analysis.result?.candidates || [];
   const method = analysis.result?.method || {};
   const stanzas = analysis.result?.language === 'zh' ? analysis.result.stanzas ?? [] : [];
@@ -226,7 +228,10 @@ export default function AnalysisDetail() {
             </div>
           )}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-gray-900">{tr('Found Metaphors', language)} ({metaphors.length})</h2>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">{tr('Found Metaphors', language)} ({metaphors.length})</h2>
+              {notes.map((note, index) => <p key={index} className="mt-1 text-sm text-gray-500">{trWarning(note, language)}</p>)}
+            </div>
             <div className="flex gap-2">
               <a
                 href={getExportUrl(analysis.analysis_id, 'json')}

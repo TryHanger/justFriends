@@ -3,12 +3,13 @@
 import importlib.util
 from pathlib import Path
 
+from app.nlp.calibration import XLMR_PROBABILITIES, XLMR_UNCALIBRATED
 from app.nlp.contracts import resolve_language, validate_result
 from app.schemas.analysis import AnalysisResult, MetaphorSpan
 from app.schemas.taxonomy import BIO_LABELS, METAPHOR_LABELS
 
 LABEL2ID = {label: i for i, label in enumerate(BIO_LABELS)}
-# Explanations are shown to users in Russian only.
+# Explanations are shown to users in Russian only; replaced when attribute heads are present.
 XLMR_RATIONALE = (
     "XLM-R отметила фрагмент как образное выражение; тип фигуры (метафора, сравнение "
     "и т. п.) и области образа эта модель не определяет."
@@ -191,6 +192,10 @@ class XLMRDetector:
         self.version = getattr(
             self.model.config, "nlp_model_version", f"xlmr:{Path(model_path).name}"
         )
+        from app.nlp.figure_attributes import FigureAttributes
+
+        # Type and domain heads trained on this checkpoint's hidden states, if present.
+        self.attributes = FigureAttributes.load(Path(model_path) / "figure_attributes.json")
 
     def analyze(self, text: str, language: str = "auto") -> AnalysisResult:
         import torch
@@ -224,6 +229,8 @@ class XLMRDetector:
             model_version=self.version,
             metaphors=spans,
             needs_review=True,
-            warnings=["Token probabilities are uncalibrated; domains unknown."],
+            warnings=[XLMR_PROBABILITIES if self.attributes else XLMR_UNCALIBRATED],
         )
+        if self.attributes and spans:
+            result = self.attributes.apply(text, result, self.model, self.tokenizer, self.device)
         return validate_result(text, language, result)

@@ -156,6 +156,7 @@ def train_xlmr(
         detector = XLMRDetector.__new__(XLMRDetector)
         detector.tokenizer, detector.model, detector.device = tokenizer, model.eval(), device
         detector.max_length, detector.stride, detector.version = max_length, stride, "training"
+        detector.attributes = None  # validation scores spans only
         predictions = {r.id: detector.analyze(r.text, r.language) for r in validation}
         scores = evaluate(validation, predictions, allow_non_gold=allow_silver_pilot)
         f1 = scores["all"]["metaphor_detection"]["f1"]

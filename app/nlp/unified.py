@@ -52,10 +52,17 @@ def merge(
         figures.append(span)
         sources[(span.start, span.end)] = ["llm", "xlmr"] if hits else ["llm"]
         raw.append(llm_raw[index] if llm_raw else None)
+    # With attribute heads XLM-R figures carry a type, domains and an explanation of their own.
+    attributes = bool(xlmr and "attributes" in xlmr.method)
     for i, other in enumerate(others):
         if i in matched:
             continue
-        figures.append(other.model_copy(update={"label": "metaphor", "rationale": XLMR_ONLY}))
+        update = (
+            {"rationale": f"{XLMR_ONLY} {other.rationale}"}
+            if attributes
+            else {"label": "metaphor", "rationale": XLMR_ONLY}
+        )
+        figures.append(other.model_copy(update=update))
         sources[(other.start, other.end)] = ["xlmr"]
         raw.append(None)  # no LLM self-estimate exists for this figure
     order = sorted(range(len(figures)), key=lambda i: (figures[i].start, figures[i].end))
@@ -64,13 +71,13 @@ def merge(
     parts = [llm] + ([xlmr] if xlmr else [])
     merged_warnings = [w for part in parts for w in part.warnings if not _REVIEW_SUMMARY.match(w)]
     merged_warnings += list(warnings)
-    if figures:
-        low = sum(span.confidence < threshold for span in figures)
+    low = sum(span.confidence < threshold for span in figures)
+    if low:
         merged_warnings.append(
             f"{low} of {len(figures)} figure(s) below the review threshold "
             f"{threshold:.0%}: check them first."
         )
-    else:
+    elif not figures:
         merged_warnings.append("No figures found; models miss many figures, so review the text.")
 
     counts = {"both": 0, "llm_only": 0, "xlmr_only": 0}

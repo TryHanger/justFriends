@@ -107,6 +107,8 @@ const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
     (m) => `Режим классической поэзии (${m[1]}) не сработал; показаны только фигуры основного анализа.`],
   [/^XLM-R does not determine source and target domains\.$/,
     () => 'XLM-R не определяет исходную и целевую области образа.'],
+  [/^Token probabilities are uncalibrated\.$/,
+    () => 'Вероятности XLM-R не откалиброваны.'],
   [/^Token probabilities are uncalibrated; domains unknown\.$/,
     () => 'Вероятности XLM-R не откалиброваны; области не определены.'],
   [/^Detection and attribute scores are uncalibrated\.$/,
@@ -128,6 +130,11 @@ const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^Provider or parsing failure; empty prediction counted in metrics\.$/,
     () => 'Ошибка провайдера или разбора ответа; в метриках учтён пустой результат.'],
 ];
+
+// Statements about how confidence was obtained: shown as a note, not as a warning.
+const notePatterns = [/^Confidence calibrated on .+ \(\d+ figures\): the probability that a figure is correct\.$/];
+
+export function isNote(text: string) { return notePatterns.some(pattern => pattern.test(text)); }
 
 export function trWarning(text: string, language: Language) {
   if (language !== 'ru') return text;
