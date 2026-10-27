@@ -6,6 +6,8 @@ Metrics per language (all / zh / kk):
   entity_extraction    exact-boundary P/R/F1 of entity candidates (module B)
   usage_classification literal vs metaphorical on gold candidates (module C), positive = metaphorical
   semantic_labeling    end-to-end P/R/F1 of (span, field, value) for domains, semantic label, sentiment
+Diagnostic metrics (overlap/char/document detection, tenor and ground quality, calibration,
+genre breakdown, reliability) are described in quality.py.
 """
 
 import random
@@ -14,6 +16,12 @@ from itertools import combinations
 
 from app.nlp.contracts import validate_result
 from app.nlp.corpus import Poem
+from app.nlp.quality import (
+    calibration,
+    detection_counts,
+    reliability,
+    text_field_scores,
+)
 from app.schemas.analysis import AnalysisResult
 from app.schemas.taxonomy import METAPHOR_LABELS
 
@@ -31,7 +39,12 @@ _COUNTED = (
     "entity_extraction",
     "usage_classification",
     "semantic_labeling",
+    "overlap_detection",
+    "char_detection",
+    "document_detection",
 )
+# "unknown" is an abstention, not an annotation: matching unknown == unknown is no evidence.
+UNANNOTATED = {None, "unknown"}
 
 
 def prf(tp: int, fp: int, fn: int) -> dict:
@@ -59,7 +72,7 @@ def _semantic_tuples(spans, fields) -> set:
         for s in spans
         if s.label in METAPHOR_LABELS
         for name in fields
-        if _norm(getattr(s, name)) is not None
+        if getattr(s, name) not in UNANNOTATED and _norm(getattr(s, name)) is not None
     }
 
 
@@ -103,7 +116,9 @@ def record_counts(record: Poem, prediction: AnalysisResult) -> dict:
         counts["entity_extraction"] = counts["usage_classification"] = None
 
     # Only fields that gold annotates are scored; a field absent from gold is not penalised.
-    fields = [f for f in SEMANTIC_FIELDS if any(getattr(s, f) is not None for s in record.spans)]
+    fields = [
+        f for f in SEMANTIC_FIELDS if any(getattr(s, f) not in UNANNOTATED for s in record.spans)
+    ]
     if fields:
         expected = _semantic_tuples(record.spans, fields)
         actual = _semantic_tuples(predicted, fields)
@@ -123,6 +138,7 @@ def record_counts(record: Poem, prediction: AnalysisResult) -> dict:
     else:
         counts["semantic_labeling"] = None
         counts["semantic_fields"] = {}
+    counts.update(detection_counts(record, prediction))
     return counts
 
 
@@ -167,8 +183,22 @@ def evaluate(
                     a + b for a, b in zip(fields.get(name, (0, 0, 0)), values, strict=True)
                 ]
         section["semantic_by_field"] = {name: prf(*values) for name, values in fields.items()}
+        negatives = [
+            row["negative_document"] for row in rows if row["negative_document"] is not None
+        ]
+        if section["document_detection"] is not None:
+            section["document_detection"]["negative_documents"] = len(negatives)
+            # False alarms on texts experts confirmed to contain no metaphor.
+            section["document_detection"]["false_positive_rate"] = (
+                sum(negatives) / len(negatives) if negatives else None
+            )
+        section["text_fields"], tenor = text_field_scores(subset, predictions)
+        section["tenor_localization"] = prf(*tenor) if tenor else None
+        section["calibration"] = calibration(subset, predictions)
         section["attributes_on_exact_matches"] = _attribute_confusion(subset, predictions)
         report[language] = section
+    report["by_genre"] = _by_genre(gold, counts)
+    report["reliability"] = reliability(predictions)
     report["tz_targets"] = tz_targets(report["all"])
     report["synthetic"] = any(r.synthetic for r in gold)
     report["supervision"] = "non-gold-pilot" if allow_non_gold else "gold"
@@ -177,6 +207,23 @@ def evaluate(
             "Weakly supervised pilot metric only; it is not an independent Gold evaluation."
         )
     return report
+
+
+def _by_genre(gold: list[Poem], counts: dict) -> dict:
+    groups: dict[str, list[dict]] = {}
+    for record in gold:
+        key = f"{record.language}:{record.genre}" + (
+            f" ({record.era})" if record.era != "unknown" else ""
+        )
+        groups.setdefault(key, []).append(counts[record.id])
+    return {
+        key: {
+            "documents": len(rows),
+            "exact_f1": prf(*_sum(rows, "metaphor_detection")[0])["f1"],
+            "overlap_f1": prf(*_sum(rows, "overlap_detection")[0])["f1"],
+        }
+        for key, rows in sorted(groups.items())
+    }
 
 
 def _attribute_confusion(subset: list[Poem], predictions: dict[str, AnalysisResult]) -> dict:

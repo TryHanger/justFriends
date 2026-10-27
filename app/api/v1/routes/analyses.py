@@ -1,4 +1,5 @@
 import csv
+import importlib.util
 import json
 import logging
 from collections import Counter, defaultdict
@@ -46,11 +47,18 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
+def _local_model_ready(path: str) -> bool:
+    """A fine-tuned checkpoint is usable only with its weights and PyTorch installed;
+    otherwise the UI would offer a model whose every analysis fails."""
+    return Path(path).is_dir() and importlib.util.find_spec("torch") is not None
+
+
 def _model_catalog() -> list[ModelInfo]:
     return [
         ModelInfo(id="default", name="GPT-4o-mini", description="Основная LLM-модель анализа с объяснением метафор.", languages=["auto", "zh", "kk"], supervision="LLM", available=bool(settings.openai_api_key)),
-        ModelInfo(id="xlmr_zh_gold_v2", name="XLM-R Chinese Gold v2", description="Дообученная XLM-R для китайских метафор.", languages=["zh"], supervision="Gold", training_records=18043, metric_label="Chinese Gold span F1", metric_value=0.6713, available=Path(settings.chinese_gold_xlmr_model_path).is_dir()),
-        ModelInfo(id="experimental_kk", name="XLM-R Kazakh Silver pilot v2", description="Экспериментальная казахская XLM-R; необходима ручная проверка.", languages=["kk"], supervision="Silver-pilot", training_records=119, metric_label="Kazakh Silver control F1", metric_value=0.1458, available=Path(settings.experimental_kk_xlmr_model_path).is_dir()),
+        ModelInfo(id="xlmr_zh_gold_v2", name="XLM-R zh+kk expert v3 (китайский)", description="Единая XLM-R для китайского и казахского: эталон CMDAG и 570 классических стихов с разметкой Claude; видит и образы классической поэзии.", languages=["zh"], supervision="Gold + silver", training_records=3570, metric_label="Chinese Gold span F1", metric_value=0.658, available=_local_model_ready(settings.chinese_gold_xlmr_model_path)),
+        ModelInfo(id="experimental_kk", name="XLM-R zh+kk expert v3 (казахский)", description="Единая XLM-R для китайского и казахского: цитаты толкового словаря, 100 казахских стихов с разметкой Claude и silver-разметка; результаты — подсказки для проверки.", languages=["kk"], supervision="Словарь + silver", training_records=1586, metric_label="Kazakh dictionary κ (unseen words)", metric_value=0.201, available=_local_model_ready(settings.experimental_kk_xlmr_model_path)),
+        ModelInfo(id="unified", name="Единая модель", description="GPT-4o-mini вместе с XLM-R языка текста (китайской Gold v2 или казахской expert v2): фигуры обеих моделей объединяются, у каждой видно, какая модель её нашла. Без весов XLM-R или PyTorch работает только GPT.", languages=["auto", "zh", "kk"], supervision="LLM + XLM-R", available=bool(settings.openai_api_key)),
         ModelInfo(id="baseline", name="Lexical baseline", description="Словарный baseline для сравнения; покрытие ограничено.", languages=["auto", "zh", "kk"], supervision="lexicon", available=True),
     ]
 

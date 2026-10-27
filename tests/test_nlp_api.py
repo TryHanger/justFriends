@@ -146,3 +146,23 @@ def test_api_persist_retrieve_and_errors(monkeypatch):
         get_pipeline.cache_clear()
         get_settings.cache_clear()
         engine.dispose()
+
+
+def test_fine_tuned_models_need_torch(monkeypatch, tmp_path):
+    from app.api.v1.routes import analyses
+
+    monkeypatch.setattr(analyses.settings, "chinese_gold_xlmr_model_path", str(tmp_path))
+    real_find_spec = analyses.importlib.util.find_spec
+
+    def torch_installed(installed):
+        # Pretend either way, so the test does not depend on this environment (CI has no torch).
+        def find_spec(name, *args):
+            if name == "torch":
+                return object() if installed else None
+            return real_find_spec(name, *args)
+
+        monkeypatch.setattr(analyses.importlib.util, "find_spec", find_spec)
+        return {model.id: model for model in analyses.list_models()}["xlmr_zh_gold_v2"]
+
+    assert torch_installed(False).available is False  # weights exist, PyTorch does not
+    assert torch_installed(True).available is True

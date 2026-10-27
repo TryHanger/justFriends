@@ -1,12 +1,19 @@
 """XLM-R BIO detection with complete-text sliding windows and original character offsets."""
 
+import importlib.util
 from pathlib import Path
 
+from app.nlp.calibration import XLMR_PROBABILITIES, XLMR_UNCALIBRATED
 from app.nlp.contracts import resolve_language, validate_result
 from app.schemas.analysis import AnalysisResult, MetaphorSpan
 from app.schemas.taxonomy import BIO_LABELS, METAPHOR_LABELS
 
 LABEL2ID = {label: i for i, label in enumerate(BIO_LABELS)}
+# Explanations are shown to users in Russian only; replaced when attribute heads are present.
+XLMR_RATIONALE = (
+    "XLM-R отметила фрагмент как образное выражение; тип фигуры (метафора, сравнение "
+    "и т. п.) и области образа эта модель не определяет."
+)
 
 
 def align_labels(text, offsets, spans):
@@ -85,7 +92,7 @@ def decode_bio(text, offsets, tags, confidences):
                         source_domain="unknown",
                         target_domain="unknown",
                         confidence=sum(scores) / len(scores),
-                        rationale="XLM-R detected a metaphor; type and domains need classification.",
+                        rationale=XLMR_RATIONALE,
                     )
                 )
 
@@ -110,6 +117,44 @@ def decode_bio(text, offsets, tags, confidences):
             current[2].append(confidence)
     finish()
     return spans
+
+
+def snap_to_words(text: str, spans: list[MetaphorSpan]) -> list[MetaphorSpan]:
+    """Kazakh is written with spaces, but subword tags can cover part of a word ("рек" of
+    "Жүрек"); extend every span to whole words and merge spans that then overlap."""
+
+    def inside(i: int) -> bool:
+        return 0 <= i < len(text) and (text[i].isalpha() or text[i] == "-")
+
+    snapped: list[MetaphorSpan] = []
+    for span in sorted(spans, key=lambda s: s.start):
+        start, end = span.start, span.end
+        while inside(start - 1):
+            start -= 1
+        while inside(end):
+            end += 1
+        if snapped and start < snapped[-1].end:
+            last = snapped[-1]
+            start, end = last.start, max(end, last.end)
+            confidence = max(last.confidence, span.confidence)
+            snapped[-1] = last.model_copy(
+                update={
+                    "start": start,
+                    "end": end,
+                    "text": text[start:end],
+                    "confidence": confidence,
+                }
+            )
+            continue
+        snapped.append(
+            span.model_copy(update={"start": start, "end": end, "text": text[start:end]})
+        )
+    return snapped
+
+
+def checkpoint_ready(path: str) -> bool:
+    """A fine-tuned checkpoint is usable only with its weights and PyTorch installed."""
+    return Path(path).is_dir() and importlib.util.find_spec("torch") is not None
 
 
 class XLMRDetector:
@@ -147,6 +192,10 @@ class XLMRDetector:
         self.version = getattr(
             self.model.config, "nlp_model_version", f"xlmr:{Path(model_path).name}"
         )
+        from app.nlp.figure_attributes import FigureAttributes
+
+        # Type and domain heads trained on this checkpoint's hidden states, if present.
+        self.attributes = FigureAttributes.load(Path(model_path) / "figure_attributes.json")
 
     def analyze(self, text: str, language: str = "auto") -> AnalysisResult:
         import torch
@@ -171,6 +220,8 @@ class XLMRDetector:
             spans = decode_bio(
                 text, offsets, [BIO_LABELS[i] for i in labels.tolist()], scores.tolist()
             )
+            if language == "kk":
+                spans = snap_to_words(text, spans)
         else:
             spans = []
         result = AnalysisResult(
@@ -178,6 +229,8 @@ class XLMRDetector:
             model_version=self.version,
             metaphors=spans,
             needs_review=True,
-            warnings=["Token probabilities are uncalibrated; domains unknown."],
+            warnings=[XLMR_PROBABILITIES if self.attributes else XLMR_UNCALIBRATED],
         )
+        if self.attributes and spans:
+            result = self.attributes.apply(text, result, self.model, self.tokenizer, self.device)
         return validate_result(text, language, result)

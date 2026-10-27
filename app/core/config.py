@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str = "gpt-5.6-terra"
     max_upload_mb: int = 20
-    nlp_backend: Literal[
-        "openai", "anthropic", "ollama", "hf", "baseline", "xlmr", "hybrid"
-    ] = "openai"
+    nlp_backend: Literal["openai", "anthropic", "ollama", "hf", "baseline", "xlmr", "hybrid"] = (
+        "openai"
+    )
     # Prompt strategy (ТЗ п. 2.2.2): '+'-joined few_shot, cot, rag, lexicon; or zero_shot.
     llm_prompt_strategy: str = "few_shot+cot+rag+lexicon"
     # Decoding parameters from ТЗ п. 4.1; empty value in .env means provider default.
@@ -35,10 +35,23 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_context_window: int = Field(default=16384, ge=4096)
     xlmr_model_path: str = "models/xlmr"
-    experimental_kk_xlmr_model_path: str = "models/xlmr-kk-silver-pilot-v2"
-    chinese_gold_xlmr_model_path: str = "models/cmdag-xlmr-mps-full-v2"
+    experimental_kk_xlmr_model_path: str = "models/xlmr-zh-kk-expert-v3"
+    chinese_gold_xlmr_model_path: str = "models/xlmr-zh-kk-expert-v3"
     attribute_model_path: str | None = None
+    # Shijing stanza classifier 賦/比/興 (Zhu Xi labels); skipped when absent. Empty disables.
+    stanza_model_path: str | None = "models/zhuxi-stanza-sikuroberta-v1"
     hybrid_llm_backend: Literal["openai", "anthropic", "ollama", "hf"] = "openai"
+    # Two-stage analysis (docs/NLP.md): for these languages (comma-separated, empty = off)
+    # every candidate of an LLM backend is judged again by a direct usage question.
+    nlp_two_stage_languages: str = "kk"
+    nlp_usage_backend: Literal["openai", "anthropic", "ollama"] = "openai"
+    nlp_usage_model: str = "gpt-4o"
+    # Stage 2 also questions every Kazakh content word no stage-1 candidate covers.
+    nlp_usage_all_words: bool = True
+    # Classical Chinese poetry mode (app/nlp/allegory.py): images read in the commentary
+    # tradition for zh texts that look like classical verse. False disables it.
+    nlp_classical_zh: bool = True
+    nlp_allegory_model: str = "gpt-4o-mini"
     nlp_review_threshold: float = Field(default=0.8, ge=0, le=1)
     nlp_max_length: int = Field(default=256, ge=4, le=512)
     nlp_stride: int = Field(default=64, ge=0)

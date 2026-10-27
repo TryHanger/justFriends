@@ -77,6 +77,8 @@ BIO: `O`, `B-METAPHOR`, `I-METAPHOR`. Олицетворение имеет пр
 | Usage_Type | `metaphors[].usage_type`, `candidates[].usage_type` | `metaphorical` / `literal`; `null` у кандидата — ещё не классифицирован |
 | Source_Domain / Target_Domain | `source_domain` / `target_domain` | Справочник областей выше |
 | Semantic_Label | `metaphors[].semantic_label` | «благородный муж», «хитрость»… |
+| Тема (tenor) | `metaphors[].tenor`, `tenor_start`, `tenor_end` | Что описывает образ: 君子 для 兰. Смещения — только если тема дословно есть в тексте |
+| Основание (ground) | `metaphors[].ground` | Общее свойство темы и образа, на языке оригинала: 品格高洁 |
 | — | `metaphors[].sentiment` | `positive` / `neutral` / `negative` |
 | Evidence_Reasoning | `metaphors[].rationale`, `candidates[].reasoning` | При CoT включает шаги MIP |
 

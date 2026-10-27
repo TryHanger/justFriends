@@ -22,8 +22,19 @@ services:
       NLP_BACKEND: ${NLP_BACKEND:-baseline}
       QUALITY_RUNNER_ENABLED: ${QUALITY_RUNNER_ENABLED:-false}
       QUALITY_FRONTEND_WORKER_ENABLED: ${QUALITY_RUNNER_ENABLED:-false}
-      EXPERIMENTAL_KK_XLMR_MODEL_PATH: ${EXPERIMENTAL_KK_XLMR_MODEL_PATH:-models/xlmr-kk-silver-pilot-v2}
+      EXPERIMENTAL_KK_XLMR_MODEL_PATH: ${EXPERIMENTAL_KK_XLMR_MODEL_PATH:-models/xlmr-zh-kk-expert-v3}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
+      LLM_PROMPT_STRATEGY: ${LLM_PROMPT_STRATEGY:-few_shot+cot+rag+lexicon}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
+      LLM_TOP_P: ${LLM_TOP_P:-0.95}
+      RAG_TOP_K: ${RAG_TOP_K:-4}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5-5}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
+      # Ollama runs on the host machine, outside the compose network.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
@@ -63,6 +74,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Without it the database stays down after Docker Desktop restarts (exit 255) and the
+    # api restarts forever on "failed to resolve host 'db'".
+    restart: unless-stopped
 
   label-studio:
     image: heartexlabs/label-studio:latest

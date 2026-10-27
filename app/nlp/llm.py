@@ -6,6 +6,9 @@ strategies (ТЗ п. 2.2.2), soft-lexicon candidates (module B), output parsing 
 """
 
 import json
+import logging
+import re
+import threading
 from urllib.request import Request, urlopen
 
 from app.nlp.contracts import (
@@ -21,11 +24,26 @@ from app.nlp.prompts import PromptStrategy, build_prompt
 from app.schemas.analysis import AnalysisResult, EntityCandidate, MetaphorSpan
 
 DEFAULT_STRATEGY = "few_shot+cot+rag+lexicon"
+logger = logging.getLogger(__name__)
 _MIP_KEYS = ("basic_meaning", "contextual_meaning", "contrast")
 
 
-def _cyrillic(value: str) -> bool:
-    return any("Ѐ" <= char <= "ӿ" for char in value)
+_KAZAKH_LETTERS = frozenset("әғқңөұүһіӘҒҚҢӨҰҮҺІ")
+
+
+def _russian(value: str) -> bool:
+    """Russian prose: Cyrillic must dominate and must not be Kazakh.
+
+    Kazakh is Cyrillic too, so a Kazakh explanation must not pass as Russian. A Chinese
+    explanation must not pass either just because our own Russian MIP labels
+    ("базовое:", "контраст:") are appended to it. Quoted source words («жүрек», «心»)
+    are ignored; a few unquoted source words inside Russian prose stay under the limits."""
+    unquoted = re.sub(r"«[^»]*»|\"[^\"]*\"|“[^”]*”", "", value)
+    letters = [char for char in unquoted if char.isalpha()]
+    cyrillic = [char for char in letters if "Ѐ" <= char <= "ӿ"]
+    if not cyrillic or len(cyrillic) / len(letters) < 0.7:
+        return False
+    return sum(char in _KAZAKH_LETTERS for char in cyrillic) / len(cyrillic) < 0.04
 
 
 def _align(text: str, fragment: str, start: int, end: int) -> tuple[int, int] | None:
@@ -39,6 +57,23 @@ def _align(text: str, fragment: str, start: int, end: int) -> tuple[int, int] | 
     if position < 0 or text.find(fragment, position + 1) >= 0:
         return None
     return position, position + len(fragment)
+
+
+def locate_tenor(text: str, tenor: str, start: int, end: int) -> tuple[int, int] | None:
+    """Offsets of the tenor occurrence nearest to the image span, or None if implicit."""
+    if not tenor:
+        return None
+    best, position = None, text.find(tenor)
+    while position >= 0:
+        distance = (
+            0
+            if position < end and position + len(tenor) > start
+            else min(abs(position - end), abs(start - (position + len(tenor))))
+        )
+        if best is None or distance < best[0]:
+            best = (distance, position)
+        position = text.find(tenor, position + 1)
+    return None if best is None else (best[1], best[1] + len(tenor))
 
 
 def parse_output(
@@ -63,6 +98,8 @@ def parse_output(
             rationale = f"{rationale} (MIP — {steps})"
         entity = item.entity if item.entity and item.entity in item.text else None
         confidence = min(1.0, max(0.0, item.confidence))
+        tenor = item.tenor.strip() or None
+        tenor_bounds = locate_tenor(text, tenor, start, end) if tenor else None
         metaphors.append(
             MetaphorSpan(
                 text=item.text,
@@ -79,6 +116,10 @@ def parse_output(
                 context_sentence=context_sentence(text, start, end),
                 semantic_label=item.semantic_label.strip() or None,
                 sentiment=item.sentiment,
+                tenor=tenor,
+                tenor_start=tenor_bounds[0] if tenor_bounds else None,
+                tenor_end=tenor_bounds[1] if tenor_bounds else None,
+                ground=item.ground.strip() or None,
             )
         )
         if entity:
@@ -164,6 +205,8 @@ class LLMDetector:
         extractor: CandidateExtractor | None = None,
         knowledge=None,
         rag_k: int = 4,
+        usage_judge=None,
+        allegory_judge=None,
     ):
         if not model:
             raise ValueError("Set a model name")
@@ -172,6 +215,20 @@ class LLMDetector:
         self.temperature, self.top_p = temperature, top_p
         self.extractor = extractor or CandidateExtractor()
         self.knowledge, self.rag_k = knowledge, rag_k
+        # Optional stage 2 (app/nlp/usage.py): direct usage question for every candidate.
+        self.usage_judge = usage_judge
+        # Optional classical Chinese poetry mode (app/nlp/allegory.py).
+        self.allegory_judge = allegory_judge
+        # Per-thread token counter: background jobs may share one detector instance.
+        self._local = threading.local()
+
+    def _record_usage(self, input_tokens, output_tokens) -> None:
+        usage = getattr(self._local, "usage", None)
+        if usage is None:
+            return
+        usage["requests"] += 1
+        usage["input_tokens"] += int(input_tokens or 0)
+        usage["output_tokens"] += int(output_tokens or 0)
 
     # Provider hook: return the raw JSON text and whether sampling parameters were applied.
     def _complete(
@@ -201,10 +258,23 @@ class LLMDetector:
         )
         cot = "cot" in self.strategy
         sampling = {"temperature": self.temperature, "top_p": self.top_p}
+        self._local.usage = {"requests": 0, "input_tokens": 0, "output_tokens": 0}
         raw, applied = self._complete(
             prompt.instructions, prompt.user, output_schema(cot), sampling
         )
         result = parse_output(raw, text, language, self.model_version, cot=cot)
+        result = result.model_copy(
+            update={
+                "candidates": merge_candidates(
+                    result.candidates, lexicon_candidates if "lexicon" in self.strategy else []
+                )
+            }
+        )
+        if self.usage_judge and self.usage_judge.applies(result.language):
+            # Before the Russian pass, so that stage-2 explanations are checked too.
+            result = self.usage_judge.apply(text, result)
+        if self.allegory_judge and self.allegory_judge.applies(result.language, text):
+            result = self.allegory_judge.apply(text, result)
         result = self._ensure_russian(result)
         method = {
             **prompt.record,
@@ -213,55 +283,100 @@ class LLMDetector:
             "temperature": self.temperature if applied else None,
             "top_p": self.top_p if applied else None,
             "sampling_applied": applied,
+            # Includes the optional Russian translation pass; reported by the provider.
+            "usage": dict(self._local.usage),
         }
         warnings = list(result.warnings)
         if not applied and (self.temperature is not None or self.top_p is not None):
             warnings.append("Provider rejected temperature/top_p; its default decoding was used.")
         if known:
             method["lexicon"] = self.extractor.version(result.language)
-        candidates = merge_candidates(
-            result.candidates, lexicon_candidates if "lexicon" in self.strategy else []
-        )
-        result = result.model_copy(
-            update={"candidates": candidates, "method": method, "warnings": warnings}
-        )
+        for key in ("two_stage", "classical"):
+            if key in result.method:
+                method[key] = result.method[key]
+        result = result.model_copy(update={"method": method, "warnings": warnings})
         return validate_result(text, language, result)
 
     def _ensure_russian(self, result: AnalysisResult) -> AnalysisResult:
-        """Translate Russian-only fields in a narrowly scoped pass when the model ignored the rule."""
+        """Translate Russian-only fields in a narrowly scoped pass when the model ignored the rule.
+
+        Covers the figures' explanations and the candidates' readings and reasoning: the
+        interface is Russian-only, while the poem-language fields (tenor, ground) stay."""
+        items = {
+            "metaphors": (list(result.metaphors), ("rationale", "semantic_label")),
+            "candidates": (list(result.candidates), ("lexicon_meaning", "reasoning")),
+        }
         fields = [
-            (index, name)
-            for index, span in enumerate(result.metaphors)
-            for name in ("rationale", "semantic_label")
-            if getattr(span, name) and not _cyrillic(getattr(span, name))
+            (group, index, name)
+            for group, (objects, names) in items.items()
+            for index, obj in enumerate(objects)
+            for name in names
+            if getattr(obj, name) and not _russian(getattr(obj, name))
         ]
-        if not fields:
-            return result
-        items = [
-            {"expression": result.metaphors[i].text, "value": getattr(result.metaphors[i], name)}
-            for i, name in fields
-        ]
+        # Models tend to "translate" Kazakh by returning Kazakh: one more pass for leftovers.
+        for attempt in range(2):
+            if not fields:
+                break
+            translations = self._translate(
+                [
+                    {
+                        "expression": items[group][0][i].text,
+                        "value": getattr(items[group][0][i], name),
+                    }
+                    for group, i, name in fields
+                ],
+                # Deterministic first; a retry at temperature 0 would repeat the same answer.
+                temperature=0.0 if attempt == 0 else None,
+            )
+            leftover = []
+            for (group, index, name), value in zip(fields, translations, strict=True):
+                objects = items[group][0]
+                if value.strip() and _russian(value):
+                    objects[index] = objects[index].model_copy(update={name: value})
+                else:
+                    leftover.append((group, index, name))
+                    logger.warning("Rejected Russian translation of %s: %r", name, value[:160])
+            fields = leftover
+        # A failed translation of one explanation must not discard the whole analysis:
+        # keep the original text and flag it for the reviewer instead.
+        untranslated = len(fields)
+        warnings = list(result.warnings)
+        if untranslated:
+            warnings.append(f"{untranslated} explanation(s) could not be translated into Russian.")
+        return result.model_copy(
+            update={
+                "metaphors": items["metaphors"][0],
+                "candidates": items["candidates"][0],
+                "warnings": warnings,
+            }
+        )
+
+    def _translate(self, items: list[dict], temperature: float | None) -> list[str]:
         raw, _ = self._complete(
-            "Translate each value into clear, concise Russian. Return Russian Cyrillic only. "
-            "Preserve meaning and do not add claims. Return exactly one translated string per "
-            "input item, in the same order.",
+            "Translate each value from Chinese or Kazakh into clear, concise Russian. "
+            "The answer must be Russian: Kazakh is not Russian, so never return text with the "
+            "letters ә, ғ, қ, ң, ө, ұ, ү, һ, і and never return the value unchanged or "
+            "wrapped in quotes. Single source words such as 舟 or жүрек may stay inside the "
+            "Russian sentence. Preserve meaning and do not add claims. Return exactly one "
+            "translated string per input item, in the same order.",
             json.dumps({"items": items}, ensure_ascii=False),
             _TRANSLATION_SCHEMA,
-            {"temperature": None, "top_p": None},
+            {"temperature": temperature, "top_p": None},
         )
         translations = json.loads(raw)["translations"]
-        if len(translations) != len(fields) or not all(
-            value.strip() and _cyrillic(value) for value in translations
-        ):
-            raise ValueError("LLM returned invalid Russian translations")
-        spans = list(result.metaphors)
-        for (index, name), value in zip(fields, translations, strict=True):
-            spans[index] = spans[index].model_copy(update={name: value})
-        return result.model_copy(update={"metaphors": spans})
+        if len(translations) != len(items):
+            # Cannot tell which translation belongs to which item: keep the originals, so
+            # they are retried and, failing that, flagged instead of failing the analysis.
+            logger.warning("Translation returned %d items for %d", len(translations), len(items))
+            return [item["value"] for item in items]
+        return translations
 
 
 class OpenAIDetector(LLMDetector):
     provider = "openai"
+    # A typical answer is under 1k tokens. Without a cap, a rare degenerate repetition
+    # runs to the model maximum and the analysis hangs for minutes before failing.
+    max_output_tokens = 6000
 
     def __init__(self, model: str, api_key: str, client=None, **kwargs):
         super().__init__(model, **kwargs)
@@ -284,6 +399,7 @@ class OpenAIDetector(LLMDetector):
                     "schema": schema,
                 }
             },
+            max_output_tokens=self.max_output_tokens,
         )
         params = {k: v for k, v in sampling.items() if v is not None}
         applied = bool(params)
@@ -294,10 +410,16 @@ class OpenAIDetector(LLMDetector):
             message = str(exc).lower()
             if not params or not any(key in message for key in params):
                 raise
+            params = {}
             response = self.client.responses.create(**request)
             applied = False
+        if response.status == "incomplete":
+            # Usually a one-off repetition loop that hit the cap: sample once more.
+            response = self.client.responses.create(**request, **params)
         if response.status != "completed":
             raise ValueError("LLM response is incomplete")
+        usage = getattr(response, "usage", None)
+        self._record_usage(getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0))
         return response.output_text, applied
 
 
@@ -354,4 +476,5 @@ class OllamaDetector(LLMDetector):
             payload = json.load(response)
         if not payload.get("done") or payload.get("done_reason") == "length":
             raise ValueError("Ollama response is incomplete")
+        self._record_usage(payload.get("prompt_eval_count"), payload.get("eval_count"))
         return payload["message"]["content"], any(v is not None for v in sampling.values())

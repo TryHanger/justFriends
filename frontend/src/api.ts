@@ -22,6 +22,10 @@ export interface Metaphor {
   context_sentence?: string | null;
   semantic_label?: string | null;
   sentiment?: 'positive' | 'neutral' | 'negative' | null;
+  tenor?: string | null;
+  tenor_start?: number | null;
+  tenor_end?: number | null;
+  ground?: string | null;
 }
 
 export interface EntityCandidate {
@@ -35,6 +39,16 @@ export interface EntityCandidate {
   reasoning?: string | null;
 }
 
+export type StanzaType = '賦' | '比' | '興';
+
+export interface StanzaLabel {
+  text: string;
+  start: number;
+  end: number;
+  label: StanzaType;
+  probabilities: Partial<Record<StanzaType, number>>;
+}
+
 export interface AnalysisResult {
   language: string;
   model_version: string;
@@ -43,6 +57,7 @@ export interface AnalysisResult {
   warnings?: string[];
   candidates?: EntityCandidate[];
   method?: Record<string, unknown>;
+  stanzas?: StanzaLabel[];
 }
 
 export interface AnalysisResponse {
@@ -106,7 +121,7 @@ export interface SubmitResponse {
   status_url: string;
 }
 
-export type ModelProfile = 'default' | 'experimental_kk' | 'xlmr_zh_gold_v2' | 'baseline';
+export type ModelProfile = 'default' | 'experimental_kk' | 'xlmr_zh_gold_v2' | 'unified' | 'baseline';
 
 export interface ModelInfo {
   id: ModelProfile;

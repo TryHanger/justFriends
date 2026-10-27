@@ -41,6 +41,14 @@ class LLMMetaphor(_Offsets):
 
     entity: str = Field(description="Key image word inside text, e.g. 兰 or бөрі")
     entity_type: EntityType
+    tenor: str = Field(
+        description="Tenor: what the image describes, copied from the poem when present; "
+        "empty string if implicit"
+    )
+    ground: str = Field(
+        description="Ground: short phrase naming the property shared by tenor and image, "
+        "in the poem's language"
+    )
     label: MetaphorLabel
     source_domain: Domain
     target_domain: Domain
@@ -61,6 +69,14 @@ class LLMMetaphorCoT(_Offsets):
     )
     entity: str = Field(description="Key image word inside text, e.g. 兰 or бөрі")
     entity_type: EntityType
+    tenor: str = Field(
+        description="Tenor: what the image describes, copied from the poem when present; "
+        "empty string if implicit"
+    )
+    ground: str = Field(
+        description="Ground: short phrase naming the property shared by tenor and image, "
+        "in the poem's language"
+    )
     label: MetaphorLabel
     source_domain: Domain
     target_domain: Domain
@@ -128,6 +144,8 @@ def validate_spans(text: str, spans: list[MetaphorSpan]) -> None:
             raise ValueError("Span must exactly match original text[start:end]")
         if span.start < previous_end:
             raise ValueError("Overlapping or duplicate spans require adjudication")
+        if span.tenor_start is not None and text[span.tenor_start : span.tenor_end] != span.tenor:
+            raise ValueError("Tenor offsets must exactly match original text")
         previous_end = span.end
 
 

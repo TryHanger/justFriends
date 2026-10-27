@@ -21,7 +21,11 @@
         "usage_type": "metaphorical",
         "context_sentence": null,
         "semantic_label": null,
-        "sentiment": null
+        "sentiment": null,
+        "tenor": null,
+        "tenor_start": null,
+        "tenor_end": null,
+        "ground": null
       }
     ],
     "needs_review": true,

@@ -6,7 +6,7 @@ from app.core.limits import MAX_ANALYSIS_CHARS
 from app.schemas.taxonomy import EntityType, MetaphorLabel, Sentiment, UsageType
 
 Language = Literal["auto", "zh", "kk"]
-ModelProfile = Literal["default", "experimental_kk", "xlmr_zh_gold_v2", "baseline"]
+ModelProfile = Literal["default", "experimental_kk", "xlmr_zh_gold_v2", "unified", "baseline"]
 
 
 class AnalyzeRequest(BaseModel):
@@ -46,6 +46,13 @@ class MetaphorSpan(BaseModel):
         default=None, description="Short conventional meaning, e.g. 'благородный муж' for 兰"
     )
     sentiment: Sentiment | None = None
+    # Tenor ("тема"): what the image describes; vehicle is the span itself. Offsets are
+    # set only when the tenor occurs literally in the source text (it may be implicit).
+    tenor: str | None = Field(default=None, description="Tenor: what is described, e.g. 火")
+    tenor_start: int | None = Field(default=None, ge=0, strict=True)
+    tenor_end: int | None = Field(default=None, gt=0, strict=True)
+    # Ground ("основание сравнения"): the property shared by tenor and vehicle.
+    ground: str | None = Field(default=None, description="Ground: shared property, e.g. 折磨的感觉")
 
     @model_validator(mode="after")
     def ordered_bounds(self):
@@ -53,6 +60,13 @@ class MetaphorSpan(BaseModel):
             raise ValueError("end must be greater than start")
         if self.entity is not None and self.entity not in self.text:
             raise ValueError("entity must be a substring of the span text")
+        if (self.tenor_start is None) != (self.tenor_end is None):
+            raise ValueError("tenor_start and tenor_end must be set together")
+        if self.tenor_start is not None:
+            if self.tenor is None or self.tenor_end <= self.tenor_start:
+                raise ValueError("tenor offsets need tenor text and ordered bounds")
+            if self.tenor_end - self.tenor_start != len(self.tenor):
+                raise ValueError("tenor offsets must cover exactly the tenor text")
         return self
 
 
@@ -79,6 +93,32 @@ class EntityCandidate(BaseModel):
         return self
 
 
+StanzaType = Literal["賦", "比", "興"]
+
+
+class StanzaLabel(BaseModel):
+    """Stanza type after Zhu Xi (詩經集傳): 賦 description, 比 comparison, 興 evocative image.
+
+    A model suggestion with its probabilities, not an expert annotation.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1)
+    start: int = Field(ge=0, strict=True)
+    end: int = Field(gt=0, strict=True)
+    label: StanzaType
+    probabilities: dict[StanzaType, float]
+
+    @model_validator(mode="after")
+    def ordered_bounds(self):
+        if self.end <= self.start:
+            raise ValueError("end must be greater than start")
+        if not all(0 <= p <= 1 for p in self.probabilities.values()):
+            raise ValueError("probabilities must lie in [0, 1]")
+        return self
+
+
 class AnalysisResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -92,6 +132,9 @@ class AnalysisResult(BaseModel):
     method: dict = Field(
         default_factory=dict,
         description="Reproducibility record: prompt strategy, decoding parameters, lexicon version",
+    )
+    stanzas: list[StanzaLabel] = Field(
+        default_factory=list, description="Chinese only: stanza types 賦/比/興 suggested by a model"
     )
 
 

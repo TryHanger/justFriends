@@ -58,21 +58,41 @@ const ru: Record<string, string> = {
   'Found Metaphors': 'Найденные метафоры', 'No metaphors detected in this document.': 'В документе метафоры не обнаружены.',
   Method: 'Метод', 'provider default decoding': 'декодирование по умолчанию провайдера',
   'Fields of the technical specification': 'Поля из ТЗ: Entity, Type, Context_Sentence, Usage_Type…', 'TZ format': 'Формат ТЗ',
-  'Context:': 'Контекст:', positive: 'позитивная', neutral: 'нейтральная', negative: 'негативная',
+  'Context:': 'Контекст:', 'Tenor:': 'Тема:', 'Ground:': 'Основание:', positive: 'позитивная', neutral: 'нейтральная', negative: 'негативная',
   'Entity candidates': 'Сущности-кандидаты', Entity: 'Сущность', Usage: 'Употребление',
   'Found by the soft lexicon and the model; each is judged literal or metaphorical in context.': 'Найдены словарём-ограничением и моделью; для каждой в контексте решено, прямое это употребление или переносное.',
   'Conventional reading / reasoning': 'Традиционное прочтение / обоснование',
   metaphorical: 'переносное', literal: 'прямое', unclassified: 'не решено',
   natural_phenomenon: 'Явление природы', landscape: 'Ландшафт', celestial: 'Небесное тело', artifact: 'Предмет', abstract: 'Абстракция',
   Sentiment: 'Тональность', 'Entity types': 'Типы сущностей', 'Domain pairs': 'Пары «источник → мишень»', 'Semantic labels': 'Семантические метки',
+  Stanzas: 'Строфы', probability: 'вероятность',
+  description: 'описание', comparison: 'сравнение', 'evocative image': 'образ-зачин',
+  "Types follow Zhu Xi's classification (詩經集傳); labels are model suggestions, not expert annotation.": 'Типы строф даны по классификации Чжу Си (詩經集傳); метки — подсказки модели, а не экспертная разметка.',
+  'GPT and XLM-R': 'GPT и XLM-R', 'GPT only': 'только GPT', 'XLM-R only': 'только XLM-R',
+  'Classical poetry mode': 'классический режим', 'Added by the direct usage question': 'добавлено прямым вопросом',
+  'Stage 2 judged the head word literal': 'второй этап: прямое значение',
+  // Rationale stored by XLM-R analyses made before it was written in Russian.
+  'XLM-R detected a metaphor; type and domains need classification.': 'XLM-R отметила фрагмент как образное выражение; тип фигуры (метафора, сравнение и т. п.) и области образа эта модель не определяет.',
 };
 
 export function tr(text: string, language: Language) { return language === 'ru' ? (ru[text] ?? text) : text; }
+
+function calibrationSource(source: string) {
+  if (source.startsWith('CMDAG')) return 'эталон CMDAG';
+  if (source.startsWith('Kazakh explanatory dictionary')) return 'толковый словарь казахского языка';
+  return source;
+}
 
 // Backend warnings are English and may contain numbers or offsets, so they are matched by pattern.
 const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/^LLM preliminary annotation; confidence is self-reported and uncalibrated\.$/,
     () => 'Предварительная разметка LLM: уверенность — самооценка модели, она не откалибрована.'],
+  [/^Confidence calibrated on (.+) \((\d+) figures\): the probability that a figure is correct\.$/,
+    (m) => `Уверенность откалибрована на экспертных данных (${calibrationSource(m[1])}, ${m[2]} фигур): это вероятность того, что фигура найдена верно.`],
+  [/^(\d+) of (\d+) figure\(s\) below the review threshold (\d+)%: check them first\.$/,
+    (m) => `Проверьте в первую очередь фигуры с уверенностью ниже ${m[3]}%: ${m[1]} из ${m[2]}.`],
+  [/^No figures found; models miss many figures, so review the text\.$/,
+    () => 'Фигуры не найдены. Модели пропускают много фигур, поэтому проверьте текст вручную.'],
   [/^(\d+) (?:item|span)\(s\) omitted: the expression could not be aligned uniquely to the source text\.$/,
     (m) => `Пропущено фрагментов: ${m[1]} — выражение не удалось однозначно найти в исходном тексте.`],
   [/^(\d+) literal candidate\(s\) overlapped figurative spans and were dropped\.$/,
@@ -81,6 +101,14 @@ const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
     () => 'Провайдер не принял temperature и top-p, использованы его параметры по умолчанию.'],
   [/^Lexical baseline has limited coverage; confidence is not calibrated\.$/,
     () => 'Словарный baseline покрывает мало случаев; уверенность не откалибрована.'],
+  [/^Classical poetry mode \((.+)\): (\d+) image\(s\) read in the commentary tradition were added; recall on Wang Yi's Chu Ci images about 50%, precision not measured\.$/,
+    (m) => `Режим классической поэзии (${m[1]}): добавлено образов, прочитанных в традиции комментария, — ${m[2]}. На образах Ван И из «Чу Цы» такой режим находит около половины; точность не измерялась, поэтому проверьте эти образы.`],
+  [/^Classical poetry mode \((.+)\) failed; only stage-1 figures are shown\.$/,
+    (m) => `Режим классической поэзии (${m[1]}) не сработал; показаны только фигуры основного анализа.`],
+  [/^XLM-R does not determine source and target domains\.$/,
+    () => 'XLM-R не определяет исходную и целевую области образа.'],
+  [/^Token probabilities are uncalibrated\.$/,
+    () => 'Вероятности XLM-R не откалиброваны.'],
   [/^Token probabilities are uncalibrated; domains unknown\.$/,
     () => 'Вероятности XLM-R не откалиброваны; области не определены.'],
   [/^Detection and attribute scores are uncalibrated\.$/,
@@ -91,11 +119,22 @@ const warningPatterns: [RegExp, (m: RegExpMatchArray) => string][] = [
     (m) => `Фрагмент [${m[1]}, ${m[2]}) нашла только LLM.`],
   [/^Conflicting LLM boundary \[(\d+), (\d+)\); kept primary boundary for manual adjudication\.$/,
     (m) => `Границы LLM [${m[1]}, ${m[2]}) расходятся с XLM-R; оставлены границы XLM-R для ручного решения.`],
+  [/^(\d+) explanation\(s\) could not be translated into Russian\.$/,
+    (m) => `Не удалось перевести на русский пояснений: ${m[1]}; показан исходный текст.`],
   [/^Candidate confidence is below review threshold ([\d.]+)\.$/,
     (m) => `Уверенность ниже порога проверки ${m[1]}.`],
+  [/^Unified model: XLM-R for (zh|kk) is not installed \(weights or PyTorch missing\); only LLM figures are shown\.$/,
+    (m) => `Единая модель: XLM-R для ${m[1] === 'zh' ? 'китайского' : 'казахского'} не установлена (нет весов или PyTorch); показаны только фигуры GPT.`],
+  [/^Unified model: XLM-R for (zh|kk) failed \((\w+)\); only LLM figures are shown\.$/,
+    (m) => `Единая модель: XLM-R для ${m[1] === 'zh' ? 'китайского' : 'казахского'} не сработала (${m[2]}); показаны только фигуры GPT.`],
   [/^Provider or parsing failure; empty prediction counted in metrics\.$/,
     () => 'Ошибка провайдера или разбора ответа; в метриках учтён пустой результат.'],
 ];
+
+// Statements about how confidence was obtained: shown as a note, not as a warning.
+const notePatterns = [/^Confidence calibrated on .+ \(\d+ figures\): the probability that a figure is correct\.$/];
+
+export function isNote(text: string) { return notePatterns.some(pattern => pattern.test(text)); }
 
 export function trWarning(text: string, language: Language) {
   if (language !== 'ru') return text;

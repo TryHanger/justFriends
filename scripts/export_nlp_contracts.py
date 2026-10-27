@@ -48,27 +48,44 @@ def main():
     def options(values):
         return "".join(f'<Choice value="{escape(x)}"/>' for x in values)
 
-    def region_choices(name, values, required):
+    def region_choices(name, values, layout):
+        # Long vocabularies as drop-downs keep the attribute column on one screen.
         return (
             f'<Choices name="{name}" toName="poem" perRegion="true" choice="single" '
-            f'required="{str(required).lower()}" visibleWhen="region-selected">{options(values)}</Choices>'
+            f'required="false" layout="{layout}" visibleWhen="region-selected">'
+            f"{options(values)}</Choices>"
+        )
+
+    def region_text(name, placeholder):
+        return (
+            f'<TextArea name="{name}" toName="poem" perRegion="true" maxSubmissions="1" '
+            f'editable="true" visibleWhen="region-selected" placeholder="{placeholder}"/>'
         )
 
     labels = "".join(f'<Label value="{escape(x)}"/>' for x in LABELS)
+    # Two columns: labels above the poem on the left, attributes of the selected region on
+    # the right, so long poems never push the controls below the fold.
     xml = (
-        '<View><Text name="poem" value="$text"/>'
-        f'<Header value="Фигура (выражение)"/><Labels name="figure" toName="poem">{labels}</Labels>'
-        '<Header value="Сущность-кандидат (literal или metaphorical)"/>'
+        '<View style="display: flex; gap: 24px; align-items: flex-start">'
+        '<View style="flex: 3; min-width: 0">'
+        '<Header value="1. Выделите фрагмент и выберите метку" size="5"/>'
+        f'<Labels name="figure" toName="poem">{labels}</Labels>'
         '<Labels name="entity" toName="poem"><Label value="entity"/></Labels>'
-        '<Header value="Атрибуты выделенного региона"/>'
-        + region_choices("source_domain", DOMAINS, False)
-        + region_choices("target_domain", DOMAINS, False)
-        + region_choices("sentiment", SENTIMENTS, False)
-        + '<TextArea name="semantic_label" toName="poem" perRegion="true" maxSubmissions="1" '
-        'visibleWhen="region-selected" placeholder="Семантическая метка, напр. благородный муж"/>'
-        + region_choices("entity_type", ENTITY_TYPES, False)
-        + region_choices("usage_type", USAGE_TYPES, False)
-        + "</View>\n"
+        '<Text name="poem" value="$text"/>'
+        "</View>"
+        '<View style="flex: 2; min-width: 280px; position: sticky; top: 0">'
+        '<Header value="2. Поля выделенного фрагмента" size="5"/>'
+        '<Header value="Для фигуры" size="6"/>'
+        + region_choices("source_domain", DOMAINS, "select")
+        + region_choices("target_domain", DOMAINS, "select")
+        + region_choices("sentiment", SENTIMENTS, "inline")
+        + region_text("semantic_label", "Семантическая метка по-русски, напр. благородный муж")
+        + region_text("tenor", "Тема: что описывается, словами из текста")
+        + region_text("ground", "Основание сравнения: общее свойство")
+        + '<Header value="Для entity" size="6"/>'
+        + region_choices("entity_type", ENTITY_TYPES, "select")
+        + region_choices("usage_type", USAGE_TYPES, "inline")
+        + "</View></View>\n"
     )
     target = ROOT / "annotation/label_studio.xml"
     target.parent.mkdir(parents=True, exist_ok=True)

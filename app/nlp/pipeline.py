@@ -7,8 +7,9 @@ from app.nlp.contracts import NLPInputError, context_sentence, validate_result
 class MetaphorPipeline:
     """Modules A-D in order; module E (expert review) works on the stored result."""
 
-    def __init__(self, detector, classifier=None, extractor=None):
+    def __init__(self, detector, classifier=None, extractor=None, calibrator=None, stanza=None):
         self.detector, self.classifier, self.extractor = detector, classifier, extractor
+        self.calibrator, self.stanza = calibrator, stanza
 
     def analyze(self, text: str, language: str = "auto"):
         if not text.strip() or len(text) > MAX_ANALYSIS_CHARS:
@@ -29,15 +30,34 @@ class MetaphorPipeline:
         if self.extractor and not result.candidates:
             # Detectors without module B (XLM-R) still expose soft-lexicon candidates.
             update["candidates"] = self.extractor.extract(text, result.language)
-        return validate_result(text, language, result.model_copy(update=update))
+        result = result.model_copy(update=update)
+        if self.calibrator:
+            result = self.calibrator.apply(result)
+        if self.stanza and result.language == "zh":
+            # Whole-stanza figure type (Zhu Xi), independent of the span detector.
+            result = result.model_copy(
+                update={
+                    "stanzas": self.stanza.classify(text),
+                    "method": {**result.method, "stanza_model": self.stanza.version},
+                }
+            )
+        return validate_result(text, language, result)
 
 
 LLM_BACKENDS = {"openai", "anthropic", "ollama", "hf"}
 
 
+def two_stage_languages(settings) -> frozenset[str]:
+    languages = frozenset(
+        part.strip() for part in settings.nlp_two_stage_languages.split(",") if part.strip()
+    )
+    if languages - {"zh", "kk"}:
+        raise ValueError("NLP_TWO_STAGE_LANGUAGES must list zh and/or kk")
+    return languages
+
+
 def build_llm(settings, provider: str, strategy: str | None = None):
     from app.nlp.lexicon import CandidateExtractor
-    from app.nlp.llm import OllamaDetector, OpenAIDetector
 
     common = dict(
         strategy=strategy or settings.llm_prompt_strategy,
@@ -50,15 +70,53 @@ def build_llm(settings, provider: str, strategy: str | None = None):
         from app.nlp.rag import default_knowledge
 
         common["knowledge"] = default_knowledge(settings.knowledge_dir)
+    languages = two_stage_languages(settings)
+    if languages:
+        from app.nlp.usage import UsageJudge
+
+        # Only the provider call of this detector is used; temperature 0 is set per request.
+        judge = _llm(
+            settings,
+            settings.nlp_usage_backend,
+            dict(strategy="zero_shot", temperature=0.0, top_p=None),
+            settings.nlp_usage_model,
+        )
+        common["usage_judge"] = UsageJudge(judge, languages, all_words=settings.nlp_usage_all_words)
+    if settings.nlp_classical_zh and settings.openai_api_key:
+        from app.nlp.allegory import AllegoryJudge
+        from app.nlp.rag import default_knowledge
+
+        # Wang Yi's commentary is in the default knowledge base (data/knowledge).
+        reader = _llm(
+            settings,
+            "openai",
+            dict(strategy="zero_shot", temperature=0.0, top_p=None),
+            settings.nlp_allegory_model,
+        )
+        common["allegory_judge"] = AllegoryJudge(reader, default_knowledge(settings.knowledge_dir))
+    return _llm(settings, provider, common)
+
+
+def _llm(settings, provider: str, common: dict, model: str | None = None):
+    from app.nlp.llm import OllamaDetector, OpenAIDetector
+
     if provider == "openai":
         if not settings.openai_api_key:
-            raise ValueError("OPENAI_API_KEY is required for the OpenAI backend")
-        return OpenAIDetector(settings.openai_model, settings.openai_api_key, **common)
+            raise ValueError(
+                "OPENAI_API_KEY is required for the OpenAI backend"
+                + (
+                    " of the two-stage usage judge; set NLP_USAGE_BACKEND or disable it "
+                    "with an empty NLP_TWO_STAGE_LANGUAGES"
+                    if model
+                    else ""
+                )
+            )
+        return OpenAIDetector(model or settings.openai_model, settings.openai_api_key, **common)
     if provider == "anthropic":
         from app.nlp.claude import ClaudeDetector
 
         return ClaudeDetector(
-            settings.anthropic_model,
+            model or settings.anthropic_model,
             settings.anthropic_api_key,
             effort=settings.anthropic_effort,
             **common,
@@ -71,7 +129,7 @@ def build_llm(settings, provider: str, strategy: str | None = None):
         return TransformersDetector(settings.hf_model, settings.hf_adapter, **common)
     if provider == "ollama":
         return OllamaDetector(
-            settings.ollama_model,
+            model or settings.ollama_model,
             settings.ollama_base_url,
             context_window=settings.ollama_context_window,
             **common,
@@ -108,6 +166,14 @@ def build_pipeline(settings, strategy: str | None = None):
         from app.nlp.attributes import AttributeClassifier
 
         classifier = AttributeClassifier(settings.attribute_model_path)
+    from app.nlp.calibration import Calibrator
     from app.nlp.lexicon import CandidateExtractor
+    from app.nlp.stanza import load_stanza_classifier
 
-    return MetaphorPipeline(detector, classifier, CandidateExtractor(settings.lexicon_dir))
+    return MetaphorPipeline(
+        detector,
+        classifier,
+        CandidateExtractor(settings.lexicon_dir),
+        Calibrator.load(settings.nlp_review_threshold),
+        load_stanza_classifier(settings.stanza_model_path),
+    )
