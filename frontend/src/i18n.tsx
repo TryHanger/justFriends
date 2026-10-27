@@ -12,7 +12,7 @@ const ru: Record<string, string> = {
   time: 'Время', life: 'Жизнь', death: 'Смерть', emotion: 'Чувство', love: 'Любовь', mind: 'Сознание', society: 'Общество',
   spirituality: 'Духовность', other: 'Другое', unknown: 'Не определено',
   'Conf:': 'Уверенность:', 'Source:': 'Исходный образ:', 'Target:': 'Целевой образ:',
-  'Metaphor Analyzer': 'Анализатор метафор', Analyses: 'Анализы', Compare: 'Сравнение',
+  'Metaphor Analyzer': 'Анализатор метафор', Analyses: 'Анализы', Compare: 'Сравнение', Standards: 'Стандарты',
   'New Analysis': 'Новый анализ', Language: 'Язык', 'Auto-detect': 'Определить автоматически',
   'Chinese (zh)': 'Китайский (zh)', 'Kazakh (kk)': 'Казахский (kk)', 'Poem Text': 'Текст стихотворения',
   'Paste poem text here...': 'Вставьте текст стихотворения…', OR: 'ИЛИ', 'Upload Document': 'Загрузить документ',

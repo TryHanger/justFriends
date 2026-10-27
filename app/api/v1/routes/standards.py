@@ -13,9 +13,15 @@ from app.schemas.standards import (
 )
 from app.services import quality_checks
 from app.services.quality import run_quality_suite
+from app.services.security_lab import SecurityReview, SecurityReviewRequest, review_code
 from app.services.standards import lifecycle_state, search_standards
 
 router = APIRouter()
+
+
+@router.post("/security/review", response_model=SecurityReview)
+def review_security(request: SecurityReviewRequest):
+    return review_code(request)
 
 
 def require_runner(request: Request, x_quality_local: str | None = Header(default=None)) -> None:

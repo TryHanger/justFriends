@@ -192,6 +192,19 @@ export interface StandardInfo {
   project_evidence: string[];
 }
 
+export interface SecurityFinding {
+  rule: string; line: number; title: string; category: string;
+  consequence: string; recommendation: string;
+}
+export interface SecurityReview {
+  before: { findings: SecurityFinding[]; syntax_error: string | null };
+  after: { findings: SecurityFinding[]; syntax_error: string | null };
+  removed: number; remaining: number; introduced: number;
+  risk_score: number; risk_level: string;
+}
+export const reviewSecurity = async (before: string, after: string, likelihood: number, impact: number) =>
+  (await api.post<SecurityReview>('/standards/security/review', { before, after, likelihood, impact })).data;
+
 export interface LifecycleProcess {
   id: string;
   name: string;

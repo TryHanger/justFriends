@@ -18,12 +18,12 @@ function AppContent() {
     <BrowserRouter>
       <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
         <header className="bg-white border-b border-gray-200">
-          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 py-3 sm:min-h-16 flex flex-wrap items-center justify-between gap-3">
             <Link to="/" className="flex items-center gap-2 font-bold text-xl text-indigo-600">
               <FileText className="w-6 h-6" />
               {tr('Metaphor Analyzer', language)}
             </Link>
-            <nav className="flex items-center gap-6">
+            <nav className="flex flex-wrap items-center gap-3 sm:gap-6 text-sm">
               <Link to="/" className="text-gray-600 hover:text-indigo-600 flex items-center gap-2">
                 <List className="w-4 h-4" />
                 {tr('Analyses', language)}

@@ -4,15 +4,16 @@ import type { LifecycleState, StandardInfo } from '../api';
 import { getApiErrorMessage } from '../apiErrors';
 import QualityCenter from './QualityCenter';
 import QualityDashboard from './QualityDashboard';
+import SecurityLab from './SecurityLab';
 
-type Tab = 'catalog' | 'lifecycle' | 'quality' | 'checks';
+type Tab = 'catalog' | 'lifecycle' | 'quality' | 'checks' | 'security';
 const badge = (tone: 'good' | 'warn' | 'bad' | 'neutral') => ({
   good: 'bg-emerald-100 text-emerald-800', warn: 'bg-amber-100 text-amber-800',
   bad: 'bg-rose-100 text-rose-800', neutral: 'bg-slate-100 text-slate-700',
 })[tone];
 
 export default function Standards() {
-  const [tab, setTab] = useState<Tab>('catalog');
+  const [tab, setTab] = useState<Tab>(() => window.location.hash === '#security' ? 'security' : 'catalog');
   const [standards, setStandards] = useState<StandardInfo[]>([]);
   const [lifecycle, setLifecycle] = useState<LifecycleState | null>(null);
   const [sourceRunId, setSourceRunId] = useState<string | null>(null);
@@ -44,17 +45,17 @@ export default function Standards() {
     acc[item.domain] = (acc[item.domain] || 0) + 1; return acc;
   }, {})).sort((a, b) => b[1] - a[1]), [standards]);
 
-  const tabLabels: Record<Tab, string> = { catalog: 'Каталог', lifecycle: 'Жизненный цикл', quality: 'Качество и тесты', checks: 'Проверки проекта' };
+  const tabLabels: Record<Tab, string> = { security: 'Безопасная разработка', catalog: 'Каталог', lifecycle: 'Жизненный цикл', quality: 'Качество и тесты', checks: 'Проверки проекта' };
   return <div className="space-y-6 text-slate-900">
-    <section className="rounded-2xl bg-slate-900 px-6 py-7 text-white shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">Инженерная панель · учебная адаптация лабораторных №1–6</p>
-      <h1 className="mt-2 text-3xl font-bold">Стандарты и проверка проекта</h1>
-      <p className="mt-2 max-w-3xl text-sm text-slate-300">Каталог стандартов, свидетельства в репозитории, карта процессов и реальные результаты тестов. Наличие артефакта означает только наличие файла, а не выполнение всех требований стандарта.</p>
+    <section className={`rounded-2xl bg-slate-900 px-6 text-white shadow-sm ${tab === 'security' ? 'py-4' : 'py-7'}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">Инженерная панель · стандарты качества и безопасной разработки</p>
+      <h1 className={`mt-2 font-bold ${tab === 'security' ? 'text-xl' : 'text-3xl'}`}>Стандарты и проверка проекта</h1>
+      {tab !== 'security' && <><p className="mt-2 max-w-3xl text-sm text-slate-300">Каталог стандартов, свидетельства в репозитории, карта процессов и реальные результаты тестов. Наличие артефакта означает только наличие файла, а не выполнение всех требований стандарта.</p>
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">{standards.length}</div><div className="text-xs text-slate-300">стандартов в выборке</div></div>
         <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">{lifecycle?.processes.length ?? '—'}</div><div className="text-xs text-slate-300">процессов в модели</div></div>
         <div className="rounded-xl bg-white/10 p-4"><div className="text-3xl font-bold">5</div><div className="text-xs text-slate-300">видов проверок проекта</div></div>
-      </div>
+      </div></>}
     </section>
 
     {error && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error} <button onClick={() => { setLoading(true); setError(''); loadData(); }} className="ml-2 font-semibold underline">Повторить загрузку</button></div>}
@@ -101,6 +102,7 @@ export default function Standards() {
 
     {!loading && tab === 'quality' && <QualityDashboard onOpenRun={id => { setSourceRunId(id); setTab('checks'); }} />}
     {tab === 'checks' && <QualityCenter initialRunId={sourceRunId} />}
+    {tab === 'security' && <SecurityLab />}
   </div>;
 }
 
