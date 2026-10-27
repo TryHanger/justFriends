@@ -17,6 +17,7 @@ Baselines run on the same folds. A final model is fitted on all quotations.
 import argparse
 import json
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -55,20 +56,55 @@ def fit(texts, labels, args, device):
         id2label=dict(enumerate(LABELS)),
         label2id={label: i for i, label in enumerate(LABELS)},
         ignore_mismatched_sizes=True,  # the base checkpoint carries a token-level head
+        # LoRA keeps the frozen base in bf16 (half the memory); adapters stay fp32 below.
+        torch_dtype=torch.bfloat16 if args.lora else torch.float32,
     ).to(device)
     model.config.pad_token_id = tokenizer.pad_token_id
+    if args.gradient_checkpointing:
+        model.gradient_checkpointing_enable()
+    if args.lora:
+        from peft import LoraConfig, get_peft_model
+
+        # Frozen base, rank-16 adapters on every linear layer, trainable classification head.
+        model = get_peft_model(
+            model,
+            LoraConfig(
+                task_type="SEQ_CLS",
+                r=16,
+                lora_alpha=32,
+                lora_dropout=0.1,
+                target_modules="all-linear",
+            ),
+        )
+        for parameter in model.parameters():
+            if parameter.requires_grad:
+                parameter.data = parameter.data.float()
     positives = sum(labels)
     weights = torch.tensor(
         [len(labels) / (2 * (len(labels) - positives)), len(labels) / (2 * positives)],
         device=device,
     )
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.01)
+    if args.optimizer == "adafactor":
+        from transformers.optimization import Adafactor
+
+        # Factored second moments, no first moment: a 0.5B model fits an 8 GB GPU in fp32.
+        optimizer = Adafactor(
+            model.parameters(),
+            lr=args.learning_rate,
+            weight_decay=0.01,
+            scale_parameter=False,
+            relative_step=False,
+            warmup_init=False,
+        )
+    else:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=0.01)
     steps = args.epochs * ((len(texts) + args.batch_size - 1) // args.batch_size)
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lambda step: min(1.0, (step + 1) / (0.1 * steps)) * max(0.0, 1 - step / steps)
     )
     loss_fn = torch.nn.CrossEntropyLoss(weight=weights)
     model.train()
+    started, step = time.time(), 0
     for _ in range(args.epochs):
         order = np.random.permutation(len(texts))
         for start in range(0, len(order), args.batch_size):
@@ -88,6 +124,9 @@ def fit(texts, labels, args, device):
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
+            step += 1
+            if step % 50 == 0:
+                print(f"    step {step}/{steps}: {time.time() - started:.0f}s", flush=True)
     return tokenizer, model
 
 
@@ -103,7 +142,10 @@ def predict(tokenizer, model, texts, args, device) -> list[int]:
             padding=True,
             return_tensors="pt",
         ).to(device)
-        result.extend(model(**encoded).logits.argmax(-1).tolist())
+        # A bf16 LoRA base needs autocast; full fine-tuning is evaluated in fp32 as before.
+        lora = args.lora and device.type == "cuda"
+        with torch.autocast(device.type, dtype=torch.bfloat16, enabled=lora):
+            result.extend(model(**encoded).logits.argmax(-1).tolist())
     return result
 
 
@@ -169,6 +211,16 @@ def main() -> None:
     parser.add_argument("--max-length", type=int, default=160)
     parser.add_argument("--window", type=int, default=150, help="characters on each side")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--optimizer",
+        choices=["adamw", "adafactor"],
+        default="adamw",
+        help="adafactor for models whose AdamW states do not fit the GPU (Qwen 0.5B on 8 GB)",
+    )
+    parser.add_argument("--gradient-checkpointing", action="store_true")
+    parser.add_argument(
+        "--lora", action="store_true", help="LoRA adapters instead of full fine-tuning"
+    )
     parser.add_argument(
         "--unseen-only",
         action="store_true",
