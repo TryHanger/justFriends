@@ -28,9 +28,95 @@
 слова-метафоры. Казахский — агглютинативный язык с ограниченными ресурсами: для него
 нет размеченного корпуса метафор, а мультиязычные токенизаторы сильно дробят словоформы.
 
-[TODO: обзор литературы — автоматическое выявление метафор (MIP/MIPVU, VUA, задачи
-shared task), работы по китайским метафорам (в т. ч. CMDAG), по казахскому NLP
-(KazLLM, SozKZ), по LLM в разметке метафор; позиционирование работы]
+**Автоматическое выявление метафор.** Операциональная основа большинства работ —
+процедура MIP [1]: слово употреблено метафорически, если его контекстное значение
+отличается от более базового значения и понимается через сопоставление с ним. MIPVU [2]
+уточняет MIP (выбор словаря-эталона, прямые метафоры и сравнения, пограничные случаи) и
+лежит в основе VU Amsterdam Metaphor Corpus (VUA) [3] — фрагментов BNC-Baby четырёх
+регистров (академический, новости, художественная проза, разговор) примерно по 50 тыс.
+слов. VUA стал общим эталоном в задачах shared task 2018 и 2020 годов [4, 5]: пословная
+разметка всех знаменательных слов или только глаголов, в 2020 г. добавлен подкорпус эссе
+TOEFL. В последующих работах основным подходом стали трансформеры: MelBERT [6] встраивает в RoBERTa два
+критерия теории — контраст контекстного и изолированного значения (MIP) и нарушение
+селективных ограничений — и сообщает результаты на VUA-18, VUA-20, MOH-X и TroFi.
+Пробинг предобученных моделей показывает, что сведения о метафоре сосредоточены
+в основном в средних слоях и частично переносятся между языками и наборами данных [8];
+сравнивать слои по количеству информации, а не только по точности пробы, позволяет
+MDL-пробинг [9]. Поэзия в этой линии работ представлена слабо: эталонные корпуса — проза
+и разговорная речь на английском, а работы по поэзии ограничиваются отдельными типами
+метафор в английском материале (например, [7]).
+
+**Китайский материал.** MIPVU адаптирована к китайскому языку с учётом классификаторов,
+сложных слов и определения базового значения [10]. Для современного китайского есть
+корпус сравнений с разметкой темы и образа (11,3 тыс. предложений с показателем
+сравнения) [11] и CMDAG [12] — около 28 тыс. метафор с разметкой темы (tenor), образа
+(vehicle) и основания (ground); основание используется как цепочка рассуждений при
+генерации метафор. На данных CMDAG построена задача NLPCC 2024 о генерации метафор и
+извлечении их компонентов [13]. Для классического языка созданы SikuBERT и SikuRoBERTa,
+предобученные на корпусе «Сыку цюаньшу» (四庫全書) [14]. Открытые корпуса с разметкой
+метафор в классической поэзии нам неизвестны. Филологическая традиция описывает
+образность этой поэзии иначе, чем MIP: 比 и 興 относятся к строфе и к соотнесению картины
+природы с человеческой ситуацией, а не к отдельному слову. П. Юй [15] показывает, что
+западные категории метафоры и аллегории плохо переносятся на китайскую поэтическую
+образность, и разбирает 比/興 и аллегорическое чтение «Ши цзин» в комментаторской
+традиции. Аллегорическое прочтение «Чу Цы» закрепил комментарий Ван И (II в.) [17],
+подведший итог ханьской полемике о Цюй Юане и «Ли сао» [16]; разметку строф «Ши цзин»
+по типам 賦/比/興 дал Чжу Си [18].
+
+**Казахский язык.** Мультиязычные энкодеры, такие как XLM-R [20], охватывают казахский
+в числе 100 языков, но их общий токенизатор дробит казахские словоформы. Rust и др. [21]
+показали, что качество токенизатора (фертильность — число подслов на слово — и доля
+разбитых слов) влияет на результат не меньше, чем объём данных предобучения, и что замена
+мультиязычного токенизатора моноязычным почти всегда улучшает качество. Для казахского
+созданы: KazLLM (ISSAI, Назарбаев Университет) — модели на основе Llama 3.1 с 8 и 70 млрд
+параметров, выпущенные в декабре 2024 г. для некоммерческого использования [22]; SozKZ —
+семейство малых моделей архитектуры Llama (в статье — от 50 до 600 млн параметров),
+обученных с нуля на 9 млрд токенов казахского текста с собственным BPE-токенизатором на
+50 тыс. токенов [23]; kaz-roberta — энкодер RoBERTa с байтовым BPE на 52 тыс. токенов,
+предобученный на многодоменном казахском корпусе и диалогах службы поддержки [24]. Работ
+по автоматическому выявлению метафор в казахском языке, тем более в поэзии, и открытого
+размеченного корпуса казахских метафор мы не нашли.
+
+**LLM в разметке и выявлении метафор.** GPT-3 с 12 примерами в запросе называл верную
+исходную область метафоры в 65% английских и 35% испанских случаев [26]. MetaPro 2.0 [27]
+сравнивает прямой запрос и цепочку рассуждений по шагам MIP для GPT-3.5 и GPT-4 и отмечает
+у этих моделей много ложных срабатываний; Tian и др. [28] предлагают пошаговые инструкции,
+построенные на теории метафоры. Перевод шагов MIPVU в промпты не позволяет LLM догнать
+дообученные модели, причём буквальные употребления отсеиваются недостаточно [29]. При
+сравнении RAG, промптинга и дообучения на полной разметке текстов дообученные LLM достигли
+медианного F1 0.79 [30]. Дообучение открытых моделей обычно выполняется
+параметр-эффективно, например методом LoRA [31].
+
+**Калибровка.** Уверенность классификатора или LLM не обязательно совпадает с вероятностью
+верного ответа. Масштабирование Платта [32] подгоняет сигмоиду к выходу модели на
+отложенных данных. Guo и др. [33] показали, что современные нейросети плохо откалиброваны,
+предложили температурное масштабирование — однопараметрический вариант метода Платта —
+и использовали ECE как основную метрику калибровки.
+
+**Место данной работы.** Работа отличается от перечисленных материалом, способом оценки и
+устройством системы. Материал — поэзия двух традиций, для которых, насколько нам известно,
+нет открытых корпусов с разметкой метафор: классическая китайская («Чу Цы», «Ши цзин»,
+танская поэзия) и казахская (Абай). Вместо недоступной разметки тремя экспертами оценка
+опирается на экспертные решения из опубликованных источников: пометы «ауыс.» толкового
+словаря казахского языка [19], комментарий Ван И к «Чу Цы» [17] и метки 賦/比/興 Чжу Си
+для «Ши цзин» [18] (раздел 2). Система единая: конвейер A–E на LLM с промптами по шагам
+MIP [1, 2], RAG по комментариям и калибровкой Платта [32]; XLM-R [20] как пословный
+тэггер, обученный на CMDAG [12] и дообученный на казахских данных; классификатор строф на
+SikuRoBERTa [14], который ставит задачу на уровне строфы, как традиция 比/興 [15];
+сопоставление образов двух традиций с векторным поиском на multilingual-e5 [34]. Согласие
+оценивается κ Коэна и Флейса [35, 36].
+
+Три гипотезы связывают работу с литературой. H1 (дообучение против промптинга)
+продолжает сравнения [29, 30] на открытой модели Qwen2.5-1.5B-Instruct [25] с LoRA [31]: в
+упрощённой постановке она подтверждается — сильно для китайских строф и слабо для
+казахского (4.9, 5.1). H2 проверяет на казахском вывод Rust и др. [21] о роли токенизатора:
+вместо закрытой SozKZ [23] взята открытая kaz-roberta [24], которая кодирует казахский
+экономнее и не уступает XLM-R при втрое меньшем размере, но не превосходит её, поэтому H2
+подтверждается частично (5.2). H3 переносит на китайский и казахский вывод о средних слоях
+[8] с MDL-пробингом [9] и в основном подтверждается, с оговорками для SikuRoBERTa и
+казахского XLM-R (5.2). Отдельно рассматривается случай, которого, насколько нам известно,
+нет в работах по выявлению метафор, — аллегория «Чу Цы»: пословные детекторы находят 3–7%
+образов Ван И, а прямой вопрос в традиции комментария — 15 из 29 (4.2, 5.3).
 
 ### 1.2. Цели по ТЗ
 
@@ -1068,22 +1154,130 @@ p ≈ 2e-28), и в исходных областях (χ² = 56, p ≈ 6e-07) �
 | Чжу Си, «詩經集傳» | https://zh.wikisource.org/wiki/詩經集傳 | Текст и комментарий — общественное достояние; транскрипция Wikisource — CC BY-SA 4.0 |
 | «Қазақ әдеби тілінің сөздігі» (15 томов, 2011) | https://sozdikqor.kz | Защищён авторским правом; только исследовательская оценка, не распространяется |
 | Стихотворения Абая (пилот kk) | https://bilim-all.kz/figure/8?posts=olen | Условия веб-транскрипции не зафиксированы (`license_verified=false`) |
-| XLM-RoBERTa | `FacebookAI/xlm-roberta-base` (Hugging Face) | [TODO: проверить по карточке модели] |
-| SikuRoBERTa | [TODO: идентификатор checkpoint] | [TODO: проверить по карточке модели] |
-| multilingual-e5-base | `intfloat/multilingual-e5-base` (Hugging Face) | [TODO: проверить по карточке модели] |
-| KazLLM | ISSAI, на основе Llama-3.1-8B | [TODO: проверить; в экспериментах не использовалась] |
-| Qwen2.5-1.5B-Instruct, Qwen2.5-0.5B (H1, H3) | [TODO: идентификаторы на Hugging Face] | [TODO: проверить по карточке модели] |
-| SozKZ | `stukenov/sozkz-core-llama-*-kk-base-v1` (Hugging Face, 30M–1B) | Файлы закрыты, нужен вход в Hugging Face; [TODO: проверить лицензию; в экспериментах не использовалась] |
+| XLM-RoBERTa | `FacebookAI/xlm-roberta-base` (Hugging Face) | MIT (по карточке модели) |
+| SikuRoBERTa | `SIKU-BERT/sikuroberta` (Hugging Face, официальный checkpoint авторов [14]) | Apache-2.0 (по карточке модели) |
+| multilingual-e5-base | `intfloat/multilingual-e5-base` (Hugging Face) | MIT (по карточке модели) |
+| KazLLM | `issai/LLama-3.1-KazLLM-1.0-8B` (ISSAI, на основе Llama-3.1-8B; есть версия 70B) | CC BY-NC 4.0, только некоммерческое использование; доступ по заявке с принятием условий Llama 3.1; в экспериментах не использовалась |
+| Qwen2.5-1.5B-Instruct, Qwen2.5-0.5B (H1, H2, H3) | `Qwen/Qwen2.5-1.5B-Instruct`, `Qwen/Qwen2.5-0.5B` (Hugging Face) | Apache-2.0 (по карточкам моделей) |
+| kaz-roberta (H2) | `kz-transformers/kaz-roberta-conversational` (Hugging Face) | Apache-2.0 (по карточке модели) |
+| SozKZ | `stukenov/sozkz-core-llama-*-kk-base-v1` (Hugging Face, 30M–1B) | Файлы закрыты, нужен вход в Hugging Face; по карточке `sozkz-core-llama-50m-kk-base-v1` — Apache-2.0; в экспериментах не использовалась |
 
 ## Литература
 
-- Pragglejaz Group (2007). MIP: A method for identifying metaphorically used words in
-  discourse. *Metaphor and Symbol* 22(1).
-- Steen G. et al. (2010). *A Method for Linguistic Metaphor Identification: From MIP to MIPVU*.
-- Voita E., Titov I. (2020). Information-Theoretic Probing with Minimum Description Length. EMNLP.
-- Hu E. et al. (2022). LoRA: Low-Rank Adaptation of Large Language Models. ICLR.
-- Fleiss J. (1971). Measuring nominal scale agreement among many raters.
-  *Psychological Bulletin* 76(5).
-- Metaphor Detection in a Poetry Corpus. https://aclanthology.org/W17-2201/
-- [TODO: статья CMDAG, SikuRoBERTa, XLM-R, multilingual-e5, Platt (1999), KazLLM, SozKZ, Qwen2.5,
-  работы по метафорам в китайской и казахской поэзии; оформить по требованиям журнала]
+Описания сверены с ACL Anthology, arXiv, страницами издателей и карточками Hugging Face
+(27.10.2026). Пометка «[проверить]» — данные, которые не удалось подтвердить по
+первоисточнику.
+
+1. Pragglejaz Group. MIP: A method for identifying metaphorically used words in discourse //
+   Metaphor and Symbol. 2007. Vol. 22, no. 1. P. 1–39. DOI: 10.1080/10926480709336752.
+2. Steen G. J., Dorst A. G., Herrmann J. B., Kaal A. A., Krennmayr T., Pasma T. A Method for
+   Linguistic Metaphor Identification: From MIP to MIPVU. Amsterdam; Philadelphia: John
+   Benjamins, 2010. 238 p. (Converging Evidence in Language and Communication Research;
+   vol. 14). DOI: 10.1075/celcr.14.
+3. Steen G., Dorst A. G., Herrmann J. B., Kaal A., Krennmayr T. VU Amsterdam Metaphor Corpus
+   [Электронный ресурс]. Oxford Text Archive, 2010. URL:
+   https://ota.ox.ac.uk/llds/xmlui/handle/20.500.14106/2541.
+4. Leong C. W., Beigman Klebanov B., Shutova E. A Report on the 2018 VUA Metaphor Detection
+   Shared Task // Proceedings of the Workshop on Figurative Language Processing. New Orleans:
+   ACL, 2018. P. 56–66. DOI: 10.18653/v1/W18-0907.
+5. Leong C. W., Beigman Klebanov B., Hamill C., Stemle E., Ubale R., Chen X. A Report on the
+   2020 VUA and TOEFL Metaphor Detection Shared Task // Proceedings of the Second Workshop on
+   Figurative Language Processing. Online: ACL, 2020. P. 18–29.
+   DOI: 10.18653/v1/2020.figlang-1.3.
+6. Choi M., Lee S., Choi E., Park H., Lee J., Lee D., Lee J. MelBERT: Metaphor Detection via
+   Contextualized Late Interaction using Metaphorical Identification Theories // Proceedings
+   of NAACL-HLT 2021. Online: ACL, 2021. P. 1763–1773. DOI: 10.18653/v1/2021.naacl-main.141.
+7. Kesarwani V., Inkpen D., Szpakowicz S., Tanasescu C. Metaphor Detection in a Poetry Corpus //
+   Proceedings of the Joint SIGHUM Workshop on Computational Linguistics for Cultural
+   Heritage, Social Sciences, Humanities and Literature. Vancouver: ACL, 2017. P. 1–9.
+   DOI: 10.18653/v1/W17-2201.
+8. Aghazadeh E., Fayyaz M., Yaghoobzadeh Y. Metaphors in Pre-Trained Language Models: Probing
+   and Generalization Across Datasets and Languages // Proceedings of ACL 2022 (Vol. 1: Long
+   Papers). Dublin: ACL, 2022. P. 2037–2050. DOI: 10.18653/v1/2022.acl-long.144.
+9. Voita E., Titov I. Information-Theoretic Probing with Minimum Description Length //
+   Proceedings of EMNLP 2020. Online: ACL, 2020. P. 183–196.
+   DOI: 10.18653/v1/2020.emnlp-main.14.
+10. Wang B. P.-Y., Lu X., Hsu C.-C., Lin E. P.-C., Ai H. Linguistic metaphor identification in
+    Chinese // Metaphor Identification in Multiple Languages: MIPVU around the world / ed. by
+    S. Nacey, A. G. Dorst, T. Krennmayr, W. G. Reijnierse. Amsterdam: John Benjamins, 2019.
+    Ch. 12. P. 247–… [проверить конечную страницу]. DOI сборника: 10.1075/celcr.22.
+11. Liu L., Hu X., Song W., Fu R., Liu T., Hu G. Neural Multitask Learning for Simile
+    Recognition // Proceedings of EMNLP 2018. Brussels: ACL, 2018. P. 1543–1553.
+    DOI: 10.18653/v1/D18-1183.
+12. Shao Y., Yao X., Qu X., Lin C., Wang S., Huang W., Zhang G., Fu J. CMDAG: A Chinese Metaphor
+    Dataset with Annotated Grounds as CoT for Boosting Metaphor Generation // Proceedings of
+    LREC-COLING 2024. Torino: ELRA and ICCL, 2024. P. 3357–3366. URL:
+    https://aclanthology.org/2024.lrec-main.298. Данные:
+    https://github.com/JasonShao55/Chinese_Metaphor_Explanation.
+13. Qu X., Zhang G., Wu S., Li Y., Lin C. Overview of the NLPCC 2024 Shared Task on Chinese
+    Metaphor Generation // Natural Language Processing and Chinese Computing (NLPCC 2024).
+    Springer, 2024. (LNCS; vol. 15363). P. 181–192. arXiv:2408.04378. URL:
+    https://arxiv.org/abs/2408.04378.
+14. 王东波, 刘畅, 朱子赫 等. SikuBERT与SikuRoBERTa：面向数字人文的《四库全书》预训练模型构建及应用研究
+    [Ван Дунбо, Лю Чан, Чжу Цзыхэ и др. SikuBERT и SikuRoBERTa: построение и применение
+    предобученных моделей «Сыку цюаньшу» для цифровых гуманитарных наук] // 图书馆论坛. 2022.
+    Т. 42, № 6. С. 31–43. Модель: URL: https://huggingface.co/SIKU-BERT/sikuroberta.
+15. Yu P. The Reading of Imagery in the Chinese Poetic Tradition. Princeton, NJ: Princeton
+    University Press, 1987. xi, 239 p. ISBN 0-691-06682-5. URL:
+    https://libcat.library.tamu.edu/Record/in00000019455.
+16. Schimmelpfennig M. The Quest for a Classic: Wang Yi and the Exegetical Prehistory of His
+    Commentary to the Songs of Chu // Early China. 2004. Vol. 29. [проверить страницы:
+    в источниках 109–160 и 111–162]. URL:
+    https://www.cambridge.org/core/product/47EB89EC24B68958EC53BB05857EEB84.
+17. 王逸. 楚辭章句 [Ван И. Комментарий к «Чу цы» по главам и фразам] [Электронный ресурс] // Wikisource.
+    URL: https://zh.wikisource.org/wiki/楚辭章句.
+18. 朱熹. 詩經集傳 [Чжу Си. Собрание толкований к «Ши цзин»] (1177) [Электронный ресурс] //
+    Wikisource. URL: https://zh.wikisource.org/wiki/詩經集傳.
+19. Қазақ әдеби тілінің сөздігі: 15 томдық [Словарь казахского литературного языка: в 15 т.].
+    Институт языкознания им. А. Байтурсынулы, 2011. URL: https://sozdikqor.kz.
+20. Conneau A., Khandelwal K., Goyal N., Chaudhary V., Wenzek G., Guzmán F., Grave E., Ott M.,
+    Zettlemoyer L., Stoyanov V. Unsupervised Cross-lingual Representation Learning at Scale //
+    Proceedings of ACL 2020. Online: ACL, 2020. P. 8440–8451.
+    DOI: 10.18653/v1/2020.acl-main.747.
+21. Rust P., Pfeiffer J., Vulić I., Ruder S., Gurevych I. How Good is Your Tokenizer? On the
+    Monolingual Performance of Multilingual Language Models // Proceedings of ACL-IJCNLP 2021
+    (Vol. 1: Long Papers). Online: ACL, 2021. P. 3118–3135. DOI: 10.18653/v1/2021.acl-long.243.
+22. ISSAI. KAZ-LLM: Kazakh Large Language Model [Электронный ресурс]. Астана: Nazarbayev
+    University, 2024. URL: https://issai.nu.edu.kz/kazllm/. Модель: URL:
+    https://huggingface.co/issai/LLama-3.1-KazLLM-1.0-8B.
+23. Tukenov S. SozKZ: Training Efficient Small Language Models for Kazakh from Scratch //
+    arXiv:2603.20854. 2026. URL: https://arxiv.org/abs/2603.20854.
+24. kz-transformers. Kaz-RoBERTa (base-sized model): kaz-roberta-conversational
+    [Электронный ресурс] // Hugging Face. URL:
+    https://huggingface.co/kz-transformers/kaz-roberta-conversational.
+25. Qwen Team. Qwen2.5 Technical Report // arXiv:2412.15115. 2024. URL:
+    https://arxiv.org/abs/2412.15115.
+26. Wachowiak L., Gromann D. Does GPT-3 Grasp Metaphors? Identifying Metaphor Mappings with
+    Generative Language Models // Proceedings of ACL 2023 (Vol. 1: Long Papers). Toronto: ACL,
+    2023. P. 1018–1032. DOI: 10.18653/v1/2023.acl-long.58.
+27. Mao R., He K., Ong C., Liu Q., Cambria E. MetaPro 2.0: Computational Metaphor Processing on
+    the Effectiveness of Anomalous Language Modeling // Findings of ACL 2024. Bangkok: ACL,
+    2024. P. 9891–9908. DOI: 10.18653/v1/2024.findings-acl.590.
+28. Tian Y., Xu N., Mao W. A Theory Guided Scaffolding Instruction Framework for LLM-Enabled
+    Metaphor Reasoning // Proceedings of NAACL-HLT 2024 (Vol. 1: Long Papers). Mexico City:
+    ACL, 2024. [проверить страницы]. DOI: 10.18653/v1/2024.naacl-long.428.
+29. Reimann S., Scheffler T. Using Large Language Models to Perform MIPVU-Inspired Automatic
+    Metaphor Detection // Proceedings of the 2nd Workshop on Analogical Abstraction in
+    Cognition, Perception, and Language (Analogy-Angle II). Vienna: ACL, 2025. P. 10–21.
+    DOI: 10.18653/v1/2025.analogyangle-1.2.
+30. Fuoli M., Huang W., Littlemore J., Turner S., Wilding E. Metaphor identification using
+    large language models: A comparison of RAG, prompt engineering, and fine-tuning //
+    arXiv:2509.24866. 2025. URL: https://arxiv.org/abs/2509.24866.
+31. Hu E. J., Shen Y., Wallis P., Allen-Zhu Z., Li Y., Wang S., Wang L., Chen W. LoRA: Low-Rank
+    Adaptation of Large Language Models // International Conference on Learning
+    Representations (ICLR 2022). URL: https://openreview.net/forum?id=nZeVKeeFYf9;
+    arXiv:2106.09685.
+32. Platt J. C. Probabilistic Outputs for Support Vector Machines and Comparisons to
+    Regularized Likelihood Methods // Advances in Large Margin Classifiers / ed. by
+    A. J. Smola, P. Bartlett, B. Schölkopf, D. Schuurmans. Cambridge, MA: MIT Press, 2000.
+    P. 61–74. (Обычно цитируется как Platt, 1999.) URL сборника:
+    https://is.mpg.de/publications/974.
+33. Guo C., Pleiss G., Sun Y., Weinberger K. Q. On Calibration of Modern Neural Networks //
+    Proceedings of the 34th International Conference on Machine Learning. PMLR, 2017.
+    Vol. 70. P. 1321–1330. URL: https://proceedings.mlr.press/v70/guo17a.html.
+34. Wang L., Yang N., Huang X., Yang L., Majumder R., Wei F. Multilingual E5 Text Embeddings:
+    A Technical Report // arXiv:2402.05672. 2024. URL: https://arxiv.org/abs/2402.05672.
+35. Cohen J. A Coefficient of Agreement for Nominal Scales // Educational and Psychological
+    Measurement. 1960. Vol. 20, no. 1. P. 37–46. DOI: 10.1177/001316446002000104.
+36. Fleiss J. L. Measuring nominal scale agreement among many raters // Psychological
+    Bulletin. 1971. Vol. 76, no. 5. P. 378–382. DOI: 10.1037/h0031619.
