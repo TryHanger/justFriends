@@ -30,6 +30,7 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.model_selection import StratifiedGroupKFold
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
+from app.nlp.amp import Amp
 from app.nlp.corpus import read_corpus
 from app.nlp.evaluation import evaluate
 from app.nlp.xlmr import XLMRDetector, align_labels, token_windows
@@ -103,6 +104,7 @@ def fit(train_records, args, device, output: Path | None = None):
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lambda s: min(1.0, (s + 1) / (0.1 * steps)) * max(0.0, 1 - s / steps)
     )
+    amp = Amp(device)
     model.train()
     for _ in range(args.epochs):
         random.shuffle(data)
@@ -110,7 +112,7 @@ def fit(train_records, args, device, output: Path | None = None):
             batch = data[start : start + args.batch_size]
             width = max(len(f["input_ids"]) for f in batch)
 
-            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            with amp.autocast():
                 logits = model(
                     input_ids=pad(batch, width, "input_ids", tokenizer.pad_token_id, device),
                     attention_mask=pad(batch, width, "attention_mask", 0, device),
@@ -118,9 +120,7 @@ def fit(train_records, args, device, output: Path | None = None):
             loss = loss_fn(
                 logits.float().view(-1, 3), pad(batch, width, "labels", -100, device).view(-1)
             )
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            amp.step(loss, model, optimizer)
             scheduler.step()
             optimizer.zero_grad()
     path = output or Path(args.scratch)

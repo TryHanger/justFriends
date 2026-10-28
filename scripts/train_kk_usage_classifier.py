@@ -28,6 +28,8 @@ from sklearn.metrics import cohen_kappa_score, f1_score, precision_score, recall
 from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
+from app.nlp.amp import Amp, amp_dtype
+
 SET = Path("data/processed/kk_usage/kk_usage_dictionary.jsonl")
 LABELS = ["literal", "metaphorical"]
 
@@ -50,17 +52,39 @@ def fit(texts, labels, args, device):
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
     if tokenizer.pad_token is None:  # decoder models (SozKZ, Qwen) have no padding token
         tokenizer.pad_token = tokenizer.eos_token
+    # LoRA keeps the frozen base in half precision (bf16, or fp16 on T4/P100); adapters stay
+    # fp32 below. --load-4bit quantizes it further (QLoRA) for 7-8B models on a 16 GB GPU.
+    half = amp_dtype(device) or torch.float32
+    extra = {}
+    if args.load_4bit:
+        from transformers import BitsAndBytesConfig
+
+        extra = {
+            "quantization_config": BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=half,
+            ),
+            "device_map": {"": device.index or 0},
+        }
     model = AutoModelForSequenceClassification.from_pretrained(
         args.base_model,
         num_labels=2,
         id2label=dict(enumerate(LABELS)),
         label2id={label: i for i, label in enumerate(LABELS)},
         ignore_mismatched_sizes=True,  # the base checkpoint carries a token-level head
-        # LoRA keeps the frozen base in bf16 (half the memory); adapters stay fp32 below.
-        torch_dtype=torch.bfloat16 if args.lora else torch.float32,
-    ).to(device)
+        torch_dtype=half if args.lora else torch.float32,
+        **extra,
+    )
+    if not args.load_4bit:
+        model = model.to(device)
     model.config.pad_token_id = tokenizer.pad_token_id
-    if args.gradient_checkpointing:
+    if args.load_4bit:
+        from peft import prepare_model_for_kbit_training
+
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    elif args.gradient_checkpointing:
         model.gradient_checkpointing_enable()
     if args.lora:
         from peft import LoraConfig, get_peft_model
@@ -103,6 +127,7 @@ def fit(texts, labels, args, device):
         optimizer, lambda step: min(1.0, (step + 1) / (0.1 * steps)) * max(0.0, 1 - step / steps)
     )
     loss_fn = torch.nn.CrossEntropyLoss(weight=weights)
+    amp = Amp(device)
     model.train()
     started, step = time.time(), 0
     for _ in range(args.epochs):
@@ -117,11 +142,9 @@ def fit(texts, labels, args, device):
                 return_tensors="pt",
             ).to(device)
             target = torch.tensor([labels[i] for i in batch], device=device)
-            with torch.autocast(device.type, dtype=torch.bfloat16, enabled=device.type == "cuda"):
+            with amp.autocast():
                 logits = model(**encoded).logits
-            loss_fn(logits.float(), target).backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            amp.step(loss_fn(logits.float(), target), model, optimizer)
             scheduler.step()
             optimizer.zero_grad()
             step += 1
@@ -142,9 +165,8 @@ def predict(tokenizer, model, texts, args, device) -> list[int]:
             padding=True,
             return_tensors="pt",
         ).to(device)
-        # A bf16 LoRA base needs autocast; full fine-tuning is evaluated in fp32 as before.
-        lora = args.lora and device.type == "cuda"
-        with torch.autocast(device.type, dtype=torch.bfloat16, enabled=lora):
+        # A half-precision LoRA base needs autocast; full fine-tuning is evaluated in fp32.
+        with Amp(device).autocast(enabled=args.lora):
             result.extend(model(**encoded).logits.argmax(-1).tolist())
     return result
 
@@ -222,11 +244,18 @@ def main() -> None:
         "--lora", action="store_true", help="LoRA adapters instead of full fine-tuning"
     )
     parser.add_argument(
+        "--load-4bit",
+        action="store_true",
+        help="4-bit base (QLoRA, needs bitsandbytes and --lora) for 7-8B models",
+    )
+    parser.add_argument(
         "--unseen-only",
         action="store_true",
         help="only the unseen-word cross-validation, no final model (model comparisons)",
     )
     args = parser.parse_args()
+    if args.load_4bit and not args.lora:
+        parser.error("--load-4bit needs --lora")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     records = [json.loads(line) for line in SET.read_text(encoding="utf-8").splitlines()]

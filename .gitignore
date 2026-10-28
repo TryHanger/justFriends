@@ -48,3 +48,6 @@ transfer/
 
 
 .idea/
+
+# Kaggle upload bundle (contains the copyrighted Kazakh dictionary)
+kaggle_upload/
