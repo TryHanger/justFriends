@@ -7,9 +7,15 @@ The prompt and schema are shared with stage 2 of the two-stage pipeline (app/nlp
 
     python -m scripts.eval_kk_usage_direct --models gpt-4o-mini gpt-4o
     python -m scripts.eval_kk_usage_direct --score data/processed/kk_usage/claude_direct.tsv
+    python -m scripts.eval_kk_usage_direct --local-models issai/LLama-3.1-KazLLM-1.0-8B
+
+Local (Hugging Face) models get the same question and instructions; instead of a JSON
+answer, the label with the higher log-likelihood after the prompt is taken (as in H1),
+with the base in 4 bits on a GPU.
 """
 
 import argparse
+import importlib.util
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -79,6 +85,73 @@ def run(model: str, records: list[dict]) -> Path:
     return output
 
 
+LOCAL_INSTRUCTIONS = INSTRUCTIONS.replace(
+    "Answer in JSON.", "Answer with one word: literal or metaphorical."
+)
+
+
+def run_local(model_name: str, records: list[dict]) -> Path:
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    from app.nlp.amp import amp_dtype
+
+    output = ROOT / f"direct-{model_name.split('/')[-1]}.json"
+    done = json.loads(output.read_text(encoding="utf-8")) if output.exists() else {}
+    todo = [r for r in records if r["id"] not in done]
+    if not todo:
+        return output
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    extra = {}
+    if device.type == "cuda" and importlib.util.find_spec("bitsandbytes"):
+        from transformers import BitsAndBytesConfig
+
+        extra = {
+            "quantization_config": BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=amp_dtype(device),
+            ),
+            "device_map": {"": 0},
+        }
+    elif device.type == "cuda":  # without bitsandbytes: half precision (small models)
+        extra = {"torch_dtype": amp_dtype(device), "device_map": {"": 0}}
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, **extra).eval()
+    labels = ["literal", "metaphorical"]
+    label_ids = [tokenizer(label, add_special_tokens=False)["input_ids"] for label in labels]
+    with torch.no_grad():
+        for number, record in enumerate(todo, 1):
+            question = direct_question(
+                record["text"], record["start"], record["end"], record["target"]
+            )
+            messages = [
+                {"role": "system", "content": LOCAL_INSTRUCTIONS},
+                {"role": "user", "content": question},
+            ]
+            text = tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True
+            )
+            prompt = tokenizer(text, add_special_tokens=False)["input_ids"]
+            scores = []
+            for ids in label_ids:
+                sequence = torch.tensor([prompt + ids], device=model.device)
+                logits = model(input_ids=sequence).logits[0, len(prompt) - 1 : -1].float()
+                logprobs = logits.log_softmax(-1).gather(
+                    1, torch.tensor(ids, device=model.device)[:, None]
+                )
+                scores.append(float(logprobs.sum()))
+            done[record["id"]] = {
+                "usage": labels[int(scores[1] > scores[0])],
+                "logprobs": scores,
+                "tokens": [len(prompt), 0],
+            }
+            if number % 20 == 0:
+                print(f"  {model_name}: {number}/{len(todo)}", flush=True)
+    output.write_text(json.dumps(done, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    return output
+
+
 def score(name: str, answers: dict, records: list[dict]) -> dict:
     gold = {r["id"]: r["usage_type"] == "metaphorical" for r in records}
     pairs = [(gold[i], a == "metaphorical") for i, a in answers.items() if i in gold]
@@ -101,17 +174,31 @@ def score(name: str, answers: dict, records: list[dict]) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", nargs="*", default=[])
+    parser.add_argument(
+        "--local-models", nargs="*", default=[], help="Hugging Face models, run on this machine"
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="all 1 264 quotations instead of the 160-quotation sample",
+    )
     parser.add_argument("--score", nargs="*", default=[], help="extra TSV files: id<TAB>usage")
     parser.add_argument("--show", action="store_true", help="print quotations without labels")
     args = parser.parse_args()
     records = quotations()
+    if args.all:
+        records = [
+            json.loads(line) for line in (ROOT / "kk_usage_dictionary.jsonl").open(encoding="utf-8")
+        ]
     if args.show:
         for r in records:
             print(f"{r['id']}\t{r['target']}\t{r['text'].replace(chr(10), ' / ')}")
         return
     report = []
-    for model in args.models:
-        cached = json.loads(run(model, records).read_text(encoding="utf-8"))
+    runs = [(model, run) for model in args.models]
+    runs += [(model, run_local) for model in args.local_models]
+    for model, runner in runs:
+        cached = json.loads(runner(model, records).read_text(encoding="utf-8"))
         # The cache may hold answers for quotations of an earlier sample.
         answers = {r["id"]: cached[r["id"]] for r in records if r["id"] in cached}
         result = score(model, {k: v["usage"] for k, v in answers.items()}, records)
