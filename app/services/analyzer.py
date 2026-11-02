@@ -105,7 +105,7 @@ def _profiled(result: AnalysisResult, model_profile: str) -> AnalysisResult:
     if model_profile == "xlmr_zh_gold_v2":
         return result.model_copy(
             update={
-                "model_version": "xlmr-zh-kk-expert-v3",
+                "model_version": "xlmr-zh-kk-expert-large-v1",
                 "method": {**result.method, "model_profile": "xlmr_zh_gold_v2", "supervision": "gold"},
             }
         )

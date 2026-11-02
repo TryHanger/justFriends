@@ -92,6 +92,28 @@
         "ece_before": 0.35821462349035715,
         "ece_after": 0.049005592873452276
       }
+    },
+    "xlmr-zh-kk-expert-large-v1": {
+      "zh": {
+        "a": 0.6025700811905592,
+        "b": 0.13227270217141526,
+        "source": "CMDAG test sample (gold, 1000 sentences)",
+        "spans": 1307,
+        "precision": 0.8745218056618209,
+        "mean_self_reported": 0.9187421623973743,
+        "ece_before": 0.052571937745424305,
+        "ece_after": 0.027027339084048505
+      },
+      "kk": {
+        "a": 0.42490017989759876,
+        "b": -1.3041976653654879,
+        "source": "Kazakh explanatory dictionary «ауыс.» quotations (1264, out-of-fold)",
+        "spans": 402,
+        "precision": 0.3009950248756219,
+        "mean_self_reported": 0.7112119299916002,
+        "ece_before": 0.4102169051159782,
+        "ece_after": 0.03971891988828547
+      }
     }
   }
 }

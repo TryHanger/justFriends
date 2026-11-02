@@ -2,13 +2,13 @@
 
 The XLM-R detector only tags tokens as inside or outside a figure. Each span then gets a
 type and two domains from linear heads over the detector's own hidden states (mean of the
-span tokens in layers 6, 9 and 12, plus the mean of a context window), trained by
+span tokens in three layers from the middle up, plus the mean of a context window), trained by
 scripts/train_figure_attributes.py on Claude-annotated Chinese and Kazakh poems. An
 explicit comparison marker (如/似/若…, -дай/-дей, сияқты…) makes the span a simile. The
 explanation is assembled in Russian from these predictions.
 
-Cross-validated by poem, the type is right 78% of the time, the source domain 46% and the
-target domain 35%; below 0.4 probability a domain is right about one time in four, so it
+Cross-validated by poem on XLM-R large, the type is right 78% of the time, the source domain
+52% and the target domain 39% (46% and 35% on base); below 0.4 probability a domain is right about one time in four, so it
 is left unknown, and below 0.5 the explanation calls it tentative.
 """
 

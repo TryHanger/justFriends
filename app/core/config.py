@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     ollama_context_window: int = Field(default=16384, ge=4096)
     xlmr_model_path: str = "models/xlmr"
     experimental_kk_xlmr_model_path: str = "models/xlmr-zh-kk-expert-v3"
-    chinese_gold_xlmr_model_path: str = "models/xlmr-zh-kk-expert-v3"
+    chinese_gold_xlmr_model_path: str = "models/xlmr-zh-kk-expert-large-v1"
     attribute_model_path: str | None = None
     # Shijing stanza classifier 賦/比/興 (Zhu Xi labels); skipped when absent. Empty disables.
     stanza_model_path: str | None = "models/zhuxi-stanza-sikuroberta-v1"

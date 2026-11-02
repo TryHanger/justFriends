@@ -23,7 +23,6 @@ CORPORA = (
     "data/processed/pilot/zh_claude_silver_song150.jsonl",
     "data/processed/kk_ensemble/claude_silver_150.jsonl",
 )
-LAYERS = [6, 9, 12]
 
 
 def examples(paths):
@@ -69,7 +68,10 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(args.model, local_files_only=True)
     model = AutoModel.from_pretrained(args.model, local_files_only=True).to(device).eval()
 
-    encoder = FigureAttributes({}, LAYERS)
+    # Middle, three-quarter and last layer: 6, 9, 12 for XLM-R base; 12, 18, 24 for large.
+    depth = model.config.num_hidden_layers
+    layers = [depth // 2, 3 * depth // 4, depth]
+    encoder = FigureAttributes({}, layers)
     rows, features = [], []
     for poem, span in examples(CORPORA):
         vector = encoder.features(model, tokenizer, device, poem.text, span.start, span.end)
@@ -90,7 +92,7 @@ def main():
         "source": "Claude silver: Shijing/Tang/Song (zh) and Abai (kk)",
         "figures": len(rows),
         "by_language": dict(Counter(languages.tolist())),
-        "layers": LAYERS,
+        "layers": layers,
         "balanced": args.balanced,
         "cv": {},
     }
@@ -139,7 +141,7 @@ def main():
         }
     output = Path(args.output or Path(args.model) / "figure_attributes.json")
     output.write_text(
-        json.dumps({"layers": LAYERS, "report": report, "heads": heads}), encoding="utf-8"
+        json.dumps({"layers": layers, "report": report, "heads": heads}), encoding="utf-8"
     )
     Path(args.report).write_text(json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
     print("saved", output)
