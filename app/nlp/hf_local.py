@@ -41,20 +41,37 @@ class TransformersDetector(LLMDetector):
         adapter: str | None = None,
         max_new_tokens: int = 2048,
         device: str | None = None,
+        load_4bit: bool = False,
         **kwargs,
     ):
         super().__init__(model, **kwargs)
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.tokenizer = AutoTokenizer.from_pretrained(adapter or model)
-        self.lm = AutoModelForCausalLM.from_pretrained(model, torch_dtype="auto")
+        if load_4bit and self.device == "cuda":
+            # 7-8B models (KazLLM, Qwen-7B) fit an 8 GB GPU only with a 4-bit base.
+            from transformers import BitsAndBytesConfig
+
+            from app.nlp.amp import amp_dtype
+
+            quantization = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=amp_dtype(torch.device("cuda")),
+            )
+            self.lm = AutoModelForCausalLM.from_pretrained(
+                model, quantization_config=quantization, device_map={"": 0}
+            )
+        else:
+            self.lm = AutoModelForCausalLM.from_pretrained(model, torch_dtype="auto")
+            self.lm.to(self.device)
         if adapter:
             from peft import PeftModel
 
             self.lm = PeftModel.from_pretrained(self.lm, adapter)
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.lm.to(self.device).eval()
+        self.lm.eval()
         self.adapter, self.max_new_tokens = adapter, max_new_tokens
 
     @property
@@ -89,4 +106,7 @@ class TransformersDetector(LLMDetector):
             raise ValueError("Generation hit max_new_tokens; the JSON answer is incomplete")
         text = self.tokenizer.decode(generated, skip_special_tokens=True)
         self._record_usage(inputs["input_ids"].shape[1], len(generated))
-        return extract_json(text), do_sample
+        try:
+            return extract_json(text), do_sample
+        except ValueError as exc:
+            raise ValueError(f"{exc}. Model output starts with: {text[:400]!r}") from exc

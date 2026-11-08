@@ -31,6 +31,8 @@ nlp = [
 ]
 finetune = [
   "peft>=0.13,<1",
+  # 4-bit bases for 7-8B models (HF_LOAD_4BIT, QLoRA)
+  "bitsandbytes>=0.46,<1",
 ]
 dev = [
   "pytest>=8.0,<10.0",

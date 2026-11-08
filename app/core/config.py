@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     anthropic_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = None
     hf_model: str = ""
     hf_adapter: str | None = None
+    hf_load_4bit: bool = False
     ollama_model: str = ""
     ollama_base_url: str = "http://localhost:11434"
     ollama_context_window: int = Field(default=16384, ge=4096)

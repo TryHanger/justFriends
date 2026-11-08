@@ -126,7 +126,9 @@ def _llm(settings, provider: str, common: dict, model: str | None = None):
             raise ValueError("HF_MODEL is required for the hf backend")
         from app.nlp.hf_local import TransformersDetector
 
-        return TransformersDetector(settings.hf_model, settings.hf_adapter, **common)
+        return TransformersDetector(
+            settings.hf_model, settings.hf_adapter, load_4bit=settings.hf_load_4bit, **common
+        )
     if provider == "ollama":
         return OllamaDetector(
             model or settings.ollama_model,
