@@ -138,7 +138,7 @@ def figures(text: str, result: dict | None) -> str:
 
 def silver(path: Path) -> dict:
     """Claude's annotations are a corpus (jsonl with spans), the other runs are predictions."""
-    if path.suffix == ".jsonl":
+    if path.suffix == ".jsonl" and path.exists():
         out = {}
         for line in path.read_text(encoding="utf-8").splitlines():
             record = json.loads(line)
@@ -271,9 +271,11 @@ def main() -> None:
     parser.add_argument("--poems", type=int, default=12)
     parser.add_argument("--quotations", type=int, default=30)
     args = parser.parse_args()
+    # The page needs the gpt-4o and Claude runs, which are not shipped to Kaggle.
     if args.command == "run":
         run(args)
-    print(page(args))
+    else:
+        print(page(args))
 
 
 if __name__ == "__main__":
