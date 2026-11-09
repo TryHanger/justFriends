@@ -119,11 +119,39 @@ def highlight(text: str, spans) -> str:
     return "".join(out).replace("\n", "<br>")
 
 
+def error_ru(error: str) -> str:
+    """What went wrong, in words, for a failed analysis."""
+    if "literal_error" in error:
+        return "ответ не принят: модель вписала область или тип не из списка"
+    if "max_new_tokens" in error:
+        return "ответ не принят: модель не уложилась в 2048 токенов"
+    if "invalid or incomplete" in error or "no JSON" in error:
+        return "ответ не принят: модель выдала испорченный JSON"
+    return "ошибка"
+
+
+def failure(error: str) -> str:
+    return (
+        f'<p class="error">{error_ru(error)}</p>'
+        f'<details class="muted"><summary>подробно</summary>{html.escape(error)}</details>'
+    )
+
+
+def direct_answer(result: dict) -> tuple[str | None, str]:
+    """Usage and reason; local models sometimes nest them in "properties" or echo the schema."""
+    if "error" in result:
+        return None, error_ru(result["error"])
+    for answer in (result, result.get("properties", {})):
+        if isinstance(answer.get("usage"), str):
+            return answer["usage"], answer.get("reason", "")
+    return None, "вместо ответа вернула пустой шаблон JSON из инструкции"
+
+
 def figures(text: str, result: dict | None) -> str:
     if result is None:
         return '<p class="muted">нет прогона</p>'
     if "error" in result:
-        return f'<p class="error">Ошибка: {html.escape(result["error"])}</p>'
+        return failure(result["error"])
     spans = result.get("metaphors", [])
     items = "".join(
         f"<li><b>{html.escape(s['text'])}</b> — {LABEL_RU.get(s['label'], s['label'])}"
@@ -200,8 +228,8 @@ def page(args) -> Path:
         if record["id"] not in own["direct"] and record["id"] not in own["quotes"]:
             continue
         gold = usage_ru[record["usage_type"]]
-        direct = own["direct"].get(record["id"], {})
-        answer = usage_ru.get(direct.get("usage"), direct.get("error", "—"))
+        usage, reason = direct_answer(own["direct"].get(record["id"], {"error": "нет прогона"}))
+        answer = usage_ru.get(usage, "нет ответа")
         reference = usage_ru.get(gpt_direct.get(record["id"], {}).get("usage"), "—")
 
         def cell(value, gold=gold):
@@ -215,20 +243,37 @@ def page(args) -> Path:
             + html.escape(quote[record["end"] :])
         )
         mine = own["quotes"].get(record["id"])
-        found = (
-            ", ".join(html.escape(s["text"]) for s in mine["metaphors"]) or "ничего"
-            if mine and "error" not in mine
-            else "—"
-        )
+        if mine and "error" not in mine:
+            found = ", ".join(html.escape(s["text"]) for s in mine["metaphors"]) or "ничего"
+        else:
+            found = error_ru(mine["error"]) if mine else "нет прогона"
         rows.append(
             f"<tr><td><b>{html.escape(record['target'])}</b><br>"
             f'<span class="quote">{marked}</span></td><td>{gold}</td>'
             f"{cell(reference)}{cell(answer)}"
-            f'<td class="muted">{html.escape(direct.get("reason", ""))}</td>'
+            f'<td class="muted">{html.escape(reason)}</td>'
             f"{cell(headword_marked(record, mine))}"
             f"{cell(headword_marked(record, gpt_two_stage.get(record['id'])))}"
             f'<td class="muted">{found}</td></tr>'
         )
+
+    def accepted(kind):
+        runs = own[kind].values()
+        return f"{sum('error' not in r for r in runs)} из {len(own[kind])}"
+
+    answers = [direct_answer(r)[0] for r in own["direct"].values()]
+    records = {r["id"]: r for r in quotations(args.quotations)}
+    correct = sum(
+        direct_answer(r)[0] == records[i]["usage_type"]
+        for i, r in own["direct"].items()
+        if i in records
+    )
+    summary = (
+        f"<ul><li>Анализ стихов Абая: ответ принят в {accepted('poems')}.</li>"
+        f"<li>Анализ словарных цитат: ответ принят в {accepted('quotes')}.</li>"
+        f"<li>Прямой вопрос: ответила по существу в {sum(a is not None for a in answers)} из "
+        f"{len(answers)}, из них совпало со словарём {correct}.</li></ul>"
+    )
 
     body = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -245,9 +290,10 @@ table{{border-collapse:collapse;width:100%;background:var(--card)}} td,th{{borde
 td.ok{{background:var(--ok)}} td.bad{{background:var(--bad)}} .tbl{{overflow-x:auto}} .quote{{font-size:14px}}
 </style></head><body>
 <h1>{name} в работе: что она находит на самом деле</h1>
-<p>Локальный прогон на видеокарте (основа в 4 битах), тот же анализ, что на сайте, но без
+<p>Прогон на видеокарте (основа в 4 битах), тот же анализ, что на сайте, но без
 второго этапа gpt-4o. Для стихов Абая эталона нет: рядом разметка gpt-4o-mini и Claude
 (модельная, не gold). Для словарных цитат эталон — помета словаря «ауыс.».</p>
+<div class="card"><h3>Итог</h3>{summary}</div>
 <h2>1. Стихи Абая: какие фигуры находит каждая модель</h2>{"".join(blocks) or "<p>нет данных</p>"}
 <h2>2. Словарные цитаты: прямое или переносное?</h2>
 <p class="muted">Зелёным — совпало со словарём, красным — нет. «Прямой вопрос»: модели называют слово
