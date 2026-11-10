@@ -9,6 +9,10 @@ the cache; it quotes the copyrighted dictionary, so it stays out of git and publ
 
     python -m scripts.compare_kazllm run --poems 12 --quotations 30
     python -m scripts.compare_kazllm html
+
+With --lenient (separate cache files) values outside the closed lists are replaced instead
+of rejecting the answer, the format note asks for values rather than the schema, the token
+limit is 3072, and the raw model output is kept, so the content of every answer is visible.
 """
 
 import argparse
@@ -31,8 +35,19 @@ LABEL_RU = {
 }
 
 
+LENIENT_NOTE = (
+    " Проверка формата мягкая: значение не из списка (например, область «abstract») заменено"
+    " на «другое», а не отклоняет весь ответ; под каждым ответом — что модель написала сама."
+)
+
+
 def short(model: str) -> str:
     return model.split("/")[-1]
+
+
+def tag(args) -> str:
+    """Cache and page name: the lenient run is kept apart from the strict one."""
+    return short(args.model) + ("-lenient" if args.lenient else "")
 
 
 def load_json(path: Path) -> dict:
@@ -64,13 +79,20 @@ def quotations(count: int) -> list[dict]:
 
 def run(args) -> None:
     # Pure local model: the site's Kazakh second stage would otherwise ask gpt-4o.
-    os.environ.update(HF_MODEL=args.model, HF_LOAD_4BIT="true", NLP_TWO_STAGE_LANGUAGES="")
+    os.environ.update(
+        HF_MODEL=args.model,
+        HF_LOAD_4BIT="true",
+        HF_LENIENT=str(args.lenient).lower(),
+        NLP_TWO_STAGE_LANGUAGES="",
+    )
     from app.nlp.__main__ import make_pipeline
     from app.nlp.usage import INSTRUCTIONS, RUSSIAN_REASON, SCHEMA, direct_question
 
     pipeline = make_pipeline("hf", None)
     detector = pipeline.detector
-    name = short(args.model)
+    if args.lenient:
+        detector.max_new_tokens = 3072
+    name = tag(args)
     jobs = [("poems", r.id, r.text, None) for r in poems(args.poems)]
     jobs += [("quotes", r["id"], r["text"], None) for r in quotations(args.quotations)]
     jobs += [("direct", r["id"], None, r) for r in quotations(args.quotations)]
@@ -80,6 +102,7 @@ def run(args) -> None:
         if item_id in done and "error" not in done[item_id]:
             continue
         started = time.time()
+        detector.outputs = []
         try:
             if kind == "direct":
                 question = direct_question(
@@ -91,6 +114,10 @@ def run(args) -> None:
                 done[item_id] = pipeline.analyze(text, "kk").model_dump()
         except Exception as exc:  # noqa: BLE001 - shown on the page, retried on the next run
             done[item_id] = {"error": f"{type(exc).__name__}: {exc}"[:700]}
+        if args.lenient and detector.outputs:
+            # The first call is the answer itself; a later one may be the Russian pass.
+            done[item_id]["raw"] = detector.outputs[0]["text"]
+            done[item_id]["repairs"] = sum(o["repairs"] for o in detector.outputs)
         save_json(path, done)
         status = "ошибка" if "error" in done[item_id] else "готово"
         print(
@@ -137,6 +164,19 @@ def failure(error: str) -> str:
     )
 
 
+def raw_output(result: dict) -> str:
+    """The lenient run keeps what the model actually wrote and how many values were replaced."""
+    note = ""
+    if result.get("repairs"):
+        note = f'<p class="muted">Заменено значений не из списка: {result["repairs"]}</p>'
+    if result.get("raw"):
+        note += (
+            '<details class="muted"><summary>что ответила модель</summary>'
+            f"<pre>{html.escape(result['raw'])}</pre></details>"
+        )
+    return note
+
+
 def direct_answer(result: dict) -> tuple[str | None, str]:
     """Usage and reason; local models sometimes nest them in "properties" or echo the schema."""
     if "error" in result:
@@ -151,7 +191,7 @@ def figures(text: str, result: dict | None) -> str:
     if result is None:
         return '<p class="muted">нет прогона</p>'
     if "error" in result:
-        return failure(result["error"])
+        return failure(result["error"]) + raw_output(result)
     spans = result.get("metaphors", [])
     items = "".join(
         f"<li><b>{html.escape(s['text'])}</b> — {LABEL_RU.get(s['label'], s['label'])}"
@@ -160,7 +200,7 @@ def figures(text: str, result: dict | None) -> str:
     )
     return (
         f'<p class="poem">{highlight(text, spans)}</p>'
-        f'<p class="count">Фигур: {len(spans)}</p><ul>{items}</ul>'
+        f'<p class="count">Фигур: {len(spans)}</p><ul>{items}</ul>' + raw_output(result)
     )
 
 
@@ -199,7 +239,9 @@ def headword_marked(record: dict, result: dict | None) -> str:
 
 def page(args) -> Path:
     name = short(args.model)
-    own = {kind: load_json(ROOT / f"{kind}-{name}.json") for kind in ("poems", "quotes", "direct")}
+    kinds = ("poems", "quotes", "direct")
+    own = {kind: load_json(ROOT / f"{kind}-{tag(args)}.json") for kind in kinds}
+    strict = {kind: load_json(ROOT / f"{kind}-{name}.json") for kind in kinds}
     gpt_mini = load_json(Path("data/processed/kk_ensemble/gpt-4o-mini.json"))
     claude = silver(Path("data/processed/kk_ensemble/claude-opus-5-5.jsonl"))
     gpt_direct = load_json(USAGE / "direct-gpt-4o.json")
@@ -228,7 +270,8 @@ def page(args) -> Path:
         if record["id"] not in own["direct"] and record["id"] not in own["quotes"]:
             continue
         gold = usage_ru[record["usage_type"]]
-        usage, reason = direct_answer(own["direct"].get(record["id"], {"error": "нет прогона"}))
+        direct = own["direct"].get(record["id"], {"error": "нет прогона"})
+        usage, reason = direct_answer(direct)
         answer = usage_ru.get(usage, "нет ответа")
         reference = usage_ru.get(gpt_direct.get(record["id"], {}).get("usage"), "—")
 
@@ -251,29 +294,40 @@ def page(args) -> Path:
             f"<tr><td><b>{html.escape(record['target'])}</b><br>"
             f'<span class="quote">{marked}</span></td><td>{gold}</td>'
             f"{cell(reference)}{cell(answer)}"
-            f'<td class="muted">{html.escape(reason)}</td>'
+            f'<td class="muted">{html.escape(reason)}{"" if usage else raw_output(direct)}</td>'
             f"{cell(headword_marked(record, mine))}"
             f"{cell(headword_marked(record, gpt_two_stage.get(record['id'])))}"
             f'<td class="muted">{found}</td></tr>'
         )
 
-    def accepted(kind):
-        runs = own[kind].values()
-        return f"{sum('error' not in r for r in runs)} из {len(own[kind])}"
-
-    answers = [direct_answer(r)[0] for r in own["direct"].values()]
     records = {r["id"]: r for r in quotations(args.quotations)}
-    correct = sum(
-        direct_answer(r)[0] == records[i]["usage_type"]
-        for i, r in own["direct"].items()
-        if i in records
-    )
-    summary = (
-        f"<ul><li>Анализ стихов Абая: ответ принят в {accepted('poems')}.</li>"
-        f"<li>Анализ словарных цитат: ответ принят в {accepted('quotes')}.</li>"
-        f"<li>Прямой вопрос: ответила по существу в {sum(a is not None for a in answers)} из "
-        f"{len(answers)}, из них совпало со словарём {correct}.</li></ul>"
-    )
+
+    def summary_of(run: dict) -> str:
+        def accepted(kind):
+            return f"{sum('error' not in r for r in run[kind].values())} из {len(run[kind])}"
+
+        answers = {i: direct_answer(r)[0] for i, r in run["direct"].items()}
+        correct = sum(u == records[i]["usage_type"] for i, u in answers.items() if i in records)
+        hits = [
+            headword_marked(records[i], r) == usage_ru[records[i]["usage_type"]]
+            for i, r in run["quotes"].items()
+            if i in records and "error" not in r
+        ]
+        return (
+            f"<ul><li>Анализ стихов Абая: ответ принят в {accepted('poems')}.</li>"
+            f"<li>Анализ словарных цитат: ответ принят в {accepted('quotes')}, из них "
+            f"заглавное слово оценено как в словаре в {sum(hits)}.</li>"
+            f"<li>Прямой вопрос: ответила по существу в "
+            f"{sum(u is not None for u in answers.values())} из {len(answers)}, из них совпало "
+            f"со словарём {correct}.</li></ul>"
+        )
+
+    summary = summary_of(own)
+    if args.lenient and any(strict.values()):
+        summary = (
+            f"<h4>Мягкая проверка формата</h4>{summary}"
+            f"<h4>Строгая проверка (как на сайте)</h4>{summary_of(strict)}"
+        )
 
     body = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -284,14 +338,14 @@ body{{background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif;ma
 .card{{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:16px 0}}
 .cols{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}}
 mark{{background:var(--mark);color:inherit;border-radius:3px;padding:0 2px}}
-.muted{{color:var(--muted);font-size:13px}} .error{{color:#c0392b}} .poem{{white-space:normal}}
+.muted{{color:var(--muted);font-size:13px}} .error{{color:#c0392b}} .poem{{white-space:normal}} pre{{white-space:pre-wrap;font-size:12px}}
 .count{{font-weight:600;margin:4px 0}} ul{{padding-left:18px}} li{{margin-bottom:6px}}
 table{{border-collapse:collapse;width:100%;background:var(--card)}} td,th{{border:1px solid var(--line);padding:6px 8px;vertical-align:top;text-align:left}}
 td.ok{{background:var(--ok)}} td.bad{{background:var(--bad)}} .tbl{{overflow-x:auto}} .quote{{font-size:14px}}
 </style></head><body>
 <h1>{name} в работе: что она находит на самом деле</h1>
 <p>Прогон на видеокарте (основа в 4 битах), тот же анализ, что на сайте, но без
-второго этапа gpt-4o. Для стихов Абая эталона нет: рядом разметка gpt-4o-mini и Claude
+второго этапа gpt-4o.{LENIENT_NOTE if args.lenient else ""} Для стихов Абая эталона нет: рядом разметка gpt-4o-mini и Claude
 (модельная, не gold). Для словарных цитат эталон — помета словаря «ауыс.».</p>
 <div class="card"><h3>Итог</h3>{summary}</div>
 <h2>1. Стихи Абая: какие фигуры находит каждая модель</h2>{"".join(blocks) or "<p>нет данных</p>"}
@@ -305,7 +359,7 @@ td.ok{{background:var(--ok)}} td.bad{{background:var(--bad)}} .tbl{{overflow-x:a
 <tbody>{"".join(rows)}</tbody></table></div>
 <p class="muted">Цитаты из «Қазақ әдеби тілінің сөздігі» — только для внутренней оценки, не публиковать.</p>
 </body></html>"""
-    path = ROOT / f"compare-{name}.html"
+    path = ROOT / f"compare-{tag(args)}.html"
     path.write_text(body, encoding="utf-8")
     return path
 
@@ -316,6 +370,7 @@ def main() -> None:
     parser.add_argument("--model", default="issai/LLama-3.1-KazLLM-1.0-8B")
     parser.add_argument("--poems", type=int, default=12)
     parser.add_argument("--quotations", type=int, default=30)
+    parser.add_argument("--lenient", action="store_true", help="replace out-of-list values")
     args = parser.parse_args()
     # The page needs the gpt-4o and Claude runs, which are not shipped to Kaggle.
     if args.command == "run":

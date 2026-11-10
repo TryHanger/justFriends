@@ -2,13 +2,55 @@
 
 Used to evaluate instruction-tuned checkpoints (hypothesis H1) on the same contract as the
 API models. Unlike OpenAI/Claude/Ollama there is no constrained decoding here: an invalid
-JSON answer fails the analysis instead of being repaired.
+JSON answer fails the analysis. With `lenient`, values outside a schema enum are replaced
+by its "other"/"unknown" member (or the array item is dropped) instead, so the content of
+an answer can be inspected even when the model ignores the closed lists.
 """
 
 import json
 from pathlib import Path
 
 from app.nlp.llm import LLMDetector
+
+_DROP = object()
+FORMAT_NOTE = (
+    "\nAnswer with one JSON object that follows this JSON Schema. Fill in the values; "
+    "never repeat the schema itself.\nJSON Schema:\n"
+)
+
+
+def coerce_enums(value, schema: dict, defs: dict | None = None) -> tuple[object, int]:
+    """Value with out-of-enum strings replaced; returns it and the number of repairs."""
+    defs = schema.get("$defs", {}) if defs is None else defs
+    if "$ref" in schema:
+        schema = defs[schema["$ref"].rsplit("/", 1)[-1]]
+    if "anyOf" in schema:
+        if value is None:
+            return value, 0
+        schema = next(s for s in schema["anyOf"] if s.get("type") != "null")
+    if "enum" in schema and isinstance(value, str) and value not in schema["enum"]:
+        fallback = next((v for v in ("other", "unknown") if v in schema["enum"]), _DROP)
+        return fallback, 1
+    if isinstance(value, dict) and "properties" in schema:
+        repairs, out = 0, {}
+        for key, item in value.items():
+            if key not in schema["properties"]:
+                out[key] = item
+                continue
+            fixed, count = coerce_enums(item, schema["properties"][key], defs)
+            if fixed is _DROP:
+                return _DROP, repairs + count
+            out[key], repairs = fixed, repairs + count
+        return out, repairs
+    if isinstance(value, list) and "items" in schema:
+        repairs, out = 0, []
+        for item in value:
+            fixed, count = coerce_enums(item, schema["items"], defs)
+            repairs += count
+            if fixed is not _DROP:
+                out.append(fixed)
+        return out, repairs
+    return value, 0
 
 
 def render_chat(tokenizer, messages: list[dict], add_generation_prompt: bool) -> str:
@@ -42,6 +84,7 @@ class TransformersDetector(LLMDetector):
         max_new_tokens: int = 2048,
         device: str | None = None,
         load_4bit: bool = False,
+        lenient: bool = False,
         **kwargs,
     ):
         super().__init__(model, **kwargs)
@@ -73,6 +116,9 @@ class TransformersDetector(LLMDetector):
             self.lm = PeftModel.from_pretrained(self.lm, adapter)
         self.lm.eval()
         self.adapter, self.max_new_tokens = adapter, max_new_tokens
+        self.lenient = lenient
+        # Raw text and enum repairs of every answer, for inspecting what the model said.
+        self.outputs: list[dict] = []
 
     @property
     def model_version(self) -> str:
@@ -87,7 +133,9 @@ class TransformersDetector(LLMDetector):
             [
                 {
                     "role": "system",
-                    "content": instructions + "\nJSON schema:\n" + json.dumps(schema),
+                    "content": instructions
+                    + (FORMAT_NOTE if self.lenient else "\nJSON schema:\n")
+                    + json.dumps(schema),
                 },
                 {"role": "user", "content": user},
             ],
@@ -102,11 +150,17 @@ class TransformersDetector(LLMDetector):
         with torch.inference_mode():
             output = self.lm.generate(**inputs, **kwargs)
         generated = output[0, inputs["input_ids"].shape[1] :]
+        text = self.tokenizer.decode(generated, skip_special_tokens=True)
+        self.outputs.append({"text": text, "repairs": 0})
         if len(generated) >= self.max_new_tokens:
             raise ValueError("Generation hit max_new_tokens; the JSON answer is incomplete")
-        text = self.tokenizer.decode(generated, skip_special_tokens=True)
         self._record_usage(inputs["input_ids"].shape[1], len(generated))
         try:
-            return extract_json(text), do_sample
+            answer = extract_json(text)
         except ValueError as exc:
             raise ValueError(f"{exc}. Model output starts with: {text[:400]!r}") from exc
+        if self.lenient:
+            fixed, self.outputs[-1]["repairs"] = coerce_enums(json.loads(answer), schema)
+            if fixed is not _DROP:
+                answer = json.dumps(fixed, ensure_ascii=False)
+        return answer, do_sample

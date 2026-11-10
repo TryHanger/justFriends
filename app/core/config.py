@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     hf_model: str = ""
     hf_adapter: str | None = None
     hf_load_4bit: bool = False
+    hf_lenient: bool = False
     ollama_model: str = ""
     ollama_base_url: str = "http://localhost:11434"
     ollama_context_window: int = Field(default=16384, ge=4096)

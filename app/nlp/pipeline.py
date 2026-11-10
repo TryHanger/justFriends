@@ -127,7 +127,11 @@ def _llm(settings, provider: str, common: dict, model: str | None = None):
         from app.nlp.hf_local import TransformersDetector
 
         return TransformersDetector(
-            settings.hf_model, settings.hf_adapter, load_4bit=settings.hf_load_4bit, **common
+            settings.hf_model,
+            settings.hf_adapter,
+            load_4bit=settings.hf_load_4bit,
+            lenient=settings.hf_lenient,
+            **common,
         )
     if provider == "ollama":
         return OllamaDetector(
