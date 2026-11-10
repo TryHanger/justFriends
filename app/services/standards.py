@@ -5,7 +5,13 @@ These are evidence mappings, not claims of certification or ISO conformance.
 
 from pathlib import Path
 
-from app.schemas.standards import LifecycleProcess, LifecycleState, StandardInfo
+from app.schemas.standards import (
+    LifecycleProcess,
+    LifecycleState,
+    SoaArchitecture,
+    SoaLayer,
+    StandardInfo,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -28,6 +34,8 @@ STANDARDS = [
     _standard("ISO/IEC 27001:2022", "ISO/IEC", "Information security management systems — Requirements", "Безопасность", "Требования к системе менеджмента информационной безопасности.", "Определить риск хранения стихов и API ключей; каталог не означает сертификацию.", "https://www.iso.org/standard/27001", ["app/core/config.py"]),
     _standard("ISO/IEC/IEEE 15288:2023", "ISO/IEC/IEEE", "System life cycle processes", "Системная инженерия", "Процессы жизненного цикла системы в целом.", "Проверить готовность развертывания API, БД и UI вместе.", "https://www.iso.org/standard/81702.html", ["docker-compose.yml", "frontend/src/App.tsx"]),
     _standard("ISO/IEC/IEEE 42010:2022", "ISO/IEC/IEEE", "Architecture description", "Архитектура", "Требования к описанию архитектуры и точкам зрения.", "Описать связи фронтенда, API, модели и БД.", "https://www.iso.org/standard/74393.html", ["ARCHITECTURE.md"]),
+    _standard("ISO/IEC 18384-1:2016", "ISO/IEC", "Reference Architecture for SOA — Part 1: Terminology and concepts for SOA", "Архитектура", "Словарь и принципы сервис-ориентированной архитектуры: сервис, контракт, композиция, слабая связанность.", "Описать функции проекта как сервисы с явными контрактами и потребителями.", "https://www.iso.org/standard/63104.html", ["docs/API_CONTRACT.md", "contracts/analysis-result.schema.json"]),
+    _standard("ISO/IEC 18384-2:2016", "ISO/IEC", "Reference Architecture for SOA — Part 2: Reference Architecture for SOA Solutions", "Архитектура", "Эталонная архитектура SOA: пять горизонтальных слоёв от операционных систем до потребителей и четыре сквозных — интеграция, качество обслуживания, информация, управление.", "Сопоставить слои с компонентами проекта и найти пробелы: посредник интеграции, мониторинг, реестр сервисов.", "https://www.iso.org/standard/63105.html", ["ARCHITECTURE.md", "app/api/v1/router.py"]),
     _standard("ISO 31000:2018", "ISO", "Risk management — Guidelines", "Риски", "Принципы и руководство по управлению рисками.", "Вести реестр рисков ошибок анализа и утечки данных.", "https://www.iso.org/standard/65694.html", []),
     _standard("IEC 62443-4-1:2018", "IEC", "Secure product development lifecycle requirements", "Безопасность", "Процессы безопасной разработки для промышленной автоматизации; пример отдельной области IEC.", "Сравнить подход к безопасной разработке; прямое применение к этому API требует обоснования.", "https://webstore.iec.ch/en/publication/33615", []),
     _standard("IEEE 829-2008", "IEEE", "Standard for Software and System Test Documentation", "Тестирование", "Исторический стандарт документации тестирования; заменён семейством ISO/IEC/IEEE 29119.", "Сопоставить структуру отчёта об испытаниях; не использовать как актуальное требование.", "https://standards.ieee.org/standard/829-2008.html", ["tests/test_nlp_api.py"]),
@@ -83,6 +91,66 @@ def lifecycle_state(root: Path = ROOT) -> LifecycleState:
         readiness = "ready"
     return LifecycleState(processes=processes, readiness=readiness, issues=issues,
                           last_checked_at=checked_at)
+
+
+# ISO/IEC 18384-2 layers: id, name, name in the standard, kind, role in this project,
+# artifacts that evidence it, gaps that files cannot close.
+SOA_LAYER_DEFS = [
+    ("operational", "Операционные системы", "Operational Systems Layer", "horizontal",
+     "Среда выполнения: контейнеры API, интерфейса и PostgreSQL, файлы моделей.",
+     ["docker-compose.yml", "Dockerfile", "app/db/session.py"], []),
+    ("service_components", "Компоненты сервисов", "Service Component Layer", "horizontal",
+     "Реализация сервисов: анализатор, конвейер NLP, проверки качества.",
+     ["app/services/analyzer.py", "app/nlp/pipeline.py", "app/services/quality_checks.py"], []),
+    ("services", "Сервисы", "Services Layer", "horizontal",
+     "Описанные REST-сервисы: анализ, библиотека, стандарты; контракты в OpenAPI и JSON Schema.",
+     ["app/api/v1/routes/analyses.py", "app/api/v1/routes/library.py",
+      "contracts/analysis-result.schema.json", "docs/API_CONTRACT.md"], []),
+    ("business_process", "Бизнес-процессы", "Business Process Layer", "horizontal",
+     "Композиция сервисов в процесс анализа: очередь задач и этапы A–E конвейера.",
+     ["app/services/analysis_jobs.py", "app/nlp/pipeline.py"],
+     ["Композиция задана только в коде: нет описания процесса анализа как модели (например, BPMN)"]),
+    ("consumer", "Потребители", "Consumer Layer", "horizontal",
+     "Веб-интерфейс React и его клиент API.",
+     ["frontend/src/App.tsx", "frontend/src/api.ts"], []),
+    ("integration", "Интеграция", "Integration Layer", "cross_cutting",
+     "Связь потребителей с сервисами: единый маршрутизатор /api/v1 и политика CORS.",
+     ["app/api/v1/router.py", "app/main.py"],
+     ["Нет посредника (шины сервисов или API-шлюза): интерфейс вызывает сервисы напрямую по REST"]),
+    ("quality_of_service", "Качество обслуживания", "Quality of Service Layer", "cross_cutting",
+     "Надёжность и безопасность: проверка здоровья, тесты качества, лаборатория безопасности.",
+     ["app/api/v1/routes/health.py", "app/services/quality.py", "app/services/security_lab.py"],
+     ["Нет мониторинга в эксплуатации: доступность и время ответа сервисов не измеряются"]),
+    ("information", "Информация", "Information Layer", "cross_cutting",
+     "Модели данных и схемы обмена: Pydantic, ORM, таксономия фигур.",
+     ["app/schemas/analysis.py", "app/db/models.py", "contracts/taxonomy.json"], []),
+    ("governance", "Управление", "Governance Layer", "cross_cutting",
+     "Контроль изменений сервисов: версия API в пути, CI, описание архитектуры.",
+     [".github/workflows/quality.yml", "ARCHITECTURE.md", "docs/QUALITY.md"],
+     ["Нет реестра сервисов и правил версионирования: не определено, когда вводить /api/v2"]),
+]
+
+
+def soa_architecture(root: Path = ROOT) -> SoaArchitecture:
+    """Evidence for each ISO/IEC 18384-2 layer; a mapping, not a conformance claim."""
+    layers = []
+    for ident, name, standard_name, kind, role, artifacts, fixed_gaps in SOA_LAYER_DEFS:
+        existing = [path for path in artifacts if (root / path).is_file()]
+        gaps = [f"Отсутствует {path}" for path in artifacts if path not in existing] + fixed_gaps
+        status = "missing" if not existing else "partial" if gaps else "evidenced"
+        layers.append(SoaLayer(
+            id=ident, name=name, standard_name=standard_name, kind=kind, role=role,
+            status=status, evidence=existing, gaps=gaps,
+        ))
+    issues = [gap for layer in layers for gap in layer.gaps]
+    # Without any of the five horizontal layers there is no SOA solution to speak of.
+    if any(layer.kind == "horizontal" and layer.status == "missing" for layer in layers):
+        alignment = "not_aligned"
+    elif issues:
+        alignment = "partial"
+    else:
+        alignment = "aligned"
+    return SoaArchitecture(layers=layers, alignment=alignment, issues=issues)
 
 
 def search_standards(query: str, domain: str | None = None) -> list[StandardInfo]:

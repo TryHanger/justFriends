@@ -10,13 +10,15 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.routes import standards as routes
 from app.services.quality import quality_snapshot, run_quality_suite
-from app.services.standards import STANDARDS, lifecycle_state, search_standards
+from app.services.standards import STANDARDS, lifecycle_state, search_standards, soa_architecture
 
 
 @pytest.mark.parametrize("query,expected", [
     ("25010", "ISO/IEC 25010:2023"),
     ("АРХИТЕКТУРА", "ISO/IEC/IEEE 42010:2022"),
     ("сопровождения ПО", "ISO/IEC/IEEE 12207:2017"),
+    ("18384", "ISO/IEC 18384-2:2016"),
+    ("сервис-ориентированной", "ISO/IEC 18384-1:2016"),
 ])
 def test_search_finds_designation_domain_and_purpose_case_insensitively(query, expected):
     assert expected in [item.designation for item in search_standards(query)]
@@ -131,3 +133,42 @@ def test_lifecycle_route_returns_project_evidence(monkeypatch, tmp_path):
     assert response.status_code == 200
     assert response.json()["readiness"] == "not_ready"
     assert len(response.json()["processes"]) >= 8
+
+
+def test_soa_mapping_has_the_nine_layers_of_iso_18384_2():
+    layers = soa_architecture().layers
+    assert [layer.kind for layer in layers].count("horizontal") == 5
+    assert [layer.kind for layer in layers].count("cross_cutting") == 4
+    assert {layer.standard_name for layer in layers} >= {
+        "Operational Systems Layer", "Consumer Layer", "Integration Layer", "Governance Layer"}
+
+
+def test_soa_mapping_tracks_real_artifacts_and_does_not_claim_missing_layers(tmp_path):
+    (tmp_path / "frontend" / "src").mkdir(parents=True)
+    (tmp_path / "frontend" / "src" / "App.tsx").write_text("app")
+    state = soa_architecture(tmp_path)
+    by_id = {layer.id: layer for layer in state.layers}
+    assert by_id["consumer"].status == "partial"
+    assert by_id["consumer"].evidence == ["frontend/src/App.tsx"]
+    assert "Отсутствует frontend/src/api.ts" in by_id["consumer"].gaps
+    assert by_id["operational"].status == "missing"
+    assert state.alignment == "not_aligned"
+
+
+def test_soa_gaps_that_files_cannot_close_keep_alignment_partial():
+    state = soa_architecture()
+    integration = next(layer for layer in state.layers if layer.id == "integration")
+    assert integration.status == "partial"
+    assert any("посредника" in gap for gap in integration.gaps)
+    assert state.alignment == "partial"
+
+
+def test_soa_route_returns_layers(monkeypatch, tmp_path):
+    monkeypatch.setattr(routes, "soa_architecture", lambda: soa_architecture(tmp_path))
+    app = FastAPI()
+    app.include_router(routes.router, prefix="/standards")
+    with TestClient(app) as client:
+        response = client.get("/standards/soa")
+    assert response.status_code == 200
+    assert len(response.json()["layers"]) == 9
+    assert response.json()["alignment"] == "not_aligned"

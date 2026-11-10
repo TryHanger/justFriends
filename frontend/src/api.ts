@@ -240,6 +240,23 @@ export interface LifecycleState {
   last_checked_at?: string | null;
 }
 
+export interface SoaLayer {
+  id: string;
+  name: string;
+  standard_name: string;
+  kind: 'horizontal' | 'cross_cutting';
+  role: string;
+  status: 'evidenced' | 'partial' | 'missing';
+  evidence: string[];
+  gaps: string[];
+}
+
+export interface SoaArchitecture {
+  layers: SoaLayer[];
+  alignment: 'not_aligned' | 'partial' | 'aligned';
+  issues: string[];
+}
+
 export interface QualityMetric {
   characteristic: string;
   criterion: string;
@@ -288,6 +305,9 @@ export const getLifecycleState = async () => {
   const res = await api.get<LifecycleState>('/standards/lifecycle');
   return res.data;
 };
+
+export const getSoaArchitecture = async () =>
+  (await api.get<SoaArchitecture>('/standards/soa')).data;
 
 const localCheckHeaders = { 'X-Quality-Local': '1' };
 export const runQualityChecks = async () => {

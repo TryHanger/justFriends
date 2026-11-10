@@ -9,12 +9,13 @@ from app.schemas.standards import (
     ProductMeasurementsReport,
     ProjectCheck,
     QualityReport,
+    SoaArchitecture,
     StandardInfo,
 )
 from app.services import quality_checks
 from app.services.quality import run_quality_suite
 from app.services.security_lab import SecurityReview, SecurityReviewRequest, review_code
-from app.services.standards import lifecycle_state, search_standards
+from app.services.standards import lifecycle_state, search_standards, soa_architecture
 
 router = APIRouter()
 
@@ -46,6 +47,11 @@ def get_standards_reference(query: str = Query(default="", max_length=100), doma
 @router.get("/lifecycle", response_model=LifecycleState)
 def get_lifecycle_state():
     return lifecycle_state()
+
+
+@router.get("/soa", response_model=SoaArchitecture)
+def get_soa_architecture():
+    return soa_architecture()
 
 
 @router.post("/quality/run", response_model=QualityReport, dependencies=[Depends(require_runner)])

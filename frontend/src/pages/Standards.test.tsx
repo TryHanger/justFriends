@@ -28,6 +28,24 @@ const measured = { standard: 'ISO/IEC 25023:2016', source_url: 'https://www.iso.
   ], limitations: ['Пороги не утверждены.'] };
 
 describe('Standards page', () => {
+  it('maps ISO/IEC 18384-2 layers to project files and shows gaps', async () => {
+    const soa = { alignment: 'partial', issues: ['Нет посредника'], layers: [
+      { id: 'consumer', name: 'Потребители', standard_name: 'Consumer Layer', kind: 'horizontal', role: 'Веб-интерфейс React',
+        status: 'evidenced', evidence: ['frontend/src/App.tsx'], gaps: [] },
+      { id: 'integration', name: 'Интеграция', standard_name: 'Integration Layer', kind: 'cross_cutting', role: 'Маршрутизатор /api/v1',
+        status: 'partial', evidence: ['app/api/v1/router.py'], gaps: ['Нет посредника'] },
+    ] };
+    api.defaults.adapter = async config => response(config, config.url === '/standards/reference' ? []
+      : config.url === '/standards/soa' ? soa : lifecycle);
+    render(<Standards />);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Архитектура SOA' }));
+    expect(await screen.findByRole('heading', { name: /ISO\/IEC 18384-2: частичное/ })).toBeTruthy();
+    expect(screen.getByText('Consumer Layer')).toBeTruthy();
+    expect(screen.getByText(/Сквозные слои/)).toBeTruthy();
+    expect(screen.getByText('Нет посредника')).toBeTruthy();
+    expect(screen.getByText('частично')).toBeTruthy();
+  });
+
   it('shows the full standard card and a real not found state', async () => {
     api.defaults.adapter = async config => response(config, config.url === '/standards/reference'
       ? [{ designation: 'ISO/IEC 25010:2023', organization: 'ISO/IEC', title: 'Product quality model',

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getLifecycleState, getStandardsReference } from '../api';
-import type { LifecycleState, StandardInfo } from '../api';
+import { getLifecycleState, getSoaArchitecture, getStandardsReference } from '../api';
+import type { LifecycleState, SoaArchitecture, SoaLayer, StandardInfo } from '../api';
 import { getApiErrorMessage } from '../apiErrors';
 import QualityCenter from './QualityCenter';
 import QualityDashboard from './QualityDashboard';
 import SecurityLab from './SecurityLab';
 
-type Tab = 'catalog' | 'lifecycle' | 'quality' | 'checks' | 'security';
+type Tab = 'catalog' | 'lifecycle' | 'soa' | 'quality' | 'checks' | 'security';
 const badge = (tone: 'good' | 'warn' | 'bad' | 'neutral') => ({
   good: 'bg-emerald-100 text-emerald-800', warn: 'bg-amber-100 text-amber-800',
   bad: 'bg-rose-100 text-rose-800', neutral: 'bg-slate-100 text-slate-700',
@@ -16,6 +16,7 @@ export default function Standards() {
   const [tab, setTab] = useState<Tab>(() => window.location.hash === '#security' ? 'security' : 'catalog');
   const [standards, setStandards] = useState<StandardInfo[]>([]);
   const [lifecycle, setLifecycle] = useState<LifecycleState | null>(null);
+  const [soa, setSoa] = useState<SoaArchitecture | null>(null);
   const [sourceRunId, setSourceRunId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState('');
@@ -25,8 +26,8 @@ export default function Standards() {
 
   const loadData = useCallback(() => {
     const version = ++requestVersion.current;
-    Promise.all([getStandardsReference(), getLifecycleState()])
-      .then(([reference, state]) => { if (version === requestVersion.current) { setStandards(reference); setLifecycle(state); } })
+    Promise.all([getStandardsReference(), getLifecycleState(), getSoaArchitecture()])
+      .then(([reference, state, architecture]) => { if (version === requestVersion.current) { setStandards(reference); setLifecycle(state); setSoa(architecture); } })
       .catch(e => { if (version === requestVersion.current) setError(getApiErrorMessage(e, 'Не удалось получить данные проекта. Проверьте запуск API.')); })
       .finally(() => { if (version === requestVersion.current) setLoading(false); });
   }, []);
@@ -45,7 +46,7 @@ export default function Standards() {
     acc[item.domain] = (acc[item.domain] || 0) + 1; return acc;
   }, {})).sort((a, b) => b[1] - a[1]), [standards]);
 
-  const tabLabels: Record<Tab, string> = { security: 'Безопасная разработка', catalog: 'Каталог', lifecycle: 'Жизненный цикл', quality: 'Качество и тесты', checks: 'Проверки проекта' };
+  const tabLabels: Record<Tab, string> = { security: 'Безопасная разработка', catalog: 'Каталог', lifecycle: 'Жизненный цикл', soa: 'Архитектура SOA', quality: 'Качество и тесты', checks: 'Проверки проекта' };
   return <div className="space-y-6 text-slate-900">
     <section className={`rounded-2xl bg-slate-900 px-6 text-white shadow-sm ${tab === 'security' ? 'py-4' : 'py-7'}`}>
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">Инженерная панель · стандарты качества и безопасной разработки</p>
@@ -100,10 +101,25 @@ export default function Standards() {
       </article>)}</div>
     </div>}
 
+    {!loading && tab === 'soa' && soa?.layers && <div className="space-y-5">
+      <div className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-lg font-bold">Соответствие ISO/IEC 18384-2: {soa.alignment === 'aligned' ? 'все слои подтверждены' : soa.alignment === 'partial' ? 'частичное' : 'нет'}</h2><p className="mt-1 text-sm text-slate-600">Слои эталонной архитектуры SOA сопоставлены с компонентами проекта. Наличие файла означает только наличие компонента, а не выполнение всех требований стандарта; пробелы, которые файлами не закрыть, указаны отдельно.</p></div>
+      <SoaLayers title="Горизонтальные слои: от среды выполнения до потребителя" layers={soa.layers.filter(l => l.kind === 'horizontal')} />
+      <SoaLayers title="Сквозные слои: действуют на всех уровнях" layers={soa.layers.filter(l => l.kind === 'cross_cutting')} />
+    </div>}
+
     {!loading && tab === 'quality' && <QualityDashboard onOpenRun={id => { setSourceRunId(id); setTab('checks'); }} />}
     {tab === 'checks' && <QualityCenter initialRunId={sourceRunId} />}
     {tab === 'security' && <SecurityLab />}
   </div>;
+}
+
+function SoaLayers({ title, layers }: { title: string; layers: SoaLayer[] }) {
+  return <section><h2 className="mb-3 font-bold">{title}</h2><div className="grid gap-4 md:grid-cols-2">{layers.map(l => <article key={l.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex justify-between gap-2"><div><h3 className="font-bold">{l.name}</h3><p className="text-xs text-slate-500">{l.standard_name}</p></div><span className={`h-fit rounded-full px-2 py-1 text-xs font-semibold ${badge(l.status === 'evidenced' ? 'good' : l.status === 'partial' ? 'warn' : 'bad')}`}>{l.status === 'evidenced' ? 'есть свидетельства' : l.status === 'partial' ? 'частично' : 'нет свидетельств'}</span></div>
+    <p className="mt-3 text-sm">{l.role}</p>
+    <p className="mt-2 text-sm"><strong>Файлы:</strong> {l.evidence.length ? l.evidence.join(', ') : 'не найдены'}</p>
+    {l.gaps.length > 0 && <ul className="mt-2 list-disc pl-5 text-sm text-rose-700">{l.gaps.map(gap => <li key={gap}>{gap}</li>)}</ul>}
+  </article>)}</div></section>;
 }
 
 function Distribution({ title, values, total }: { title: string; values: [string, number][]; total: number }) {

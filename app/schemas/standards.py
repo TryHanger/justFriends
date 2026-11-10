@@ -33,6 +33,23 @@ class LifecycleState(BaseModel):
     last_checked_at: str | None = None
 
 
+class SoaLayer(BaseModel):
+    id: str
+    name: str
+    standard_name: str
+    kind: Literal["horizontal", "cross_cutting"]
+    role: str
+    status: Literal["evidenced", "partial", "missing"]
+    evidence: list[str]
+    gaps: list[str]
+
+
+class SoaArchitecture(BaseModel):
+    layers: list[SoaLayer]
+    alignment: Literal["not_aligned", "partial", "aligned"]
+    issues: list[str]
+
+
 class QualityCase(BaseModel):
     name: str
     status: Literal["passed", "failed", "error", "skipped"]
