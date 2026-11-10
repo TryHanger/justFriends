@@ -20,6 +20,7 @@ import html
 import json
 import os
 import random
+import re
 import time
 from pathlib import Path
 
@@ -154,6 +155,8 @@ def error_ru(error: str) -> str:
         return "ответ не принят: модель не уложилась в 2048 токенов"
     if "invalid or incomplete" in error or "no JSON" in error:
         return "ответ не принят: модель выдала испорченный JSON"
+    if "Overlapping" in error:
+        return "ответ не принят: модель отметила пересекающиеся фрагменты"
     return "ошибка"
 
 
@@ -179,11 +182,19 @@ def raw_output(result: dict) -> str:
 
 def direct_answer(result: dict) -> tuple[str | None, str]:
     """Usage and reason; local models sometimes nest them in "properties" or echo the schema."""
-    if "error" in result:
-        return None, error_ru(result["error"])
     for answer in (result, result.get("properties", {})):
         if isinstance(answer.get("usage"), str):
             return answer["usage"], answer.get("reason", "")
+    # Lenient run: an unescaped quote breaks the JSON, but the verdict itself is readable.
+    found = re.search(
+        r'"usage":\s*"(literal|metaphorical)",\s*"reason":\s*"(.*)"\s*}',
+        result.get("raw", ""),
+        re.S,
+    )
+    if found:
+        return found[1], found[2] + " (из испорченного JSON)"
+    if "error" in result:
+        return None, error_ru(result["error"])
     return None, "вместо ответа вернула пустой шаблон JSON из инструкции"
 
 
